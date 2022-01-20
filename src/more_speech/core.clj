@@ -2,91 +2,78 @@
   (:require [quil.core :as q]
             [quil.middleware :as m]
             [more-speech.article :as a]
-            [more-speech.text
-             :as text
-             :refer [text-font
-                     draw-text
-                     set-pos
-                     new-lines
-                     set-x
-                     draw-multi-line]]))
+            [more-speech.text :as text]
+            [clojure.data.json :as json]))
+
+(def events (atom []))
+(def name-map (atom {}))
 
 (defn setup []
   (q/frame-rate 30)
   (q/color-mode :rgb)
-  {
-   :article-window {:x 50 :y 10 :w (- (q/screen-width) 100) :h (- (q/screen-height) 100)
-                    :articles [{:group "comp.lang.c++"
-                                :author "Bob"
-                                :time 1642683327
-                                :subject "Subject"
-                                :body "My Message to you."
-                                :thread-count 15}
-                               {:group "comp.object"
-                                :author "Robert C. Martin"
-                                :time 1642683327
-                                :subject "The Subject is up to you."
-                                :body "The quick brown fox jumped over\nthe lazy dog's back."
-                                :thread-count 152}]
-                    :fonts {:bold (q/create-font "CourierNewPS-BoldMT" 14)
-                            :regular (q/create-font "CourierNewPSMT" 14)
-                            }
-                    }
-   })
+  (let [bold (q/create-font "CourierNewPS-BoldMT" 14)
+        regular (q/create-font "CourierNewPSMT" 14)]
+    (q/text-font bold)
+    {
+     :article-window {:x 50 :y 10 :w (text/pos-width 105) :h (- (q/screen-height) 100)
+                      :articles []
+                      :fonts {:bold bold :regular regular}
+                      }
+     :author-window {:x (+ 50 (text/pos-width 110)) :y 10
+                     :w (text/pos-width 30) :h (- (q/screen-height) 100)
+                     :fonts {:bold bold :regular regular}}
+     }))
+
+(defn name-of [pubkey]
+  (get @name-map pubkey pubkey))
+
+(defn make-article [name time body]
+  {:group ""
+   :author name
+   :subject "?"
+   :time time
+   :body body
+   :thread-count 1}
+  )
+
+
+(defn process-event [{:keys [article-window] :as state} event]
+  (let [articles (:articles article-window)
+        [name subscription-id inner-event :as decoded-msg] event
+        {:strs [id pubkey created_at kind tags content sig]} inner-event]
+    (condp = kind
+      0 (do (swap! name-map assoc pubkey (get (json/read-str content) "name" "tilt"))
+            state)
+      3 (do (printf "%s: %s %s %s\n" kind (a/format-time created_at) (name-of pubkey) content)
+            state)
+      1 (do (printf "%s: %s %s %s\n" kind (a/format-time created_at) (name-of pubkey) content)
+            (assoc-in state [:article-window :articles]
+                      (conj articles (make-article (name-of pubkey) created_at content))))
+      4 (do (printf "%s: %s %s %s\n" kind (a/format-time created_at) (name-of pubkey) content)
+            state)
+      (do (prn "unknown event: " event)
+          state)
+      )
+    ))
 
 (defn update-state [state]
-  state)
-
-(defn render [cursor window markup]
-  (let [{:keys [bold regular]} (:fonts window)]
-    (loop [cursor cursor
-           markup markup]
-      (cond
-        (empty? markup) cursor
-        (= :bold (first markup)) (do (q/text-font bold)
-                                     (recur cursor (rest markup)))
-        (= :regular (first markup)) (do (q/text-font regular)
-                                        (recur cursor (rest markup)))
-        (= :pos (first markup)) (recur (set-pos cursor (second markup))
-                                       (drop 2 markup))
-        (= :new-line (first markup)) (recur (-> cursor (set-x 0) (new-lines 1))
-                                            (rest markup))
-        (= :line (first markup)) (do (q/stroke-weight 1)
-                                     (q/line 0 (:y cursor) (:w window) (:y cursor))
-                                     (recur cursor (rest markup)))
-        (= :multi-line (first markup)) (recur (draw-multi-line cursor (second markup))
-                                              (drop 2 markup))
-        (string? (first markup)) (recur (draw-text cursor (first markup))
-                                       (rest markup))
-        :else (recur (draw-text cursor (.toString (first markup)))
-                     (rest markup)))
-        )))
+  (if (empty? @events)
+    state
+    (let [event (first @events)]
+      (swap! events rest)
+      (process-event state event))
+    )
+  )
 
 (defn draw-article [window cursor article]
   (q/text-align :left)
   (q/fill 0 0 0)
-  (render cursor window (a/markup-article article))
-  ;(let [{:keys [bold regular]} (:fonts window)
-  ;      cursor (-> cursor
-  ;                 (text-font bold)
-  ;                 (draw-text (str "* " (:author article)))
-  ;                 (text-font regular)
-  ;                 (draw-text (str " (" (:thread-count article) ")"))
-  ;                 (text-font bold)
-  ;                 (set-pos 40)
-  ;                 (draw-text (:subject article))
-  ;                 (text-font regular)
-  ;                 (set-pos 80)
-  ;                 (draw-line (:time article))
-  ;                 (draw-lines (:body article)))]
-  ;  (q/stroke-weight 1)
-  ;  (q/line 0 (:y cursor) (:w window) (:y cursor))
-  ;  (new-lines cursor 1))
+  (text/render cursor window (a/markup-article article))
   )
 
 (defn draw-articles [{:keys [fonts articles] :as window}]
   (loop [cursor (text/->cursor 0 (text/line-height) 5)
-         articles articles]
+         articles (take-last 20 articles)]
     (if (empty? articles)
       cursor
       (recur (draw-article window cursor (first articles))
@@ -102,9 +89,36 @@
     (draw-articles window)
     ))
 
+(defn draw-author [window cursor author]
+  (q/text-align :left)
+  (q/fill 0 0 0)
+  (text/render cursor window (a/markup-author author)))
+
+(defn draw-authors [window]
+  (q/text-align :left)
+  (q/fill 0 0 0)
+  (loop [cursor (text/->cursor 0 (text/line-height) 5)
+         authors (take-last 50 @name-map)]
+    (if (empty? authors)
+      cursor
+      (recur (draw-author window cursor (first authors))
+             (rest authors))))
+  )
+
+(defn draw-author-window [window]
+  (q/with-translation
+    [(:x window) (:y window)]
+    (q/stroke 0 0 0)
+    (q/stroke-weight 2)
+    (q/fill 255 255 255)
+    (q/rect 0 0 (:w window) (:h window))
+    (draw-authors window)
+    ))
+
 (defn draw-state [state]
   (q/background 240 240 240)
   (draw-article-window (:article-window state))
+  (draw-author-window (:author-window state))
   )
 
 (declare more-speech)
@@ -116,6 +130,7 @@
                :update update-state
                :draw draw-state
                :middleware [m/fun-mode])
+  (reset! events (read-string (slurp "nostr-messages")))
   args
   )
 

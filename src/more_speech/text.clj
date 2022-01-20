@@ -16,6 +16,10 @@
 (defn line-height []
   (+ (q/text-ascent) (q/text-descent)))
 
+(defn pos-width [pos]
+  (let [s (apply str (repeat pos "X"))]
+    (q/text-width s)))
+
 (defrecord cursor [x y l-margin]
   Cursor
   (text-font [cursor font]
@@ -32,9 +36,7 @@
     (assoc c :x x :y y))
 
   (set-pos [c pos]
-    (let [s (apply str (repeat pos "X"))
-          x (q/text-width s)]
-      (set-x c x)))
+    (set-x c (pos-width pos)))
 
   (new-lines [c lines]
     (let [dy (* lines (line-height))]
@@ -56,3 +58,28 @@
     (if (empty? lines)
       cursor
       (recur (draw-line cursor (first lines)) (rest lines)))))
+
+(defn render [cursor window markup]
+  (let [{:keys [bold regular]} (:fonts window)]
+    (loop [cursor cursor
+           markup markup]
+      (cond
+        (empty? markup) cursor
+        (= :bold (first markup)) (do (q/text-font bold)
+                                     (recur cursor (rest markup)))
+        (= :regular (first markup)) (do (q/text-font regular)
+                                        (recur cursor (rest markup)))
+        (= :pos (first markup)) (recur (set-pos cursor (second markup))
+                                       (drop 2 markup))
+        (= :new-line (first markup)) (recur (-> cursor (set-x 0) (new-lines 1))
+                                            (rest markup))
+        (= :line (first markup)) (do (q/stroke-weight 1)
+                                     (q/line 0 (:y cursor) (:w window) (:y cursor))
+                                     (recur cursor (rest markup)))
+        (= :multi-line (first markup)) (recur (draw-multi-line cursor (second markup))
+                                              (drop 2 markup))
+        (string? (first markup)) (recur (draw-text cursor (first markup))
+                                        (rest markup))
+        :else (recur (draw-text cursor (.toString (first markup)))
+                     (rest markup)))
+      )))

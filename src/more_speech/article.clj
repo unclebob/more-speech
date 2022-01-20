@@ -17,10 +17,21 @@
     (.format (SimpleDateFormat. "dd MMM yy kk:mm:ss z") date))
   )
 
+(defn abbreviate-body [body]
+  (if (< (count body) 100)
+    body
+    (str (subs body 0 100) "...")))
+
+(defn abbreviate-author [author]
+  (if (< (count author) 20)
+    author
+    (str (subs author 0 20) "...")
+  ))
+
 (defn markup-article [article]
   [
    :bold
-   (str "* " (:author article))
+   (str "* " (abbreviate-author (:author article)))
    :regular
    (str " (" (:thread-count article) ")")
    :bold
@@ -30,6 +41,18 @@
    :pos 80
    (format-time (:time article))
    :new-line
-   :multi-line (:body article)
+   :multi-line (abbreviate-body (:body article))
    :line
    :new-line])
+
+(defn abbreviate-key [pubkey]
+  (str (subs pubkey 0 8) "..."))
+
+(defn markup-author [[pubkey name]]
+  [:bold
+   (abbreviate-key pubkey)
+   :regular
+   " - "
+   name
+   :new-line
+   ])
