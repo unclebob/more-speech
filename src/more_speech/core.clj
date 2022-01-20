@@ -1,6 +1,14 @@
 (ns more-speech.core
   (:require [quil.core :as q]
-            [quil.middleware :as m]))
+            [quil.middleware :as m]
+            [more-speech.text
+             :as text
+             :refer [text-font
+                     draw-text
+                     set-pos
+                     draw-line
+                     new-lines
+                     draw-lines]]))
 
 (defn setup []
   (q/frame-rate 30)
@@ -9,12 +17,18 @@
    :article-window {:x 50 :y 10 :w (- (q/screen-width) 100) :h (- (q/screen-height) 100)
                     :articles [{:group "comp.lang.c++"
                                 :author "Bob"
-                                :time "18 Jan '21 11:12:54 CST"
+                                :time "18 Jan '22 11:12:54 CST"
                                 :subject "Subject"
                                 :body "My Message to you."
-                                :thread-count 15}]
-                    :fonts {:bold (q/create-font "Courier New Bold" 14)
-                            :regular (q/create-font "Courier New" 14)
+                                :thread-count 15}
+                               {:group "comp.object"
+                                :author "Robert C. Martin"
+                                :time "19 Jan '22 12:54:51"
+                                :subject "The Subject is up to you."
+                                :body "The quick brown fox jumped over\nthe lazy dog's back."
+                                :thread-count 152}]
+                    :fonts {:bold (q/create-font "CourierNewPS-BoldMT" 14)
+                            :regular (q/create-font "CourierNewPSMT" 14)
                             }
                     }
    })
@@ -22,59 +36,33 @@
 (defn update-state [state]
   state)
 
-(defprotocol Cursor
-  (set-font [cursor font])
-  (set-x [cursor x])
-  (set-y [cursor y])
-  (set-xy [cursor x y])
-  )
-
-(defrecord cursor [x y font]
-  Cursor
-  (set-font [c font]
-    (->cursor (:x c) (:y c) font))
-  (set-x [c x]
-    (->cursor x (:y c) (:font c)))
-  (set-y [c y]
-    (->cursor (:x c) y (:font c)))
-  (set-xy [c x y]
-    (->cursor x y (:font c)))
-  )
-
-(defn draw-text [{:keys [x y font] :as cursor} text]
-  (q/text-font font)
-  (q/text text x y)
-  (update cursor :x + (q/text-width text))
-  )
-
-(defn line-height [] (+ (q/text-ascent) (q/text-descent)))
-
-(defn draw-line [cursor line]
-  (draw-text cursor line)
-  (set-xy cursor 0 (+ (:y cursor) (line-height))))
-
-(defn draw-article [{:keys [bold regular]} cursor article]
+(defn draw-article [window cursor article]
   (q/text-align :left)
   (q/fill 0 0 0)
-  (q/with-translation
-    [10 10]
-    (let [cursor (set-font cursor bold)
-          cursor (draw-text cursor (str "* "(:author article)))
-          cursor (set-font cursor regular)
-          cursor (draw-text cursor (str "(" (:thread-count article) ")"))
-          cursor (set-x cursor 100)
-          cursor (assoc cursor :font bold)
-          cursor (draw-text cursor (:subject article))
-          cursor (set-x cursor 500)
-          cursor (set-font cursor regular)
-          cursor (draw-line cursor (:time article))
-          cursor (draw-line cursor (str "  "(:body article)))
-          ])))
+  (let [{:keys [bold regular]} (:fonts window)
+        cursor (-> cursor
+                   (text-font bold)
+                   (draw-text (str "* " (:author article)))
+                   (text-font regular)
+                   (draw-text (str " (" (:thread-count article) ")"))
+                   (text-font bold)
+                   (set-pos 40)
+                   (draw-text (:subject article))
+                   (text-font regular)
+                   (set-pos 80)
+                   (draw-line (:time article))
+                   (draw-lines (:body article)))]
+    (q/stroke-weight 1)
+    (q/line 0 (:y cursor) (:w window) (:y cursor))
+    (new-lines cursor 1)))
 
-(defn draw-articles [{:keys [fonts articles]}]
-  (let [cursor (->cursor 0 (line-height) (:regular fonts))]
-    (doseq [article articles]
-      (draw-article fonts cursor article))))
+(defn draw-articles [{:keys [fonts articles] :as window}]
+  (loop [cursor (text/->cursor 0 (text/line-height) 5)
+         articles articles]
+    (if (empty? articles)
+      cursor
+      (recur (draw-article window cursor (first articles))
+             (rest articles)))))
 
 (defn draw-article-window [window]
   (q/with-translation
@@ -91,6 +79,7 @@
   (draw-article-window (:article-window state))
   )
 
+(declare more-speech)
 (defn ^:export -main [& args]
   (q/defsketch more-speech
                :title "More Speech"
