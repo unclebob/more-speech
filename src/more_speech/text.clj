@@ -50,7 +50,7 @@
   (draw-text cursor line)
   (set-xy cursor 0 (+ (:y cursor) (line-height))))
 
-(defn draw-lines [cursor lines]
+(defn draw-multi-line [cursor lines]
   (loop [cursor cursor
          lines (string/split-lines lines)]
     (if (empty? lines)
