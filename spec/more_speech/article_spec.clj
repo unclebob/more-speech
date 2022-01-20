@@ -3,7 +3,25 @@
             [more-speech.article :as a :refer :all]
             [clojure.spec.alpha :as s]))
 
-(describe "formatting an article"
+(describe "Formatting Utilities"
+  (context "Abbreviations"
+    (it "abbreviates pubkeys"
+      (should= "short" (abbreviate-key "short"))
+      (should= "long pub..." (abbreviate-key "long pubkey")))
+
+    (it "abbreviates authors"
+      (should= "short" (abbreviate-author "short"))
+      (should= "a very long author n..." (abbreviate-author "a very long author name")))
+    )
+
+  (it "abbreviates bodies"
+    (should= "short" (abbreviate-body "short"))
+    (should= (str (apply str (repeat 100 "*")) "...")
+             (abbreviate-body (apply str (repeat 200 "*")))))
+  )
+
+
+(describe "Formatting an article"
   (let [article {:group "comp.lang.c++"
                  :author "Bob"
                  :time 1642683327
@@ -30,3 +48,17 @@
                 :line
                 :new-line]
                (markup-article article)))))
+
+(describe "Formatting an author nickname."
+  (let [author-tuple ["the pubkey" "nickname"]]
+    (it "conforms to spec."
+      (should (s/valid? ::a/author-nickname-tuple author-tuple)))
+
+    (it "is properly formatted."
+      (should= [:bold
+                "the pubk..."
+                :regular
+                " - "
+                "nickname"
+                :new-line]
+               (markup-author author-tuple)))))

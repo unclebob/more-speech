@@ -3,7 +3,8 @@
             [quil.middleware :as m]
             [more-speech.article :as a]
             [more-speech.text :as text]
-            [clojure.data.json :as json]))
+            [clojure.data.json :as json]
+            [clojure.string :as string]))
 
 (def events (atom []))
 (def name-map (atom {}))
@@ -98,7 +99,7 @@
   (q/text-align :left)
   (q/fill 0 0 0)
   (loop [cursor (text/->cursor 0 (text/line-height) 5)
-         authors (take-last 50 @name-map)]
+         authors (take-last 60 (sort-by #(string/lower-case (text/nil->blank (second %))) @name-map))]
     (if (empty? authors)
       cursor
       (recur (draw-author window cursor (first authors))

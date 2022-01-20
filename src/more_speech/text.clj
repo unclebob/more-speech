@@ -12,6 +12,10 @@
   (new-lines [cursor lines] "move cursor down by lines.")
   )
 
+(defn nil->blank [s]
+  (if (nil? s)
+    ""
+    s))
 
 (defn line-height []
   (+ (q/text-ascent) (q/text-descent)))

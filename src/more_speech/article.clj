@@ -11,22 +11,29 @@
 (s/def ::thread-count number?)
 (s/def ::article (s/keys :req-un [::group ::subject ::author ::time ::body ::thread-count]))
 
+(s/def ::author-nickname string?)
+(s/def ::author-pubkey string?)
+(s/def ::author-nickname-tuple (s/tuple ::author-pubkey ::author-nickname))
+
 (defn format-time [time]
   (let [time (* time 1000)
         date (Date. (long time))]
     (.format (SimpleDateFormat. "dd MMM yy kk:mm:ss z") date))
   )
 
+(defn abbreviate [s n]
+  (if (<= (count s) n)
+    s
+    (str (subs s 0 n) "...")))
+
 (defn abbreviate-body [body]
-  (if (< (count body) 100)
-    body
-    (str (subs body 0 100) "...")))
+  (abbreviate body 100))
 
 (defn abbreviate-author [author]
-  (if (< (count author) 20)
-    author
-    (str (subs author 0 20) "...")
-  ))
+  (abbreviate author 20))
+
+(defn abbreviate-key [pubkey]
+  (abbreviate pubkey 8))
 
 (defn markup-article [article]
   [
@@ -44,9 +51,6 @@
    :multi-line (abbreviate-body (:body article))
    :line
    :new-line])
-
-(defn abbreviate-key [pubkey]
-  (str (subs pubkey 0 8) "..."))
 
 (defn markup-author [[pubkey name]]
   [:bold
