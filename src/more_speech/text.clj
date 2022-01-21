@@ -4,7 +4,6 @@
   )
 
 (defprotocol Cursor
-  (text-font [cursor font] "set the font and return the cursor.")
   (set-x [cursor x] "set pixel x position.")
   (set-y [cursor y] "set pixel y position.")
   (set-xy [cursor x y] "set pixel x and y positions.")
@@ -26,9 +25,6 @@
 
 (defrecord cursor [x y l-margin]
   Cursor
-  (text-font [cursor font]
-    (q/text-font font)
-    cursor)
 
   (set-x [c x]
     (assoc c :x x))

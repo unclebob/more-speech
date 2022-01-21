@@ -7,7 +7,63 @@
             [clojure.string :as string]))
 
 (def events (atom []))
-(def name-map (atom {}))
+
+(defprotocol widget
+  (setup-widget [widget state])
+  (update-widget [widget state])
+  (draw-widget [widget state])
+  (mouse-up [widget state position])
+  (mouse-down [widget state position]))
+
+(defrecord article-window [x y w h fonts]
+  widget
+  (setup-widget [widget state])
+  (update-widget [widget state])
+  (draw-widget [widget state])
+  (mouse-up [widget state position])
+  (mouse-down [widget state position])
+  )
+
+(defrecord author-window [x y w h fonts]
+  widget
+  (setup-widget [widget state])
+  (update-widget [widget state])
+  (draw-widget [widget state])
+  (mouse-up [widget state position])
+  (mouse-down [widget state position])
+  )
+
+(declare draw-author-window)
+(declare draw-article-window)
+
+(defrecord application []
+  widget
+  (setup-widget [widget state])
+  (update-widget [widget state])
+
+  (draw-widget [application _]
+    (draw-article-window application (:article-window application))
+    (draw-author-window application (:author-window application)))
+
+  (mouse-up [widget state position])
+  (mouse-down [widget state position])
+  )
+
+(defn make-application [bold regular]
+  (map->application
+    {:articles []
+     :nicknames {}
+
+     :article-window (map->article-window
+                       {:x 50 :y 10 :w (text/pos-width 105) :h (- (q/screen-height) 100)
+                        :fonts {:bold bold :regular regular}
+                        })
+
+     :author-window (map->author-window {:x (+ 50 (text/pos-width 110)) :y 10
+                                         :w (text/pos-width 30) :h (- (q/screen-height) 100)
+                                         :fonts {:bold bold :regular regular}})
+     }
+    ))
 
 (defn setup []
   (q/frame-rate 30)
@@ -15,18 +71,8 @@
   (let [bold (q/create-font "CourierNewPS-BoldMT" 14)
         regular (q/create-font "CourierNewPSMT" 14)]
     (q/text-font bold)
-    {
-     :article-window {:x 50 :y 10 :w (text/pos-width 105) :h (- (q/screen-height) 100)
-                      :articles []
-                      :fonts {:bold bold :regular regular}
-                      }
-     :author-window {:x (+ 50 (text/pos-width 110)) :y 10
-                     :w (text/pos-width 30) :h (- (q/screen-height) 100)
-                     :fonts {:bold bold :regular regular}}
-     }))
-
-(defn name-of [pubkey]
-  (get @name-map pubkey pubkey))
+    {:application (make-application bold regular)}
+    ))
 
 (defn make-article [name time body]
   {:group ""
@@ -37,25 +83,25 @@
    :thread-count 1}
   )
 
-
-(defn process-event [{:keys [article-window] :as state} event]
-  (let [articles (:articles article-window)
+(defn process-event [{:keys [application] :as state} event]
+  (let [{:keys [articles nicknames]} application
+        name-of (fn [pubkey] (get nicknames pubkey pubkey))
         [name subscription-id inner-event :as decoded-msg] event
         {:strs [id pubkey created_at kind tags content sig]} inner-event]
     (condp = kind
-      0 (do (swap! name-map assoc pubkey (get (json/read-str content) "name" "tilt"))
-            state)
+      0 (update-in
+          state [:application :nicknames]
+          assoc pubkey (get (json/read-str content) "name" "tilt"))
       3 (do (printf "%s: %s %s %s\n" kind (a/format-time created_at) (name-of pubkey) content)
             state)
-      1 (do (printf "%s: %s %s %s\n" kind (a/format-time created_at) (name-of pubkey) content)
-            (assoc-in state [:article-window :articles]
-                      (conj articles (make-article (name-of pubkey) created_at content))))
+      1 (assoc-in state [:application :articles]
+                  (conj articles
+                        (make-article (name-of pubkey) created_at content)))
       4 (do (printf "%s: %s %s %s\n" kind (a/format-time created_at) (name-of pubkey) content)
             state)
       (do (prn "unknown event: " event)
           state)
-      )
-    ))
+      )))
 
 (defn update-state [state]
   (if (empty? @events)
@@ -72,22 +118,22 @@
   (text/render cursor window (a/markup-article article))
   )
 
-(defn draw-articles [{:keys [fonts articles] :as window}]
+(defn draw-articles [application {:keys [fonts] :as window}]
   (loop [cursor (text/->cursor 0 (text/line-height) 5)
-         articles (take-last 20 articles)]
+         articles (take 20 (:articles application))]
     (if (empty? articles)
       cursor
       (recur (draw-article window cursor (first articles))
              (rest articles)))))
 
-(defn draw-article-window [window]
+(defn draw-article-window [application window]
   (q/with-translation
     [(:x window) (:y window)]
     (q/stroke 0 0 0)
     (q/stroke-weight 2)
     (q/fill 255 255 255)
     (q/rect 0 0 (:w window) (:h window))
-    (draw-articles window)
+    (draw-articles application window)
     ))
 
 (defn draw-author [window cursor author]
@@ -95,31 +141,30 @@
   (q/fill 0 0 0)
   (text/render cursor window (a/markup-author author)))
 
-(defn draw-authors [window]
+(defn draw-authors [application window]
   (q/text-align :left)
   (q/fill 0 0 0)
   (loop [cursor (text/->cursor 0 (text/line-height) 5)
-         authors (take-last 60 (sort-by #(string/lower-case (text/nil->blank (second %))) @name-map))]
+         authors (take-last 60 (sort-by #(string/lower-case (text/nil->blank (second %))) (:nicknames application)))]
     (if (empty? authors)
       cursor
       (recur (draw-author window cursor (first authors))
              (rest authors))))
   )
 
-(defn draw-author-window [window]
+(defn draw-author-window [application window]
   (q/with-translation
     [(:x window) (:y window)]
     (q/stroke 0 0 0)
     (q/stroke-weight 2)
     (q/fill 255 255 255)
     (q/rect 0 0 (:w window) (:h window))
-    (draw-authors window)
+    (draw-authors application window)
     ))
 
-(defn draw-state [state]
+(defn draw-state [{:keys [application] :as state}]
   (q/background 240 240 240)
-  (draw-article-window (:article-window state))
-  (draw-author-window (:author-window state))
+  (draw-widget application state)
   )
 
 (declare more-speech)
@@ -134,4 +179,5 @@
   (reset! events (read-string (slurp "nostr-messages")))
   args
   )
+
 
