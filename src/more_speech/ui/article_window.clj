@@ -1,9 +1,9 @@
 (ns more-speech.ui.article-window
   (:require
-    [quil.core :as q]
     [more-speech.ui.text :as text]
     [more-speech.article :as a]
-    [more-speech.ui.widget :refer [widget]]))
+    [more-speech.ui.widget :refer [widget]]
+    [more-speech.ui.graphics :as g]))
 
 (declare draw-article-window)
 
@@ -17,26 +17,28 @@
   (mouse-down [widget state position])
   )
 
-(defn draw-article [window cursor article]
-  (q/text-align :left)
-  (q/fill 0 0 0)
+(defn draw-article [g window cursor article]
+  (g/text-align g [:left])
+  (g/fill g [0 0 0])
   (text/render cursor window (a/markup-article article))
   )
 
-(defn draw-articles [application {:keys [fonts] :as window}]
+(defn draw-articles [g application {:keys [fonts] :as window}]
   (loop [cursor (text/->cursor 0 (text/line-height) 5)
          articles (take 20 (:articles application))]
     (if (empty? articles)
       cursor
-      (recur (draw-article window cursor (first articles))
+      (recur (draw-article g window cursor (first articles))
              (rest articles)))))
 
 (defn draw-article-window [application window]
-  (q/with-translation
-    [(:x window) (:y window)]
-    (q/stroke 0 0 0)
-    (q/stroke-weight 2)
-    (q/fill 255 255 255)
-    (q/rect 0 0 (:w window) (:h window))
-    (draw-articles application window)
-    ))
+  (let [g (:graphics application)]
+    (g/with-translation
+      g [(:x window) (:y window)]
+      (fn [g]
+        (g/stroke g [0 0 0])
+        (g/stroke-weight g 2)
+        (g/fill g [255 255 255])
+        (g/rect g [0 0 (:w window) (:h window)])
+        (draw-articles g application window))
+      )))
