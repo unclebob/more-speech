@@ -1,4 +1,4 @@
-(ns more-speech.text
+(ns more-speech.ui.text
   (:require [quil.core :as q]
             [clojure.string :as string])
   )

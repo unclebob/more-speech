@@ -15,6 +15,15 @@
 (s/def ::author-pubkey string?)
 (s/def ::author-nickname-tuple (s/tuple ::author-pubkey ::author-nickname))
 
+(defn make-article [name time body]
+  {:group ""
+   :author name
+   :subject "?"
+   :time time
+   :body body
+   :thread-count 1}
+  )
+
 (defn format-time [time]
   (let [time (* time 1000)
         date (Date. (long time))]
