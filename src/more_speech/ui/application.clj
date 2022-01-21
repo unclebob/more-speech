@@ -28,16 +28,16 @@
       {:graphics g
        :articles []
        :nicknames {}
+       :widgets {
+                 :article-window (map->article-window
+                                   {:x 50 :y 10 :w (text/pos-width 105) :h (- (g/screen-height g) 100)
+                                    :fonts {:bold bold :regular regular}
+                                    })
 
-       :article-window (map->article-window
-                         {:x 50 :y 10 :w (text/pos-width 105) :h (- (g/screen-height g) 100)
-                          :fonts {:bold bold :regular regular}
-                          })
-
-       :author-window (map->author-window
-                        {:x (+ 50 (text/pos-width 110)) :y 10
-                         :w (text/pos-width 30) :h (- (g/screen-height g) 100)
-                         :fonts {:bold bold :regular regular}})
-       :widgets [:article-window :author-window]
+                 :author-window (map->author-window
+                                  {:x (+ 50 (text/pos-width 110)) :y 10
+                                   :w (text/pos-width 30) :h (- (g/screen-height g) 100)
+                                   :fonts {:bold bold :regular regular}})
+                 }
        }
       )))

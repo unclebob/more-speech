@@ -8,8 +8,8 @@
   (mouse-down [widget state position]))
 
 (defn draw-child-widgets [parent state]
-  (loop [widgets (:widgets parent)]
+  (loop [widgets (keys (:widgets parent))]
     (if (empty? widgets)
       state
-      (do (draw-widget (get parent (first widgets)) state)
+      (do (draw-widget (get (:widgets parent) (first widgets)) state)
           (recur (rest widgets))))))

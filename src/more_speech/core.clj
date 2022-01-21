@@ -1,14 +1,8 @@
 (ns more-speech.core
   (:require [quil.core :as q]
             [quil.middleware :as m]
-            [more-speech.ui.text :as text]
             [more-speech.nostr.events :as nostr]
-            [more-speech.ui.widget :refer [widget
-                                           draw-widget]]
-            [more-speech.ui.article-window :refer [map->article-window
-                                                   draw-article-window]]
-            [more-speech.ui.author-window :refer [map->author-window
-                                                  draw-author-window]]
+            [more-speech.ui.widget :refer [draw-widget]]
             [more-speech.ui.application :refer [make-application]]
             ))
 
