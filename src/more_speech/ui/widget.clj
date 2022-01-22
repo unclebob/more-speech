@@ -7,9 +7,17 @@
   (mouse-up [widget state position])
   (mouse-down [widget state position]))
 
-(defn draw-child-widgets [parent state]
+(defn do-children [parent state f]
   (loop [widgets (keys (:widgets parent))]
-    (if (empty? widgets)
-      state
-      (do (draw-widget (get (:widgets parent) (first widgets)) state)
-          (recur (rest widgets))))))
+      (if (empty? widgets)
+        state
+        (do (f (get (:widgets parent) (first widgets)) state)
+            (recur (rest widgets)))))
+  )
+
+(defn draw-child-widgets [parent state]
+  (do-children parent state draw-widget))
+
+(defn setup-child-widgets [parent state]
+  (do-children parent state setup-widget)
+  )

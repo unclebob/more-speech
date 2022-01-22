@@ -9,7 +9,8 @@
 
 (defrecord article-window [x y w h]
   widget
-  (setup-widget [widget state])
+  (setup-widget [widget state]
+    state)
   (update-widget [widget state])
   (draw-widget [widget state]
     (draw-article-window (:application state) widget))

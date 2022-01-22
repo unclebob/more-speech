@@ -2,8 +2,9 @@
   (:require [quil.core :as q]
             [quil.middleware :as m]
             [more-speech.nostr.events :as nostr]
-            [more-speech.ui.widget :refer [draw-widget]]
-            [more-speech.ui.application :refer [make-application]]
+            [more-speech.ui.widget :refer [draw-widget
+                                           setup-widget]]
+            [more-speech.ui.application :refer [map->application]]
             [more-speech.ui.graphics :as g]
             ))
 
@@ -14,9 +15,12 @@
   (q/color-mode :rgb)
   (let [bold (q/create-font "CourierNewPS-BoldMT" 14)
         regular (q/create-font "CourierNewPSMT" 14)
-        fonts {:bold bold :regular regular}]
+        fonts {:bold bold :regular regular}
+        graphics (g/->quil-graphics fonts)
+        application (map->application {:graphics graphics})
+        state {}]
     (q/text-font bold)
-    {:application (make-application (g/->quil-graphics fonts))}
+    (setup-widget application state)
     ))
 
 (defn update-state [state]
