@@ -2,7 +2,7 @@
   (:require
     [clojure.string :as string]
     [more-speech.ui.widget :refer [widget]]
-    [more-speech.ui.text :as text]
+    [more-speech.ui.cursor :as text]
     [more-speech.article :as a]
     [more-speech.ui.graphics :as g]))
 
@@ -18,20 +18,22 @@
   (mouse-down [widget state position])
   )
 
-(defn draw-author [g window cursor author]
-  (g/text-align g [:left])
-  (g/text-color g [0 0 0])
-  (text/render cursor window (a/markup-author author)))
+(defn draw-author [window cursor author]
+  (let [g (:graphics cursor)]
+    (g/text-align g [:left])
+    (g/text-color g [0 0 0])
+    (text/render cursor window (a/markup-author author))))
 
-(defn draw-authors [g application window]
-  (g/text-align g [:left])
-  (g/text-color g [0 0 0])
-  (loop [cursor (text/->cursor 0 (text/line-height) 5)
-         authors (take-last 60 (sort-by #(string/lower-case (text/nil->blank (second %))) (:nicknames application)))]
-    (if (empty? authors)
-      cursor
-      (recur (draw-author g window cursor (first authors))
-             (rest authors))))
+(defn draw-authors [application window]
+  (let [g (:graphics application)]
+    (g/text-align g [:left])
+    (g/text-color g [0 0 0])
+    (loop [cursor (text/->cursor g 0 (g/line-height g) 5)
+           authors (take-last 60 (sort-by #(string/lower-case (text/nil->blank (second %))) (:nicknames application)))]
+      (if (empty? authors)
+        cursor
+        (recur (draw-author window cursor (first authors))
+               (rest authors)))))
   )
 
 (defn draw-author-window [application window]
@@ -42,4 +44,4 @@
         (g/stroke-weight g 2)
         (g/fill g [255 255 255])
         (g/rect g [0 0 (:w window) (:h window)])
-        (draw-authors g application window)))))
+        (draw-authors application window)))))

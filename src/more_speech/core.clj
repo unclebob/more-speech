@@ -4,6 +4,7 @@
             [more-speech.nostr.events :as nostr]
             [more-speech.ui.widget :refer [draw-widget]]
             [more-speech.ui.application :refer [make-application]]
+            [more-speech.ui.graphics :as g]
             ))
 
 (def events (atom []))
@@ -12,9 +13,10 @@
   (q/frame-rate 30)
   (q/color-mode :rgb)
   (let [bold (q/create-font "CourierNewPS-BoldMT" 14)
-        regular (q/create-font "CourierNewPSMT" 14)]
+        regular (q/create-font "CourierNewPSMT" 14)
+        fonts {:bold bold :regular regular}]
     (q/text-font bold)
-    {:application (make-application bold regular)}
+    {:application (make-application (g/->quil-graphics fonts))}
     ))
 
 (defn update-state [state]

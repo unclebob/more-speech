@@ -1,5 +1,5 @@
 (ns more-speech.ui.application
-  (:require [more-speech.ui.text :as text]
+  (:require [more-speech.ui.cursor :as text]
             [more-speech.ui.widget :refer [widget
                                            draw-widget
                                            draw-child-widgets]]
@@ -22,22 +22,19 @@
   (mouse-down [widget state position])
   )
 
-(defn make-application [bold regular]
-  (let [g (g/->quil-graphics)]
-    (map->application
-      {:graphics g
-       :articles []
-       :nicknames {}
-       :widgets {
-                 :article-window (map->article-window
-                                   {:x 50 :y 10 :w (text/pos-width 105) :h (- (g/screen-height g) 100)
-                                    :fonts {:bold bold :regular regular}
-                                    })
+(defn make-application [{:keys [fonts] :as graphics}]
+  (map->application
+    {:graphics graphics
+     :articles []
+     :nicknames {}
+     :widgets {
+               :article-window (map->article-window
+                                 {:x 50 :y 10 :w (g/pos-width graphics 105) :h (- (g/screen-height graphics) 100)})
 
-                 :author-window (map->author-window
-                                  {:x (+ 50 (text/pos-width 110)) :y 10
-                                   :w (text/pos-width 30) :h (- (g/screen-height g) 100)
-                                   :fonts {:bold bold :regular regular}})
-                 }
-       }
-      )))
+               :author-window (map->author-window
+                                {:x (+ 50 (g/pos-width graphics 110)) :y 10
+                                 :w (g/pos-width graphics 30) :h (- (g/screen-height graphics) 100)
+                                 :fonts fonts})
+               }
+     }
+    ))
