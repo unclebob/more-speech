@@ -14,7 +14,8 @@
     state)
   (update-widget [widget state])
   (draw-widget [widget state]
-    (draw-author-window (:application state) widget))
+    (draw-author-window (:application state) widget)
+    state)
   (mouse-up [widget state position])
   (mouse-down [widget state position])
   )
