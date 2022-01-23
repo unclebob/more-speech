@@ -17,7 +17,7 @@
         regular (q/create-font "CourierNewPSMT" 14)
         fonts {:bold bold :regular regular}
         graphics (g/->quil-graphics fonts)
-        application (map->application {:graphics graphics})
+        application (map->application {:path [:application] :graphics graphics })
         state {}]
     (q/text-font bold)
     (setup-widget application state)

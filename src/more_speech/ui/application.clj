@@ -12,10 +12,10 @@
 
 (declare setup-application)
 
-(defrecord application [graphics articles nicknames widgets]
+(defrecord application [path graphics articles nicknames widgets]
   widget
   (setup-widget [widget state]
-    (setup-application widget state))
+    (setup-application widget path state))
   (update-widget [widget state])
 
   (draw-widget [application state]
@@ -26,7 +26,7 @@
   (mouse-down [widget state position])
   )
 
-(defn- setup-application [application state]
+(defn- setup-application [application path state]
   (let [graphics (:graphics application)
         application
         (assoc application
@@ -41,7 +41,7 @@
                      }
 
           )
-        state (assoc state :application application)]
+        state (assoc-in state path application)]
 
     (setup-child-widgets application state)
   ))
