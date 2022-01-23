@@ -30,18 +30,16 @@
   (let [graphics (:graphics application)
         application
         (assoc application
-           :articles []
-           :nicknames {}
-           :widgets {:article-window (map->article-window
-                                       {:x 50 :y 10 :w (g/pos-width graphics 105) :h (- (g/screen-height graphics) 100)})
+          :articles []
+          :nicknames {}
+          :article-window (map->article-window
+                            {:x 50 :y 10 :w (g/pos-width graphics 105) :h (- (g/screen-height graphics) 100)})
 
-                     :author-window (map->author-window
-                                      {:x (+ 50 (g/pos-width graphics 110)) :y 10
-                                       :w (g/pos-width graphics 30) :h (- (g/screen-height graphics) 100)})
-                     }
-
+          :author-window (map->author-window
+                           {:x (+ 50 (g/pos-width graphics 110)) :y 10
+                            :w (g/pos-width graphics 30) :h (- (g/screen-height graphics) 100)})
           )
         state (assoc-in state path application)]
 
     (setup-child-widgets application state)
-  ))
+    ))
