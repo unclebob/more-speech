@@ -10,11 +10,11 @@
 (defrecord article-window [x y w h]
   widget
   (setup-widget [widget state]
-    state)
+    widget)
   (update-widget [widget state])
   (draw-widget [widget state]
     (draw-article-window (:application state) widget)
-    state)
+    widget)
   (mouse-up [widget state position])
   (mouse-down [widget state position])
   )

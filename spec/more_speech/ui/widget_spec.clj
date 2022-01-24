@@ -7,9 +7,8 @@
   widget
   (setup-widget [widget state]
     (let [path (:path widget)
-          widget (assoc widget :setup true)
-          state (assoc-in state path widget)]
-      state))
+          widget (assoc widget :setup true)]
+      widget))
   )
 
 (describe "Widgets"
@@ -25,25 +24,32 @@
       )
 
     (it "gets many children"
-          (let [parent {:child-1 (->child)
-                        :child-2 (->child)
-                        :not-child "not-child"}]
-            (should= #{:child-1 :child-2} (set (get-child-widgets parent))))))
+      (let [parent {:child-1 (->child)
+                    :child-2 (->child)
+                    :not-child "not-child"}]
+        (should= #{:child-1 :child-2} (set (get-child-widgets parent))))))
 
   (context "do-children"
     (it "does child widgets"
-      (let [
-            child-1 (assoc (->child) :path [:parent :child-1])
+      (let [child-1 (assoc (->child) :path [:parent :child-1])
             child-2 (assoc (->child) :path [:parent :child-2])
             parent {:path [:parent] :child-1 child-1 :child-2 child-2}
             state {:parent parent}
-            f (fn [widget state]
-                (let [widget (assoc widget :did-f true)
-                      state (assoc-in state (:path widget) widget)]
-                  state))
+            f (fn [widget state] (assoc widget :did-f true))
             state (do-children parent state f)]
         (should (get-in state [:parent :child-1 :did-f] false))
-        (should (get-in state [:parent :child-2 :did-f] false)))))
+        (should (get-in state [:parent :child-2 :did-f] false))))
+
+    (it "does the hierarchy."
+      (let [grandchild (->child)
+            child (assoc (->child) :child grandchild)
+            parent {:path [:parent] :child child}
+            state {:parent parent}
+            state (setup-child-widgets parent state)
+            f (fn [widget state] (assoc widget :did-f true))
+            state (do-children (:parent state) state f)]
+        (should (get-in state [:parent :child :did-f] false))
+        (should (get-in state [:parent :child :child :did-f] false)))))
 
   (context "can be setup"
     (it "constructs the path and calls setup for children."

@@ -11,11 +11,11 @@
 (defrecord author-window [x y w h fonts]
   widget
   (setup-widget [widget state]
-    state)
+    widget)
   (update-widget [widget state])
   (draw-widget [widget state]
     (draw-author-window (:application state) widget)
-    state)
+    widget)
   (mouse-up [widget state position])
   (mouse-down [widget state position])
   )

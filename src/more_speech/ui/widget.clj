@@ -22,10 +22,15 @@
 (defn do-children [parent state f]
   (loop [state state
          child-tags (get-child-widgets parent)]
-      (if (empty? child-tags)
-        state
-        (recur (f (get parent (first child-tags)) state)
-               (rest child-tags)))))
+    (if (empty? child-tags)
+      state
+      (let [child (get parent (first child-tags))
+            child-path (:path child)
+            child (f child state)
+            state (assoc-in state child-path child)
+            child (get-in state child-path)
+            state (do-children child state f)]
+        (recur state (rest child-tags))))))
 
 
 (defn draw-child-widgets [parent state]
@@ -44,7 +49,8 @@
             child (assoc child :path child-path)
             parent (assoc parent child-tag child)
             state (assoc-in state path parent)
-            state (setup-widget child state)
+            child (setup-widget child state)
+            state (assoc-in state child-path child)
             state (setup-child-widgets child state)]
         (recur state (rest child-tags))))
     )
