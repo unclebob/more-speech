@@ -3,14 +3,17 @@
     [more-speech.ui.cursor :as text]
     [more-speech.article :as a]
     [more-speech.ui.widget :refer [widget]]
+    [more-speech.ui.button :refer [map->button]]
     [more-speech.ui.graphics :as g]))
 
 (declare draw-article-window)
 
-(defrecord article-window [x y w h]
+(defrecord article-window [x y w h page-up page-down]
   widget
   (setup-widget [widget state]
-    widget)
+    (assoc widget :page-up (map->button {:x (+ x 20) :y (+ y h -20) :h 20 :w 20})
+                  :page-down (map->button {:x (+ x w -20) :y (+ y h -20) :h 20 :w 20})
+                  ))
   (update-widget [widget state])
   (draw-widget [widget state]
     (draw-article-window (:application state) widget)

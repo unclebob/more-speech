@@ -6,10 +6,12 @@
 (defrecord child []
   widget
   (setup-widget [widget state]
-    (let [path (:path widget)
-          widget (assoc widget :setup true)]
-      widget))
-  )
+    (assoc widget :setup true)))
+
+(defrecord child-with-child []
+  widget
+  (setup-widget [widget state]
+    (assoc widget :child (->child))))
 
 (describe "Widgets"
   (context "get child widgets"
@@ -84,5 +86,15 @@
             state {:parent parent}
             state (setup-child-widgets parent state)]
         (should (get-in state [:parent :child :setup]))
-        (should (get-in state [:parent :child :grand-child :setup])))))
+        (should (get-in state [:parent :child :grand-child :setup]))))
+
+    (it "handles a hierarchy setup by children."
+      (let [child (->child-with-child)
+            parent {:path [:parent] :child child}
+            state {:parent parent}
+            state (setup-child-widgets parent state)]
+        (should (get-in state [:parent :child :child :setup])))
+      )
+
+    )
   )

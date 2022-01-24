@@ -3,7 +3,8 @@
             [quil.middleware :as m]
             [more-speech.nostr.events :as nostr]
             [more-speech.ui.widget :refer [draw-widget
-                                           setup-widget]]
+                                           setup-widget
+                                           setup-child-widgets]]
             [more-speech.ui.application :refer [map->application]]
             [more-speech.ui.graphics :as g]
             ))
@@ -18,9 +19,10 @@
         fonts {:bold bold :regular regular}
         graphics (g/->quil-graphics fonts)
         application (map->application {:path [:application] :graphics graphics })
-        state {}]
+        application (setup-widget application {})
+        state {:application application}]
     (q/text-font bold)
-    (setup-widget application state)
+    (setup-child-widgets application state)
     ))
 
 (defn update-state [state]
