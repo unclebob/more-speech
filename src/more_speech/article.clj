@@ -51,7 +51,7 @@
    :regular
    (str " (" (:thread-count article) ")")
    :bold
-   :pos 40
+   :pos 30
    (:subject article)
    :regular
    :pos 80

@@ -7,7 +7,9 @@
   (setup-widget [widget state]
     widget)
   (draw-widget [widget state]
-    (q/ellipse x y w h)
+    (q/stroke-weight 2)
+    (q/ellipse-mode :corner)
+    (q/ellipse 0 0 (- w 2) (- h 2))
     widget)
 
   )
