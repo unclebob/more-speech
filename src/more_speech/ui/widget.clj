@@ -1,4 +1,5 @@
-(ns more-speech.ui.widget)
+(ns more-speech.ui.widget
+  (:require [more-speech.ui.graphics :as g]))
 
 (defprotocol widget
   (setup-widget [widget state])
@@ -33,8 +34,25 @@
             state (do-children child state f)]
         (recur state (rest child-tags))))))
 
-(defn draw-child-widgets [parent state]
-  (do-children parent state draw-widget))
+(defn draw-child-widgets [{:keys [path] :as parent} state]
+  (loop [state state
+           child-tags (get-child-widgets parent)]
+      (if (empty? child-tags)
+        state
+        (let [child-tag (first child-tags)
+              child-path (conj path child-tag)
+              child (get-in state child-path)
+              g (get-in state [:application :graphics])
+              _ (g/push-graphics g)
+              _ (g/translate g [(:x child) (:y child)])
+              _ (g/clip g [0 0 (inc (:w child)) (inc (:h child))])
+              child (draw-widget child state)
+              _ (g/no-clip g)
+              state (assoc-in state child-path child)
+              child (get-in state child-path)
+              state (draw-child-widgets child state)
+              _ (g/pop-graphics g)]
+          (recur state (rest child-tags))))))
 
 (defn setup-child-widgets [{:keys [path] :as parent} state]
   (loop [state state

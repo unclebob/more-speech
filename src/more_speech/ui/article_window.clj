@@ -11,8 +11,8 @@
 (defrecord article-window [x y w h page-up page-down]
   widget
   (setup-widget [widget state]
-    (assoc widget :page-up (map->button {:x (+ x 20) :y (+ y h -20) :h 20 :w 20})
-                  :page-down (map->button {:x (+ x w -20) :y (+ y h -20) :h 20 :w 20})
+    (assoc widget :page-up (map->button {:x 30 :y (+ h -30) :h 20 :w 20})
+                  :page-down (map->button {:x (+ w -30) :y (+ h -30) :h 20 :w 20})
                   ))
   (update-widget [widget state])
   (draw-widget [widget state]
@@ -40,12 +40,10 @@
 
 (defn draw-article-window [application window]
   (let [g (:graphics application)]
-    (g/with-translation
-      g [(:x window) (:y window)]
-      (fn [g]
-        (g/stroke g [0 0 0])
-        (g/stroke-weight g 2)
-        (g/fill g [255 255 255])
-        (g/rect g [0 0 (:w window) (:h window)])
-        (draw-articles application window))
-      )))
+    (g/stroke g [0 0 0])
+    (g/stroke-weight g 2)
+    (g/fill g [255 255 255])
+    (g/rect g [0 0 (:w window) (:h window)])
+    (draw-articles application window))
+
+  )
