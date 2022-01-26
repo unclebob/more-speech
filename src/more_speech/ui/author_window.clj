@@ -40,9 +40,10 @@
 
 (defn draw-author-window [application window]
   (let [g (:graphics application)]
-    (g/stroke g [0 0 0])
-    (g/stroke-weight g 2)
-    (g/fill g [255 255 255])
-    (g/rect g [0 0 (:w window) (:h window)])
-    (draw-authors application window)
-    ))
+    (g/with-translation
+      g [(:x window) (:y window)]
+      (fn [g] (g/stroke g [0 0 0])
+        (g/stroke-weight g 2)
+        (g/fill g [255 255 255])
+        (g/rect g [0 0 (:w window) (:h window)])
+        (draw-authors application window)))))

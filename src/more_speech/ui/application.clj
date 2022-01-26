@@ -27,9 +27,7 @@
   )
 
 (defn- setup-application [application path state]
-  (let [graphics (:graphics application)
-        bold (get-in graphics [:fonts :bold])]
-    (g/text-font graphics bold)
+  (let [graphics (:graphics application)]
     (assoc application
       :articles []
       :nicknames {}

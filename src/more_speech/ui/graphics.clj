@@ -14,11 +14,6 @@
   (rect [graphics rect])
   (line [graphics line])
   (with-translation [graphics translation f])
-  (translate [graphics translation])
-  (push-graphics [graphics])
-  (pop-graphics [graphics])
-  (clip [graphics rect])
-  (no-clip [graphics])
   (text-font [graphics font])
   (line-height [graphics] "height of line in pixels.")
   (pos-width [graphics pos] "width of character position in pixels.")
@@ -48,23 +43,13 @@
     (apply q/line line))
   (with-translation [graphics translation f]
     (q/with-translation translation (f graphics)))
-  (translate [graphics translation]
-    (apply q/translate translation))
-  (push-graphics [graphics]
-    (q/push-matrix))
-  (pop-graphics [graphics]
-    (q/pop-matrix))
-  (clip [graphics rect]
-    (apply q/clip rect))
-  (no-clip [graphics]
-    (q/no-clip))
   (text-font [graphics font]
     (q/text-font font))
   (line-height [graphics]
     (+ (q/text-ascent) (q/text-descent)))
   (pos-width [graphics pos]
       (let [s (apply str (repeat pos "X"))]
-        (int (q/text-width s))))
+        (q/text-width s)))
   (text-width [graphics s]
     (q/text-width s))
   (text [graphics text-spec]

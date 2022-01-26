@@ -38,7 +38,7 @@
                 :regular
                 " (15)"
                 :bold
-                :pos 30
+                :pos 40
                 "Subject"
                 :regular
                 :pos 80
