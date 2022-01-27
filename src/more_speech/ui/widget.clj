@@ -36,6 +36,9 @@
 (defn draw-child-widgets [parent state]
   (do-children parent state draw-widget))
 
+(defn update-child-widgets [parent state]
+  (do-children parent state update-widget))
+
 (defn setup-child-widgets [{:keys [path] :as parent} state]
   (loop [state state
          child-tags (get-child-widgets parent)]

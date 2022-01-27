@@ -4,7 +4,9 @@
             [more-speech.nostr.events :as nostr]
             [more-speech.ui.widget :refer [draw-widget
                                            setup-widget
-                                           setup-child-widgets]]
+                                           update-widget
+                                           setup-child-widgets
+                                           update-child-widgets]]
             [more-speech.ui.application :refer [map->application]]
             [more-speech.ui.graphics :as g]
             ))
@@ -14,7 +16,8 @@
 (defn setup []
   (q/frame-rate 30)
   (q/color-mode :rgb)
-  (let [bold (q/create-font "CourierNewPS-BoldMT" 14)
+  (let [
+        bold (q/create-font "CourierNewPS-BoldMT" 14)
         regular (q/create-font "CourierNewPSMT" 14)
         fonts {:bold bold :regular regular}
         graphics (g/->quil-graphics fonts)
@@ -25,18 +28,20 @@
     (setup-child-widgets application state)
     ))
 
-(defn update-state [state]
-  (if (empty? @events)
-    state
-    (let [batch (take 10 @events)]
-      (swap! events #(drop 10 %))
-      (loop [state state
-             batch batch]
-        (if (empty? batch)
-          state
-          (recur
-            (nostr/process-event state (first batch))
-            (rest batch)))))))
+(defn update-state [{:keys [application] :as state}]
+  (let [state (assoc state :application (update-widget application state))
+        state (update-child-widgets (:application state) state)]
+    (if (empty? @events)
+      state
+      (let [batch (take 10 @events)]
+        (swap! events #(drop 10 %))
+        (loop [state state
+               batch batch]
+          (if (empty? batch)
+            state
+            (recur
+              (nostr/process-event state (first batch))
+              (rest batch))))))))
 
 (defn draw-state [{:keys [application] :as state}]
   (q/background 240 240 240)

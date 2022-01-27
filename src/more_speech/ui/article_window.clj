@@ -14,7 +14,8 @@
     (assoc widget :page-up (map->button {:x (+ x 20) :y (+ y h -20) :h 20 :w 20})
                   :page-down (map->button {:x (+ x w -20) :y (+ y h -20) :h 20 :w 20})
                   ))
-  (update-widget [widget state])
+  (update-widget [widget state]
+    widget)
   (draw-widget [widget state]
     (draw-article-window (:application state) widget)
     widget)

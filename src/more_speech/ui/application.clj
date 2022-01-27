@@ -16,7 +16,8 @@
   widget
   (setup-widget [widget state]
     (setup-application widget path state))
-  (update-widget [widget state])
+  (update-widget [widget state]
+    widget)
 
   (draw-widget [application state]
     (draw-child-widgets application state)
