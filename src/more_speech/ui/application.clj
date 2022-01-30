@@ -18,13 +18,8 @@
     (setup-application widget path state))
   (update-widget [widget state]
     widget)
-
   (draw-widget [application state]
-    (draw-child-widgets application state)
-    )
-
-  (mouse-up [widget state position])
-  (mouse-down [widget state position])
+    (draw-child-widgets application state))
   )
 
 (defn- setup-application [application path state]

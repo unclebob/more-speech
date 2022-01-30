@@ -13,8 +13,7 @@
   (update-widget [widget state]
     (update-button widget state))
   (draw-widget [widget state]
-    (q/ellipse x y w h)
-    widget)
+    (q/ellipse x y w h))
   )
 
 (defn- get-button-state [in? which]

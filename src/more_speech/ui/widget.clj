@@ -23,6 +23,18 @@
   (loop [state state
          child-tags (get-child-widgets parent)]
     (if (empty? child-tags)
+      nil
+      (let [child-tag (first child-tags)
+            child-path (conj path child-tag)
+            child (get-in state child-path)
+            _ (f child state)
+            _ (do-children child state f)]
+        (recur state (rest child-tags))))))
+
+(defn update-children [{:keys [path] :as parent} state f]
+  (loop [state state
+         child-tags (get-child-widgets parent)]
+    (if (empty? child-tags)
       state
       (let [child-tag (first child-tags)
             child-path (conj path child-tag)
@@ -30,14 +42,14 @@
             child (f child state)
             state (assoc-in state child-path child)
             child (get-in state child-path)
-            state (do-children child state f)]
+            state (update-children child state f)]
         (recur state (rest child-tags))))))
 
 (defn draw-child-widgets [parent state]
   (do-children parent state draw-widget))
 
 (defn update-child-widgets [parent state]
-  (do-children parent state update-widget))
+  (update-children parent state update-widget))
 
 (defn setup-child-widgets [{:keys [path] :as parent} state]
   (loop [state state
