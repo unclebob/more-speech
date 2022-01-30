@@ -15,11 +15,9 @@
                   :page-down (map->button {:x (+ x w -20) :y (+ y h -20) :h 20 :w 20})
                   ))
   (update-widget [widget state]
-    widget)
+    [widget state])
   (draw-widget [widget state]
     (draw-article-window (:application state) widget))
-  (mouse-up [widget state position])
-  (mouse-down [widget state position])
   )
 
 (defn draw-article [window cursor article]

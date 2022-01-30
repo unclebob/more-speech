@@ -39,6 +39,7 @@
                  button)
 
         ]
-    (assoc button :button-state button-state)
+    [(assoc button :button-state button-state)
+     state]
     )
   )

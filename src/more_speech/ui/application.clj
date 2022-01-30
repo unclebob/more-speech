@@ -1,6 +1,5 @@
 (ns more-speech.ui.application
-  (:require [more-speech.ui.cursor :as text]
-            [more-speech.ui.widget :refer [widget
+  (:require [more-speech.ui.widget :refer [widget
                                            draw-widget
                                            draw-child-widgets
                                            setup-child-widgets]]
@@ -17,7 +16,7 @@
   (setup-widget [widget state]
     (setup-application widget path state))
   (update-widget [widget state]
-    widget)
+    [widget state])
   (draw-widget [application state]
     (draw-child-widgets application state))
   )

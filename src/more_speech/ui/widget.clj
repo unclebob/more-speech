@@ -1,11 +1,10 @@
 (ns more-speech.ui.widget)
 
 (defprotocol widget
-  (setup-widget [widget state])
-  (update-widget [widget state])
-  (draw-widget [widget state])
-  (mouse-up [widget state position])
-  (mouse-down [widget state position]))
+  (setup-widget [widget state] "returns the setup widget")
+  (update-widget [widget state] "returns [widget state] updated.")
+  (draw-widget [widget state] "returns nothing.  No state change.")
+)
 
 
 (defn get-child-widgets [parent]
@@ -39,7 +38,7 @@
       (let [child-tag (first child-tags)
             child-path (conj path child-tag)
             child (get-in state child-path)
-            child (f child state)
+            [child state] (f child state)
             state (assoc-in state child-path child)
             child (get-in state child-path)
             state (update-children child state f)]
