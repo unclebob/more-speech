@@ -60,6 +60,6 @@
   (get-mouse [graphics]
     (let [x (q/mouse-x)
           y (q/mouse-y)
-          which (q/mouse-button)]
+          which (if (q/mouse-pressed?) (q/mouse-button) nil)]
       [x y which]))
   )

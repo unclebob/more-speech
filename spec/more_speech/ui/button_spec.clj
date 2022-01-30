@@ -8,8 +8,9 @@
   g/graphics
   (get-mouse [graphics] [x y which]))
 
-(defn- left-up [button]
-  (assoc button :left-came-up true))
+(defn- left-up [button state]
+  [(assoc button :left-came-up true)
+  state])
 
 (describe "mouse position within button"
   (with b (map->button {:x 10 :y 10 :w 10 :h 10

@@ -6,7 +6,7 @@
 
 (declare update-button)
 
-(defrecord button [x y h w button-state]
+(defrecord button [x y h w button-state left-up]
   w/widget
   (setup-widget [widget state]
     widget)
@@ -34,11 +34,9 @@
         previous-state (:button-state button)
         in? (util/inside-rect [x y w h] [mx my])
         button-state (get-button-state in? which)
-        button (if (and (nil? which) (= :left previous-state))
-                 ((:left-up button) button)
-                 button)
-
-        ]
+        [button state] (if (and (nil? which) (= :left previous-state))
+                         ((:left-up button) button state)
+                         [button state])]
     [(assoc button :button-state button-state)
      state]
     )

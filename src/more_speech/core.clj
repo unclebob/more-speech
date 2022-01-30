@@ -34,8 +34,10 @@
         state (update-child-widgets (:application state) state)]
     (if (empty? @events)
       state
-      (let [batch (take 10 @events)]
-        (swap! events #(drop 10 %))
+      (let [n-events (count @events)
+            batch-size (min n-events 100)
+            batch (take batch-size @events)]
+        (swap! events #(drop batch-size %))
         (loop [state state
                batch batch]
           (if (empty? batch)
