@@ -19,6 +19,9 @@
   (pos-width [graphics pos] "width of character position in pixels.")
   (text-width [graphics s] "Width in pixels of a string.")
   (text [graphics text-spec] "Draw text [s x y] or the like.")
+  (get-mouse [graphics]
+    "Returns [x y which].  x & y are absolute locations.
+    which is :left | :right | :center | nil")
   )
 
 (defrecord quil-graphics [fonts]
@@ -54,4 +57,9 @@
     (q/text-width s))
   (text [graphics text-spec]
     (apply q/text text-spec))
+  (get-mouse [graphics]
+    (let [x (q/mouse-x)
+          y (q/mouse-y)
+          which (q/mouse-button)]
+      [x y which]))
   )
