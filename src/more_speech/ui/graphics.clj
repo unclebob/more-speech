@@ -11,8 +11,10 @@
   (stroke [graphics color])
   (stroke-weight [graphics weight])
   (fill [graphics color])
+  (no-fill [graphics])
   (rect [graphics rect])
   (line [graphics line])
+  (polygon [graphics points] "draws a polygon")
   (with-translation [graphics translation f])
   (text-font [graphics font])
   (line-height [graphics] "height of line in pixels.")
@@ -23,6 +25,8 @@
     "Returns [x y which].  x & y are absolute locations.
     which is :left | :right | :center | nil")
   )
+
+(declare draw-polygon)
 
 (defrecord quil-graphics [fonts]
   graphics
@@ -40,10 +44,14 @@
     (q/stroke-weight weight))
   (fill [graphics color]
     (apply q/fill color))
+  (no-fill [graphics]
+    (q/no-fill))
   (rect [graphics rect]
     (apply q/rect rect))
   (line [graphics line]
     (apply q/line line))
+  (polygon [graphics points]
+    (draw-polygon points))
   (with-translation [graphics translation f]
     (q/with-translation translation (f graphics)))
   (text-font [graphics font]
@@ -63,3 +71,11 @@
           which (if (q/mouse-pressed?) (q/mouse-button) nil)]
       [x y which]))
   )
+
+(defn- draw-polygon [points]
+  (q/begin-shape)
+  (loop [points points]
+    (if (empty? points)
+      (q/end-shape)
+      (do (apply q/vertex (first points))
+          (recur (rest points))))))

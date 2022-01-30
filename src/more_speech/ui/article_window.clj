@@ -3,7 +3,9 @@
     [more-speech.ui.cursor :as text]
     [more-speech.article :as a]
     [more-speech.ui.widget :refer [widget]]
-    [more-speech.ui.button :refer [map->button]]
+    [more-speech.ui.button :refer [map->button
+                                   up-arrow
+                                   down-arrow]]
     [more-speech.ui.graphics :as g]))
 
 (declare draw-article-window
@@ -14,10 +16,12 @@
   widget
   (setup-widget [widget state]
     (assoc widget :display-position 0
-                  :page-up (map->button {:x (+ x 20) :y (+ y h -20) :h 20 :w 20
-                                         :left-up scroll-up})
-                  :page-down (map->button {:x (+ x w -20) :y (+ y h -20) :h 20 :w 20
-                                           :left-up scroll-down})
+                  :page-up (map->button {:x (+ x 20) :y (+ y h -30) :h 20 :w 20
+                                         :left-up scroll-up
+                                         :draw up-arrow})
+                  :page-down (map->button {:x (+ x w -20) :y (+ y h -30) :h 20 :w 20
+                                           :left-up scroll-down
+                                           :draw down-arrow})
                   ))
   (update-widget [widget state]
     [widget state])
@@ -29,7 +33,9 @@
   (let [button-path (:path button)
         parent-path (drop-last button-path)
         article-window (get-in state parent-path)
-        article-window (update article-window :display-position + 20)
+        display-position (:display-position article-window)
+        display-position (+ display-position 19)
+        article-window (assoc article-window :display-position display-position)
         state (assoc-in state parent-path article-window)]
     [button state]))
 
@@ -37,7 +43,10 @@
   (let [button-path (:path button)
         parent-path (drop-last button-path)
         article-window (get-in state parent-path)
-        article-window (update article-window :display-position - 20)
+        display-position (:display-position article-window)
+        display-position (max 0 (- display-position 19))
+        article-window (assoc article-window :display-position display-position)
+
         state (assoc-in state parent-path article-window)]
     [button state]))
 
@@ -53,7 +62,7 @@
         articles (:articles application)
         display-position (:display-position window)
         articles (drop display-position articles)
-        articles (take 20 articles)]
+        articles (take 19 articles)]
     (loop [cursor (text/->cursor g 0 (g/line-height g) 5)
            articles articles]
       (if (empty? articles)
