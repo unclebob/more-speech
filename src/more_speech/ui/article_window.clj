@@ -71,9 +71,10 @@
         cursor
         (let [article-id (first articles)
               text-event (get article-map article-id)
-              {:keys [pubkey created-at content]} text-event
+              {:keys [pubkey created-at content references]} text-event
               name (get nicknames pubkey (num->hex-string pubkey))
-              article (a/make-article name created-at content)]
+              ref-count (count references)
+              article (a/make-article name created-at content ref-count)]
           (recur (draw-article window cursor article)
                  (rest articles)))))))
 

@@ -50,13 +50,13 @@
                (markup-article article)))))
 
 (describe "Formatting an author nickname."
-  (let [author-tuple ["the pubkey" "nickname"]]
+  (let [author-tuple [0 "nickname"]]
     (it "conforms to spec."
       (should (s/valid? ::a/author-nickname-tuple author-tuple)))
 
     (it "is properly formatted."
       (should= [:bold
-                "the pubk..."
+                "00000000..."
                 :regular
                 " - "
                 "nickname"

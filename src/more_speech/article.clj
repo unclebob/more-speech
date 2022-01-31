@@ -1,5 +1,6 @@
 (ns more-speech.article
-  (:require [clojure.spec.alpha :as s])
+  (:require [clojure.spec.alpha :as s]
+            [more-speech.nostr.util :refer [num->hex-string]])
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
@@ -15,13 +16,13 @@
 (s/def ::author-pubkey string?)
 (s/def ::author-nickname-tuple (s/tuple ::author-pubkey ::author-nickname))
 
-(defn make-article [name time body]
+(defn make-article [name time body thread-count]
   {:group ""
    :author name
    :subject "?"
    :time time
    :body body
-   :thread-count 1}
+   :thread-count thread-count}
   )
 
 (defn format-time [time]
@@ -63,7 +64,7 @@
 
 (defn markup-author [[pubkey name]]
   [:bold
-   (abbreviate-key pubkey)
+   (abbreviate-key (num->hex-string pubkey))
    :regular
    " - "
    name

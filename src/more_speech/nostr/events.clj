@@ -11,29 +11,56 @@
         [name subscription-id inner-event :as decoded-msg] event
         {:strs [id pubkey created_at kind tags content sig]} inner-event]
     (condp = kind
-      0 (update-in
-          state [:application :nicknames]
-          assoc pubkey (get (json/read-str content) "name" "tilt"))
+      0 (let [pubkey (hex-string->num pubkey)
+              name (get (json/read-str content) "name" "tilt")]
+          (update-in
+            state [:application :nicknames] assoc pubkey name))
       3 (do (printf "%s: %s %s %s\n" kind (article/format-time created_at) (name-of pubkey) content)
             state)
       1 (process-text-event state inner-event)
       4 (do (printf "%s: %s %s %s\n" kind (article/format-time created_at) (name-of pubkey) content)
             state)
       (do (prn "unknown event: " event)
-          state)
-      )))
+          state))))
 
-(defn process-text-event [state event]
+(defn process-tag [[type hex arg]]
+  [(keyword type)
+   (hex-string->num hex)
+   arg])
+
+(defn process-tags [tags]
+  (map process-tag tags))
+
+(defn process-references [state {:keys [id tags] :as event}]
+  (let [e-tags (filter #(= :e (first %)) tags)
+        refs (map second e-tags)]
+    (loop [refs refs
+           state state]
+      (if (empty? refs)
+        state
+        (let [referent-path [:application :text-event-map (first refs)]]
+          (if (nil? (get-in state referent-path))
+            (recur (rest refs) state)
+            (recur (rest refs)
+                   (update-in
+                     state
+                     (conj referent-path :references)
+                     conj id))))))))
+
+(defn translate-text-event [event]
   (let [id (hex-string->num (get event "id"))
         pubkey (hex-string->num (get event "pubkey"))
-        sig (hex-string->num (get event "sig"))
-        new-event {:id id
-                   :pubkey pubkey
-                   :created-at (get event "created_at")
-                   :content (get event "content")
-                   :sig sig
-                   :tags (get event "tags")}
-        state (assoc-in state [:application :text-event-map id] new-event)
+        sig (hex-string->num (get event "sig"))]
+    {:id id
+     :pubkey pubkey
+     :created-at (get event "created_at")
+     :content (get event "content")
+     :sig sig
+     :tags (process-tags (get event "tags"))}))
+
+(defn process-text-event [state event]
+  (let [event (translate-text-event event)
+        id (:id event)
+        state (assoc-in state [:application :text-event-map id] event)
         state (update-in state [:application :chronological-text-events] conj id)]
-    state
-    ))
+    (process-references state event)))

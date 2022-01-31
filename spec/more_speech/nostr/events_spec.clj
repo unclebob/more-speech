@@ -9,14 +9,15 @@
                "pubkey" "f00d"
                "created_at" @now
                "kind" 1
-               "tags" []
+               "tags" [["p" "0001" "someurl"]
+                       ["e" "0002" "anotherurl"]]
                "content" "the content"
                "sig" "dddddd"})
   (with state {:application
                {:text-event-map {}
                 :chronological-text-events []}
                })
-  (it "should create map of text events by id"
+  (it "creates the map of text events by id"
     (let [state (process-text-event @state @event)
           event-map (get-in state [:application :text-event-map])
           text-events (get-in state [:application :chronological-text-events])
@@ -30,7 +31,18 @@
       (should= @now (:created-at event))
       (should= "the content" (:content event))
       (should= 0xdddddd (:sig event))
-      (should= [] (:tags event))
+      (should= [[:p 1 "someurl"]
+                [:e 2 "anotherurl"]] (:tags event))
       ))
+
+  (it "adds references to tagged articles."
+    (let [state (assoc-in @state
+                          [:application :text-event-map 2]
+                          {:id 2})
+          state (process-references state (translate-text-event @event))
+          text-event-map (get-in state [:application :text-event-map])
+          article (get text-event-map 2)]
+      (should= [0xdeadbeef] (:references article)))
+    )
 
   )
