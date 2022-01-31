@@ -12,6 +12,7 @@
   [(assoc button :left-came-up true)
   state])
 
+(declare b)
 (describe "mouse position within button"
   (with b (map->button {:x 10 :y 10 :w 10 :h 10
                         :button-state :whatever

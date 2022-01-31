@@ -6,7 +6,8 @@
     [more-speech.ui.button :refer [map->button
                                    up-arrow
                                    down-arrow]]
-    [more-speech.ui.graphics :as g]))
+    [more-speech.ui.graphics :as g]
+    [more-speech.nostr.util :refer [num->hex-string]]))
 
 (declare draw-article-window
          scroll-up
@@ -46,7 +47,6 @@
         display-position (:display-position article-window)
         display-position (max 0 (- display-position 19))
         article-window (assoc article-window :display-position display-position)
-
         state (assoc-in state parent-path article-window)]
     [button state]))
 
@@ -59,7 +59,9 @@
 
 (defn draw-articles [application window]
   (let [g (:graphics application)
-        articles (:articles application)
+        nicknames (:nicknames application)
+        article-map (:text-event-map application)
+        articles (:chronological-text-events application)
         display-position (:display-position window)
         articles (drop display-position articles)
         articles (take 19 articles)]
@@ -67,8 +69,13 @@
            articles articles]
       (if (empty? articles)
         cursor
-        (recur (draw-article window cursor (first articles))
-               (rest articles))))))
+        (let [article-id (first articles)
+              text-event (get article-map article-id)
+              {:keys [pubkey created-at content]} text-event
+              name (get nicknames pubkey (num->hex-string pubkey))
+              article (a/make-article name created-at content)]
+          (recur (draw-article window cursor article)
+                 (rest articles)))))))
 
 (defn draw-article-window [application window]
   (let [g (:graphics application)]

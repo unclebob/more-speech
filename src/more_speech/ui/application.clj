@@ -11,7 +11,7 @@
 
 (declare setup-application)
 
-(defrecord application [path graphics articles nicknames]
+(defrecord application [path graphics nicknames]
   widget
   (setup-widget [widget state]
     (setup-application widget path state))
@@ -26,8 +26,9 @@
         bold (get-in graphics [:fonts :bold])]
     (g/text-font graphics bold)
     (assoc application
-      :articles []
       :nicknames {}
+      :chronological-text-events []
+      :text-event-map {}
       :article-window (map->article-window
                         {:x 50 :y 10 :w (g/pos-width graphics 105) :h (- (g/screen-height graphics) 100)})
 
