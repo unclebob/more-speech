@@ -12,6 +12,8 @@
   (setup-widget [widget state]
     (assoc widget :child (->child))))
 
+(defn- f [widget state] (assoc-in state (conj (:path widget) :did-f) true))
+
 (describe "Widgets"
   (context "get child widgets"
     (it "gets one child"
@@ -36,7 +38,6 @@
             child-2 (assoc (->child) :path [:parent :child-2])
             parent {:path [:parent] :child-1 child-1 :child-2 child-2}
             state {:parent parent}
-            f (fn [widget state] [(assoc widget :did-f true) state])
             state (update-children parent state f)]
         (should (get-in state [:parent :child-1 :did-f] false))
         (should (get-in state [:parent :child-2 :did-f] false))))
@@ -47,7 +48,6 @@
             parent {:path [:parent] :child child}
             state {:parent parent}
             state (setup-child-widgets parent state)
-            f (fn [widget state] [(assoc widget :did-f true) state])
             state (update-children (:parent state) state f)]
         (should (get-in state [:parent :child :did-f] false))
         (should (get-in state [:parent :child :child :did-f] false)))))

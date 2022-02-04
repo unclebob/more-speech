@@ -29,8 +29,7 @@
     ))
 
 (defn update-state [{:keys [application] :as state}]
-  (let [[application state] (update-widget application state)
-        state (assoc state :application application)
+  (let [state (update-widget application state)
         state (update-child-widgets (:application state) state)]
     (if (empty? @events)
       state

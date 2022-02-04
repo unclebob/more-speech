@@ -25,7 +25,7 @@
                                            :draw down-arrow})
                   ))
   (update-widget [widget state]
-    [widget state])
+    state)
   (draw-widget [widget state]
     (draw-article-window (:application state) widget))
   )
@@ -38,7 +38,7 @@
         display-position (+ display-position 19)
         article-window (assoc article-window :display-position display-position)
         state (assoc-in state parent-path article-window)]
-    [button state]))
+    state))
 
 (defn- scroll-down [button state]
   (let [button-path (:path button)
@@ -48,7 +48,7 @@
         display-position (max 0 (- display-position 19))
         article-window (assoc article-window :display-position display-position)
         state (assoc-in state parent-path article-window)]
-    [button state]))
+    state))
 
 (defn draw-article [window cursor article]
   (let [g (:graphics cursor)]

@@ -2,7 +2,7 @@
 
 (defprotocol widget
   (setup-widget [widget state] "returns the setup widget")
-  (update-widget [widget state] "returns [widget state] updated.")
+  (update-widget [widget state] "returns state updated.")
   (draw-widget [widget state] "returns nothing.  No state change.")
 )
 
@@ -38,8 +38,7 @@
       (let [child-tag (first child-tags)
             child-path (conj path child-tag)
             child (get-in state child-path)
-            [child state] (f child state)
-            state (assoc-in state child-path child)
+            state (f child state)
             child (get-in state child-path)
             state (update-children child state f)]
         (recur state (rest child-tags))))))

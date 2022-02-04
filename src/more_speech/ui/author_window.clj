@@ -13,7 +13,7 @@
   (setup-widget [widget state]
     widget)
   (update-widget [widget state]
-    [widget state])
+    state)
   (draw-widget [widget state]
     (draw-author-window (:application state) widget))
   )
