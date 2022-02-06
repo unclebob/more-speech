@@ -24,6 +24,8 @@
   (get-mouse [graphics]
     "Returns [x y which].  x & y are absolute locations.
     which is :left | :right | :center | nil")
+  (get-time [graphics]
+    "returns current time in milliseconds.")
   )
 
 (declare draw-polygon)
@@ -70,6 +72,8 @@
           y (q/mouse-y)
           which (if (q/mouse-pressed?) (q/mouse-button) nil)]
       [x y which]))
+  (get-time [graphics]
+    (System/currentTimeMillis))
   )
 
 (defn- draw-polygon [points]

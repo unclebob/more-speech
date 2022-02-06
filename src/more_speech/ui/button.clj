@@ -17,27 +17,45 @@
       (draw g widget)))
   )
 
-(defn- get-button-state [in? which]
-  (cond
-    (and in? (nil? which))
+(defn- get-button-state [which]
+  (if (nil? which)
     :in
-    (and in? (= :left which))
-    :left
-    (and in? (= :right which))
-    :right
-    :else
-    :out))
+    which))
+
+(defn- check-call-left-up [state button which]
+  (let [previous-state (:button-state button)]
+    (if (and (nil? which) (= :left previous-state))
+      ((:left-up button) button state)
+      state)))
+
+(defn- check-left-down [state button which]
+  (let [previous-state (:button-state button)
+        g (get-in state [:application :graphics])]
+    (if (and (= :in previous-state) (= :left which))
+      (assoc-in state (conj (:path button) :left-time) (g/get-time g))
+      state)))
+
+(defn check-erase-left-time [state button which]
+  (if (nil? which)
+    (assoc-in state (conj (:path button) :left-time) nil)
+    state))
 
 (defn update-button [button state]
   (let [g (get-in state [:application :graphics])
         [mx my which] (g/get-mouse g)
+        button (get-in state (:path button))
         {:keys [x y w h]} button
-        previous-state (:button-state button)
         in? (util/inside-rect [x y w h] [mx my])
-        button-state (get-button-state in? which)
-        state (if (and (nil? which) (= :left previous-state))
-                ((:left-up button) button state)
-                state)]
+        button-state (if in?
+                       (get-button-state which)
+                       :out)
+        state (if in?
+                (-> state
+                    (check-left-down button which)
+                    (check-call-left-up button which))
+                state)
+        state (check-erase-left-time state button which)
+        ]
     (assoc-in state (conj (:path button) :button-state) button-state))
   )
 

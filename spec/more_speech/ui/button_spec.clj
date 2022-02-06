@@ -4,48 +4,77 @@
             [more-speech.ui.widget :as w]
             [more-speech.ui.graphics :as g]))
 
-(defrecord mouse-pos [x y which]
+(defrecord mock-graphic [x y which time]
   g/graphics
-  (get-mouse [graphics] [x y which]))
+  (get-mouse [graphics] [x y which])
+  (get-time [graphics] time))
 
 (defn- left-up [button state]
   (assoc-in state (conj (:path button) :left-came-up) true))
 
-(declare b)
-(describe "mouse position within button"
-  (with b (map->button {:x 10 :y 10 :w 10 :h 10
-                        :button-state :whatever
-                        :left-up left-up
-                        :path [:application :button]}))
+(def NOW 1234)                                              ; mock time of day
+(def mouse-out (map->mock-graphic {:x 0 :y 0}))
+(def mouse-in (map->mock-graphic {:x 10 :y 10}))
+(def mouse-in-left-down (map->mock-graphic {:x 10 :y 10
+                                            :which :left
+                                            :time NOW}))
+(def mouse-in-right-down (map->mock-graphic {:x 10 :y 10 :which :right}))
+
+(def b (map->button {:x 10 :y 10 :w 10 :h 10
+                     :button-state :whatever
+                     :left-up left-up
+                     :path [:application :button]}))
+
+(defn- make-state [graphics]
+  {:application {:graphics graphics
+                 :button b}})
+
+(describe "mouse position and button state"
   (it "is :out if mouse is not in the rectangle."
-    (let [mock-g (->mouse-pos 0 0 nil)
-          state (w/update-widget @b {:application {:graphics mock-g}})
+    (let [state (make-state mouse-out)
+          state (w/update-widget b state)
           b (get-in state [:application :button])]
       (should= :out (:button-state b))))
 
   (it "is :in if mouse is in rectangle."
-    (let [mock-g (->mouse-pos 10 10 nil)
-          state (w/update-widget @b {:application {:graphics mock-g}})
+    (let [state (make-state mouse-in)
+          state (w/update-widget b state)
           b (get-in state [:application :button])]
       (should= :in (:button-state b))))
 
   (it "is :left if mouse is in rectangle and left is down."
-      (let [mock-g (->mouse-pos 10 10 :left)
-            state (w/update-widget @b {:application {:graphics mock-g}})
-            b (get-in state [:application :button])]
-        (should= :left (:button-state b))))
+    (let [state (make-state mouse-in-left-down)
+          state (w/update-widget b state)
+          b (get-in state [:application :button])]
+      (should= :left (:button-state b))))
 
   (it "is :right if mouse is in rectangle and right is down."
-      (let [mock-g (->mouse-pos 10 10 :right)
-            state (w/update-widget @b {:application {:graphics mock-g}})
-            b (get-in state [:application :button])]
-        (should= :right (:button-state b))))
+    (let [state (make-state mouse-in-right-down)
+          state (w/update-widget b state)
+          b (get-in state [:application :button])]
+      (should= :right (:button-state b))))
 
   (it "calls :left-up if left button comes up while inside."
-        (let [mock-g (->mouse-pos 10 10 nil)
-              b (assoc @b :button-state :left)
-              state (w/update-widget b {:application {:graphics mock-g
-                                                      :button b}})
-              b (get-in state [:application :button])]
-          (should (:left-came-up b))))
+    (let [state (make-state mouse-in)
+          state (assoc-in state [:application :button :button-state] :left)
+          state (w/update-widget b state)
+          b (get-in state [:application :button])]
+      (should (:left-came-up b))))
+
+  (it "records when the left button goes down."
+    (let [state (make-state mouse-in-left-down)
+          state (assoc-in state [:application :button :button-state] :in)
+          state (w/update-widget b state)
+          b (get-in state [:application :button])]
+      (should= NOW (:left-time b)))
+    )
+
+  (it "erases left button down time when left button comes up"
+    (let [state (make-state mouse-in)
+          state (assoc-in state [:application :button :button-state] :left)
+          state (assoc-in state [:application :button :left-time] NOW)
+          state (w/update-widget b state)
+          b (get-in state [:application :button])]
+      (should= nil (:left-time b))))
+
   )
