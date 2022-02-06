@@ -18,10 +18,12 @@
   (setup-widget [widget state]
     (assoc widget :display-position 0
                   :page-up (map->button {:x (+ x 20) :y (+ y h -30) :h 20 :w 20
-                                         :left-up scroll-up
+                                         :left-down scroll-up
+                                         :left-held scroll-up
                                          :draw up-arrow})
                   :page-down (map->button {:x (+ x w -20) :y (+ y h -30) :h 20 :w 20
-                                           :left-up scroll-down
+                                           :left-down scroll-down
+                                           :left-held scroll-down
                                            :draw down-arrow})
                   ))
   (update-widget [widget state]
@@ -34,8 +36,9 @@
   (let [button-path (:path button)
         parent-path (drop-last button-path)
         article-window (get-in state parent-path)
+        articles (get-in state [:application :chronological-text-events])
         display-position (:display-position article-window)
-        display-position (+ display-position 19)
+        display-position (min (count articles) (inc display-position))
         article-window (assoc article-window :display-position display-position)
         state (assoc-in state parent-path article-window)]
     state))
@@ -45,7 +48,7 @@
         parent-path (drop-last button-path)
         article-window (get-in state parent-path)
         display-position (:display-position article-window)
-        display-position (max 0 (- display-position 19))
+        display-position (max 0 (dec display-position))
         article-window (assoc article-window :display-position display-position)
         state (assoc-in state parent-path article-window)]
     state))

@@ -23,12 +23,33 @@
     which))
 
 (defn- check-call-left-up [state button which]
-  (let [previous-state (:button-state button)]
-    (if (and (nil? which) (= :left previous-state))
-      ((:left-up button) button state)
+  (let [previous-state (:button-state button)
+        left-up (:left-up button)]
+    (if (and left-up
+             (nil? which)
+             (= :left previous-state))
+      (left-up button state)
       state)))
 
-(defn- check-left-down [state button which]
+(defn- check-call-left-down [state button which]
+  (let [button (get-in state (:path button))
+        previous-state (:button-state button)
+        left-down (:left-down button)]
+    (if (and left-down
+             (= :in previous-state)
+             (= :left which))
+      (left-down button state)
+      state)))
+
+(defn- check-call-left-held [state button which]
+  (let [button (get-in state (:path button))
+        left-held (:left-held button)]
+    (if (and left-held
+             (= :left which))
+      (left-held button state)
+      state)))
+
+(defn- check-set-left-time [state button which]
   (let [previous-state (:button-state button)
         g (get-in state [:application :graphics])]
     (if (and (= :in previous-state) (= :left which))
@@ -51,7 +72,9 @@
                        :out)
         state (if in?
                 (-> state
-                    (check-left-down button which)
+                    (check-set-left-time button which)
+                    (check-call-left-down button which)
+                    (check-call-left-held button which)
                     (check-call-left-up button which))
                 state)
         state (check-erase-left-time state button which)

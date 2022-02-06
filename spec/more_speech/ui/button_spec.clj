@@ -12,6 +12,12 @@
 (defn- left-up [button state]
   (assoc-in state (conj (:path button) :left-came-up) true))
 
+(defn- left-down [button state]
+  (assoc-in state (conj (:path button) :left-went-down) true))
+
+(defn- left-held [button state]
+  (assoc-in state (conj (:path button) :left-held-down) true))
+
 (def NOW 1234)                                              ; mock time of day
 (def mouse-out (map->mock-graphic {:x 0 :y 0}))
 (def mouse-in (map->mock-graphic {:x 10 :y 10}))
@@ -23,6 +29,8 @@
 (def b (map->button {:x 10 :y 10 :w 10 :h 10
                      :button-state :whatever
                      :left-up left-up
+                     :left-down left-down
+                     :left-held left-held
                      :path [:application :button]}))
 
 (defn- make-state [graphics]
@@ -76,5 +84,26 @@
           state (w/update-widget b state)
           b (get-in state [:application :button])]
       (should= nil (:left-time b))))
+
+  (it "calls :left-down when left button goes down while in"
+    (let [state (make-state mouse-in-left-down)
+          state (assoc-in state [:application :button :button-state] :in)
+          state (w/update-widget b state)
+          b (get-in state [:application :button])]
+      (should (:left-went-down b))))
+
+  (it "does not call :left-down if left already down."
+    (let [state (make-state mouse-in-left-down)
+          state (assoc-in state [:application :button :button-state] :left)
+          state (w/update-widget b state)
+          b (get-in state [:application :button])]
+      (should-not (:left-went-down b))))
+
+  (it "calls :left-held if left already down."
+      (let [state (make-state mouse-in-left-down)
+            state (assoc-in state [:application :button :button-state] :left)
+            state (w/update-widget b state)
+            b (get-in state [:application :button])]
+        (should (:left-held-down b))))
 
   )
