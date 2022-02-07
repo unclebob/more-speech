@@ -1,6 +1,6 @@
-(ns more-speech.article-spec
+(ns more-speech.content.article-spec
   (:require [speclj.core :refer :all]
-            [more-speech.article :as a :refer :all]
+            [more-speech.content.article :as a :refer :all]
             [clojure.spec.alpha :as s]))
 
 (describe "Formatting Utilities"

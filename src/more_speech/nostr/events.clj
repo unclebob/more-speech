@@ -1,5 +1,5 @@
 (ns more-speech.nostr.events
-  (:require [more-speech.article :as article]
+  (:require [more-speech.content.article :as article]
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]))
 

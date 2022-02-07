@@ -3,7 +3,7 @@
     [clojure.string :as string]
     [more-speech.ui.widget :refer [widget]]
     [more-speech.ui.cursor :as text]
-    [more-speech.article :as a]
+    [more-speech.content.article :as a]
     [more-speech.ui.graphics :as g]))
 
 (declare draw-author-window)

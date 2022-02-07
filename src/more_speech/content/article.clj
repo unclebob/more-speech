@@ -1,4 +1,4 @@
-(ns more-speech.article
+(ns more-speech.content.article
   (:require [clojure.spec.alpha :as s]
             [more-speech.nostr.util :refer [num->hex-string]])
   (:import (java.util Date)

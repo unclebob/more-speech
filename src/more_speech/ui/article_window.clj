@@ -1,7 +1,7 @@
 (ns more-speech.ui.article-window
   (:require
     [more-speech.ui.cursor :as text]
-    [more-speech.article :as a]
+    [more-speech.content.article :as a]
     [more-speech.ui.widget :refer [widget]]
     [more-speech.ui.button :refer [map->button
                                    up-arrow
