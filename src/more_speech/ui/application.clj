@@ -1,5 +1,6 @@
 (ns more-speech.ui.application
-  (:require [more-speech.ui.widget :refer [widget
+  (:require [clojure.spec.alpha :as s]
+            [more-speech.ui.widget :refer [widget
                                            draw-widget
                                            draw-child-widgets
                                            setup-child-widgets]]
@@ -7,7 +8,16 @@
                                                    draw-article-window]]
             [more-speech.ui.author-window :refer [map->author-window
                                                   draw-author-window]]
-            [more-speech.ui.graphics :as g]))
+            [more-speech.ui.graphics :as g]
+            [more-speech.nostr.events :as events]))
+
+(s/def ::nicknames (s/map-of number? string?))
+(s/def ::chronological-text-events (s/coll-of number?))
+(s/def ::text-event-map (s/map-of number? ::events/event))
+(s/def ::application (s/keys :req-un [::nicknames
+                                      ::chronological-text-events
+                                      ::text-event-map
+                                      ]))
 
 (declare setup-application)
 

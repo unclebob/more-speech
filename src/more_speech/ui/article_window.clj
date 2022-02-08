@@ -1,6 +1,6 @@
 (ns more-speech.ui.article-window
   (:require
-    [more-speech.ui.cursor :as text]
+    [more-speech.ui.cursor :as cursor]
     [more-speech.content.article :as a]
     [more-speech.ui.widget :refer [widget]]
     [more-speech.ui.button :refer [map->button
@@ -16,59 +16,66 @@
 (defrecord article-window [x y w h page-up page-down display-position]
   widget
   (setup-widget [widget state]
-    (assoc widget :display-position 0
-                  :page-up (map->button {:x (+ x 20) :y (+ y h -30) :h 20 :w 20
-                                         :left-down scroll-up
-                                         :left-held scroll-up
-                                         :draw up-arrow})
-                  :page-down (map->button {:x (+ x w -20) :y (+ y h -30) :h 20 :w 20
-                                           :left-down scroll-down
-                                           :left-held scroll-down
-                                           :draw down-arrow})
-                  ))
+    (let [scroll-up (partial scroll-up (:path widget))
+          scroll-down (partial scroll-down (:path widget))]
+      (assoc widget :display-position 0
+                    :page-up (map->button {:x (+ x 20) :y (+ y h -30) :h 20 :w 20
+                                           :left-down scroll-up
+                                           :left-held scroll-up
+                                           :draw up-arrow})
+                    :page-down (map->button {:x (+ x w -20) :y (+ y h -30) :h 20 :w 20
+                                             :left-down scroll-down
+                                             :left-held scroll-down
+                                             :draw down-arrow})
+                    )))
   (update-widget [widget state]
     state)
   (draw-widget [widget state]
-    (draw-article-window (:application state) widget))
+    (draw-article-window state widget))
   )
 
-(defn- scroll-up [button state]
-  (let [button-path (:path button)
-        parent-path (drop-last button-path)
-        article-window (get-in state parent-path)
+(defn- scroll-up [widget-path button state]
+  (let [article-window (get-in state widget-path)
         articles (get-in state [:application :chronological-text-events])
         display-position (:display-position article-window)
         display-position (min (count articles) (inc display-position))
         article-window (assoc article-window :display-position display-position)
-        state (assoc-in state parent-path article-window)]
+        state (assoc-in state widget-path article-window)]
     state))
 
-(defn- scroll-down [button state]
-  (let [button-path (:path button)
-        parent-path (drop-last button-path)
-        article-window (get-in state parent-path)
+(defn- scroll-down [widget-path button state]
+  (let [article-window (get-in state widget-path)
         display-position (:display-position article-window)
         display-position (max 0 (dec display-position))
         article-window (assoc article-window :display-position display-position)
-        state (assoc-in state parent-path article-window)]
+        state (assoc-in state widget-path article-window)]
     state))
+
+(defn- open-button [cursor]
+  (cursor/draw-text cursor "+"))
+
+(defn- null-button [cursor]
+  (cursor/draw-text cursor " "))
 
 (defn draw-article [window cursor article]
   (let [g (:graphics cursor)]
     (g/text-align g [:left])
     (g/fill g [0 0 0])
-    (text/render cursor window (a/markup-article article)))
+    (cursor/render cursor window (a/markup-article article)
+                   {:open-button open-button
+                    :null-button null-button}))
   )
 
-(defn draw-articles [application window]
-  (let [g (:graphics application)
+(defn draw-articles [state window]
+  (let [application (:application state)
+        g (:graphics application)
         nicknames (:nicknames application)
         article-map (:text-event-map application)
         articles (:chronological-text-events application)
         display-position (:display-position window)
         articles (drop display-position articles)
         articles (take 19 articles)]
-    (loop [cursor (text/->cursor g 0 (g/line-height g) 5)
+    (loop [cursor (cursor/->cursor g 0 (g/line-height g) 5)
            articles articles]
       (if (empty? articles)
         cursor
@@ -81,8 +88,9 @@
           (recur (draw-article window cursor article)
                  (rest articles)))))))
 
-(defn draw-article-window [application window]
-  (let [g (:graphics application)]
+(defn draw-article-window [state window]
+  (let [application (:application state)
+        g (:graphics application)]
     (g/with-translation
       g [(:x window) (:y window)]
       (fn [g]
@@ -90,5 +98,5 @@
         (g/stroke-weight g 2)
         (g/fill g [255 255 255])
         (g/rect g [0 0 (:w window) (:h window)])
-        (draw-articles application window))
+        (draw-articles state window))
       )))

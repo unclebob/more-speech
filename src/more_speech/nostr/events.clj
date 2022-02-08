@@ -1,8 +1,23 @@
 (ns more-speech.nostr.events
-  (:require [more-speech.content.article :as article]
+  (:require [clojure.spec.alpha :as s]
+            [more-speech.content.article :as article]
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]))
-
+(s/def ::id number?)
+(s/def ::pubkey number?)
+(s/def ::created-at number?)
+(s/def ::content string?)
+(s/def ::sig number?)
+(s/def ::tag (s/tuple keyword? number?))
+(s/def ::tags (s/coll-of ::tag))
+(s/def ::references (s/coll-of number?))
+(s/def ::event (s/keys :req-un [::id
+                                ::pubkey
+                                ::created-at
+                                ::content
+                                ::sig
+                                ::tags
+                                ::references]))
 (declare process-text-event)
 
 (defn process-event [{:keys [application] :as state} event]

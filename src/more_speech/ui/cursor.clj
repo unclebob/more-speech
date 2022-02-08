@@ -52,28 +52,35 @@
       cursor
       (recur (draw-line cursor (first lines)) (rest lines)))))
 
-(defn render [cursor window markup]
-  (let [g (:graphics cursor)
-        {:keys [bold regular]} (:fonts g)]
-    (loop [cursor cursor
-           markup markup]
-      (cond
-        (empty? markup) cursor
-        (= :bold (first markup)) (do (g/text-font g bold)
-                                     (recur cursor (rest markup)))
-        (= :regular (first markup)) (do (g/text-font g regular)
-                                        (recur cursor (rest markup)))
-        (= :pos (first markup)) (recur (set-pos cursor (second markup))
-                                       (drop 2 markup))
-        (= :new-line (first markup)) (recur (-> cursor (set-x 0) (new-lines 1))
-                                            (rest markup))
-        (= :line (first markup)) (do (g/stroke-weight g 1)
-                                     (g/line g [0 (:y cursor) (:w window) (:y cursor)])
-                                     (recur cursor (rest markup)))
-        (= :multi-line (first markup)) (recur (draw-multi-line cursor (second markup))
-                                              (drop 2 markup))
-        (string? (first markup)) (recur (draw-text cursor (first markup))
-                                        (rest markup))
-        :else (recur (draw-text cursor (.toString (first markup)))
-                     (rest markup)))
-      )))
+(defn render
+  ([cursor window markup]
+   (render cursor window markup {}))
+
+  ([cursor window markup artifacts]
+   (let [g (:graphics cursor)
+         {:keys [bold regular]} (:fonts g)]
+     (loop [cursor cursor
+            markup markup]
+       (cond
+         (empty? markup) cursor
+         (= :bold (first markup)) (do (g/text-font g bold)
+                                      (recur cursor (rest markup)))
+         (= :regular (first markup)) (do (g/text-font g regular)
+                                         (recur cursor (rest markup)))
+         (= :pos (first markup)) (recur (set-pos cursor (second markup))
+                                        (drop 2 markup))
+         (= :new-line (first markup)) (recur (-> cursor (set-x 0) (new-lines 1))
+                                             (rest markup))
+         (= :line (first markup)) (do (g/stroke-weight g 1)
+                                      (g/line g [0 (:y cursor) (:w window) (:y cursor)])
+                                      (recur cursor (rest markup)))
+         (= :multi-line (first markup)) (recur (draw-multi-line cursor (second markup))
+                                               (drop 2 markup))
+         (keyword? (first markup)) (let [k (first markup)
+                                         f (get artifacts k)]
+                                     (recur (f cursor) (rest markup)))
+         (string? (first markup)) (recur (draw-text cursor (first markup))
+                                         (rest markup))
+         :else (recur (draw-text cursor (.toString (first markup)))
+                      (rest markup)))
+       ))))

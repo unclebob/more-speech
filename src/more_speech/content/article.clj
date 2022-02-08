@@ -46,21 +46,26 @@
   (abbreviate pubkey 8))
 
 (defn markup-article [article]
-  [
-   :bold
-   (str "* " (abbreviate-author (:author article)))
-   :regular
-   (str " (" (:thread-count article) ")")
-   :bold
-   :pos 40
-   (:subject article)
-   :regular
-   :pos 80
-   (format-time (:time article))
-   :new-line
-   :multi-line (abbreviate-body (:body article))
-   :line
-   :new-line])
+  (let [
+        thread-count (:thread-count article)]
+    [
+     (if (> thread-count 0)
+       :open-button
+       :null-button)
+     :bold
+     (abbreviate-author (:author article))
+     :regular
+     (str " (" thread-count ")")
+     :bold
+     :pos 40
+     (:subject article)
+     :regular
+     :pos 80
+     (format-time (:time article))
+     :new-line
+     :multi-line (abbreviate-body (:body article))
+     :line
+     :new-line]))
 
 (defn markup-author [[pubkey name]]
   [:bold
