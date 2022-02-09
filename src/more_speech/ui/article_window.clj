@@ -9,25 +9,57 @@
     [more-speech.ui.graphics :as g]
     [more-speech.nostr.util :refer [num->hex-string]]))
 
-(declare draw-article-window
+(declare draw-article-frame
+         draw-articles
+         draw-article-window
          scroll-up
          scroll-down)
 
-(defrecord article-window [x y w h page-up page-down display-position]
+(defrecord article-frame [x y w h display-position]
   widget
   (setup-widget [widget state]
-    (let [scroll-up (partial scroll-up (:path widget))
-          scroll-down (partial scroll-down (:path widget))]
-      (assoc widget :display-position 0
-                    :page-up (map->button {:x (+ x 20) :y (+ y h -30) :h 20 :w 20
-                                           :left-down scroll-up
-                                           :left-held scroll-up
-                                           :draw up-arrow})
-                    :page-down (map->button {:x (+ x w -20) :y (+ y h -30) :h 20 :w 20
-                                             :left-down scroll-down
-                                             :left-held scroll-down
-                                             :draw down-arrow})
-                    )))
+    widget)
+  (update-widget [widget state]
+    state)
+  (draw-widget [widget state]
+    (draw-article-frame state widget)
+    state)
+  )
+
+(defn draw-article-frame [state frame]
+  (let [{:keys [x y w h]} frame
+        application (:application state)
+        g (:graphics application)]
+    (g/with-translation
+      g [x y]
+      (fn [g]
+        (g/stroke g [0 0 0])
+        (g/stroke-weight g 2)
+        (g/no-fill g)
+        (g/rect g [0 0 w h])
+        (draw-articles state frame)))))
+
+(defrecord article-window [x y w h page-up page-down]
+  widget
+  (setup-widget [widget state]
+    (let [frame-path (conj (:path widget) :article-frame)
+          scroll-up (partial scroll-up frame-path)
+          scroll-down (partial scroll-down frame-path)]
+      (assoc widget
+        :article-frame (map->article-frame {:x (inc x)
+                                            :y (inc y)
+                                            :w (- w 30)
+                                            :h (dec h)
+                                            :display-position 0})
+        :page-up (map->button {:x (+ x w -20) :y (+ y 20) :h 20 :w 20
+                               :left-down scroll-down
+                               :left-held scroll-down
+                               :draw up-arrow})
+        :page-down (map->button {:x (+ x w -20) :y (+ y h -30) :h 20 :w 20
+                                 :left-down scroll-up
+                                 :left-held scroll-up
+                                 :draw down-arrow})
+        )))
   (update-widget [widget state]
     state)
   (draw-widget [widget state]
@@ -98,5 +130,6 @@
         (g/stroke-weight g 2)
         (g/fill g [255 255 255])
         (g/rect g [0 0 (:w window) (:h window)])
-        (draw-articles state window))
+        ;(draw-articles state window)
+        )
       )))
