@@ -7,7 +7,8 @@
                                    up-arrow
                                    down-arrow]]
     [more-speech.ui.graphics :as g]
-    [more-speech.nostr.util :refer [num->hex-string]]))
+    [more-speech.nostr.util :refer [num->hex-string]]
+    [clojure.set :as set]))
 
 (declare draw-article-frame
          draw-articles
@@ -83,53 +84,84 @@
         state (assoc-in state widget-path article-window)]
     state))
 
-(defn- open-button [cursor]
-  (cursor/draw-text cursor "+"))
+(defn thread-events
+  ([events event-map open-events]
+   (thread-events events event-map open-events 0))
+  ([events event-map open-events indent]
+  (loop [events events
+         threaded-events []
+         processed-events #{}]
+    (cond
+      (empty? events)
+      threaded-events
 
-(defn- null-button [cursor]
-  (cursor/draw-text cursor " "))
+      (contains? processed-events (first events))
+      (recur (rest events) threaded-events processed-events)
 
-(defn draw-article [window cursor article]
-  (let [g (:graphics cursor)]
-    (g/text-align g [:left])
-    (g/fill g [0 0 0])
-    (cursor/render cursor window (a/markup-article article)
-                   {:open-button open-button
-                    :null-button null-button}))
-  )
+      :else
+      (let [event-id (first events)
+            event (get event-map event-id)
+            references (:references event)]
+        (if (or (empty? references)
+                (nil? (open-events event-id)))
+          (recur (rest events)
+                 (conj threaded-events (assoc event :indent indent))
+                 (conj processed-events event-id))
+          (let [thread (thread-events references event-map open-events (inc indent))
+                threaded-events (conj threaded-events (assoc event :indent indent))
+                threaded-events (vec (concat threaded-events thread))
+                processed-events (set/union processed-events (set (map :id thread)))]
+            (recur (rest events)
+                   threaded-events
+                   (conj processed-events event-id)))))
+      ))))
 
-(defn draw-articles [state window]
-  (let [application (:application state)
-        g (:graphics application)
-        nicknames (:nicknames application)
-        article-map (:text-event-map application)
-        articles (:chronological-text-events application)
-        display-position (:display-position window)
-        articles (drop display-position articles)
-        articles (take 19 articles)]
-    (loop [cursor (cursor/->cursor g 0 (g/line-height g) 5)
-           articles articles]
-      (if (empty? articles)
-        cursor
-        (let [article-id (first articles)
-              text-event (get article-map article-id)
-              {:keys [pubkey created-at content references]} text-event
-              name (get nicknames pubkey (num->hex-string pubkey))
-              ref-count (count references)
-              article (a/make-article name created-at content ref-count)]
-          (recur (draw-article window cursor article)
-                 (rest articles)))))))
+  (defn- open-button [cursor]
+    (cursor/draw-text cursor "+"))
 
-(defn draw-article-window [state window]
-  (let [application (:application state)
-        g (:graphics application)]
-    (g/with-translation
-      g [(:x window) (:y window)]
-      (fn [g]
-        (g/stroke g [0 0 0])
-        (g/stroke-weight g 2)
-        (g/fill g [255 255 255])
-        (g/rect g [0 0 (:w window) (:h window)])
-        ;(draw-articles state window)
-        )
-      )))
+  (defn- null-button [cursor]
+    (cursor/draw-text cursor " "))
+
+  (defn draw-article [window cursor article]
+    (let [g (:graphics cursor)]
+      (g/text-align g [:left])
+      (g/fill g [0 0 0])
+      (cursor/render cursor window (a/markup-article article)
+                     {:open-button open-button
+                      :null-button null-button}))
+    )
+
+  (defn draw-articles [state window]
+    (let [application (:application state)
+          g (:graphics application)
+          nicknames (:nicknames application)
+          article-map (:text-event-map application)
+          articles (:chronological-text-events application)
+          display-position (:display-position window)
+          articles (drop display-position articles)
+          articles (take 19 articles)]
+      (loop [cursor (cursor/->cursor g 0 (g/line-height g) 5)
+             articles articles]
+        (if (empty? articles)
+          cursor
+          (let [article-id (first articles)
+                text-event (get article-map article-id)
+                {:keys [pubkey created-at content references]} text-event
+                name (get nicknames pubkey (num->hex-string pubkey))
+                ref-count (count references)
+                article (a/make-article name created-at content ref-count)]
+            (recur (draw-article window cursor article)
+                   (rest articles)))))))
+
+  (defn draw-article-window [state window]
+    (let [application (:application state)
+          g (:graphics application)]
+      (g/with-translation
+        g [(:x window) (:y window)]
+        (fn [g]
+          (g/stroke g [0 0 0])
+          (g/stroke-weight g 2)
+          (g/fill g [255 255 255])
+          (g/rect g [0 0 (:w window) (:h window)])
+          )
+        )))
