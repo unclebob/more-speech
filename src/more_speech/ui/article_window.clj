@@ -85,6 +85,7 @@
     state))
 
 (defn thread-events
+  "returns articles in threaded order."
   ([events event-map open-events]
    (thread-events events event-map open-events 0))
   ([events event-map open-events indent]
@@ -101,9 +102,11 @@
       :else
       (let [event-id (first events)
             event (get event-map event-id)
-            references (:references event)]
-        (if (or (empty? references)
-                (nil? (open-events event-id)))
+            references (:references event)
+            no-references? (empty? references)
+            not-open? (nil? (open-events event-id))
+            no-thread? (or no-references? (and (zero? indent) not-open?))]
+        (if no-thread?
           (recur (rest events)
                  (conj threaded-events (assoc event :indent indent))
                  (conj processed-events event-id))
@@ -136,7 +139,8 @@
           g (:graphics application)
           nicknames (:nicknames application)
           article-map (:text-event-map application)
-          articles (:chronological-text-events application)
+          events (:chronological-text-events application)
+          articles (thread-events events article-map (:open-thread application))
           display-position (:display-position window)
           articles (drop display-position articles)
           articles (take 19 articles)]
@@ -144,14 +148,15 @@
              articles articles]
         (if (empty? articles)
           cursor
-          (let [article-id (first articles)
-                text-event (get article-map article-id)
-                {:keys [pubkey created-at content references]} text-event
-                name (get nicknames pubkey (num->hex-string pubkey))
-                ref-count (count references)
-                article (a/make-article name created-at content ref-count)]
-            (recur (draw-article window cursor article)
-                   (rest articles)))))))
+          (let [text-event (first articles)]
+            (if (nil? text-event)
+              (recur cursor (rest articles))
+              (let [{:keys [pubkey created-at content references indent]} text-event
+                    name (get nicknames pubkey (num->hex-string pubkey))
+                    ref-count (count references)
+                    article (a/make-article name created-at content ref-count indent)]
+                (recur (draw-article window cursor article)
+                       (rest articles)))))))))
 
   (defn draw-article-window [state window]
     (let [application (:application state)

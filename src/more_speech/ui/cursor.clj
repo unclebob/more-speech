@@ -81,6 +81,6 @@
                                      (recur (f cursor) (rest markup)))
          (string? (first markup)) (recur (draw-text cursor (first markup))
                                          (rest markup))
-         :else (recur (draw-text cursor (.toString (first markup)))
+         :else (recur (draw-text cursor (prn-str (first markup)))
                       (rest markup)))
        ))))

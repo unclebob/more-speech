@@ -14,9 +14,11 @@
 (s/def ::nicknames (s/map-of number? string?))
 (s/def ::chronological-text-events (s/coll-of number?))
 (s/def ::text-event-map (s/map-of number? ::events/event))
+(s/def ::open-thread (s/coll-of number? :kind set?))
 (s/def ::application (s/keys :req-un [::nicknames
                                       ::chronological-text-events
                                       ::text-event-map
+                                      ::open-thread
                                       ]))
 
 (declare setup-application)
@@ -39,6 +41,7 @@
       :nicknames {}
       :chronological-text-events []
       :text-event-map {}
+      :open-thread #{}
       :article-window (map->article-window
                         {:x 50 :y 10 :w (g/pos-width graphics 105) :h (- (g/screen-height graphics) 100)})
 

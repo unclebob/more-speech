@@ -51,4 +51,17 @@
               threaded-events (thread-events events event-map open-events)]
           (should= [1 3 2] (map :id threaded-events))
           (should= [0 1 0] (map :indent threaded-events))))
+
+  (it "treats all articles threaded below an open article as open"
+          (let [event1 {:id 1 :references [2]}
+                event2 {:id 2 :references [3]}
+                event3 {:id 3}
+                event-map {1 event1
+                           2 event2
+                           3 event3}
+                events [1 2 3]
+                open-events #{1}
+                threaded-events (thread-events events event-map open-events)]
+            (should= [1 2 3] (map :id threaded-events))
+            (should= [0 1 2] (map :indent threaded-events))))
   )
