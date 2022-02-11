@@ -32,7 +32,8 @@
       (should (s/valid? ::a/article article)))
 
     (it "is properly formatted"
-      (should= [:open-button
+      (should= [:regular ""
+                :open-button
                 :bold
                 "Bob"
                 :regular

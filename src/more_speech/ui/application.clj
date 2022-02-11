@@ -15,10 +15,12 @@
 (s/def ::chronological-text-events (s/coll-of number?))
 (s/def ::text-event-map (s/map-of number? ::events/event))
 (s/def ::open-thread (s/coll-of number? :kind set?))
+(s/def ::update-articles boolean?)
 (s/def ::application (s/keys :req-un [::nicknames
                                       ::chronological-text-events
                                       ::text-event-map
                                       ::open-thread
+                                      ::update-articles
                                       ]))
 
 (declare setup-application)

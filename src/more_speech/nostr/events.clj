@@ -79,6 +79,7 @@
         state (assoc-in state [:application :text-event-map id] event)
         state (update-in state [:application :chronological-text-events] conj id)
         state (update-in state [:application :open-thread] conj id)
+        state (assoc-in state [:application :update-articles] true)
         ]
 
     (process-references state event)))
