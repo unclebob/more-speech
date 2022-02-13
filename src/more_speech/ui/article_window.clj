@@ -1,5 +1,6 @@
 (ns more-speech.ui.article-window
   (:require
+    [more-speech.ui.config :as config]
     [more-speech.ui.cursor :as cursor]
     [more-speech.content.article :as a]
     [more-speech.ui.widget :refer [widget]]
@@ -16,12 +17,13 @@
          scroll-up
          scroll-down
          update-article-frame
+         setup-article-frame
          thread-events)
 
 (defrecord article-frame [x y w h display-position]
   widget
   (setup-widget [widget state]
-    widget)
+    (setup-article-frame state widget))
   (update-widget [widget state]
     (update-article-frame state widget))
   (draw-widget [widget state]
@@ -29,15 +31,25 @@
     state)
   )
 
+(defn setup-article-frame [state frame]
+  (let [graphics (get-in state [:application :graphics])
+        line-height (g/line-height graphics)
+        header-height (+ config/header-bottom-margin
+                         config/header-top-margin
+                         (* config/header-lines line-height))
+        headers (quot (:h frame) header-height)
+        frame (assoc frame :n-headers headers)]
+    frame))
+
 (defn- update-article-frame [state frame]
   (if (get-in state [:application :update-articles] true)
     (let [application (:application state)
-          article-map (:text-event-map application)
+          event-map (:text-event-map application)
           events (:chronological-text-events application)
-          articles (thread-events events article-map (:open-thread application))
+          threaded-events (thread-events events event-map (:open-thread application))
           display-position (:display-position frame)
-          articles (drop display-position articles)
-          articles (take 19 articles)
+          end-position (min (count threaded-events) (+ display-position (:n-headers frame)))
+          articles (subvec threaded-events display-position end-position)
           frame-path (:path frame)
           state (assoc-in state (conj frame-path :displayed-articles) articles)
           state (assoc-in state (conj frame-path :last-display-position) display-position)

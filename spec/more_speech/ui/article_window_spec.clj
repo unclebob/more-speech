@@ -1,7 +1,8 @@
 (ns more-speech.ui.article-window-spec
   (:require [speclj.core :refer :all]
             [more-speech.ui.article-window :refer :all]
-            [more-speech.ui.widget :refer [widget setup-widget]]))
+            [more-speech.ui.widget :refer [widget setup-widget]]
+            [more-speech.ui.graphics :as g]))
 
 (describe "article window"
   (context "setup"
@@ -65,3 +66,25 @@
       (should= [1 2 3] (map :id threaded-events))
       (should= [0 1 2] (map :indent threaded-events))))
   )
+
+(defrecord mock-graphics []
+  g/graphics
+  (line-height [graphics]
+    20)
+  )
+
+(declare state frame)
+
+(describe "article frame"
+  (context "setup"
+    (with state {:application
+                 {:graphics (->mock-graphics)
+                  }
+                 }
+          )
+    (with frame {:x 0 :y 0 :w 500 :h 500})
+    (it "determines number of article headers fit in the frame"
+      (let [frame (setup-article-frame @state @frame)]
+        (should= 10 (:n-headers frame)))
+      )
+    ))
