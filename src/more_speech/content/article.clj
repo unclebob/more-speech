@@ -16,7 +16,7 @@
 (s/def ::author-pubkey string?)
 (s/def ::author-nickname-tuple (s/tuple ::author-pubkey ::author-nickname))
 
-(defn make-article [name time body thread-count indent]
+(defn make-header [name time body thread-count indent]
   {:group ""
    :author name
    :subject "?"
@@ -46,15 +46,12 @@
 (defn abbreviate-key [pubkey]
   (abbreviate pubkey 8))
 
-(defn markup-article [article]
+(defn markup-header [article]
   (let [thread-count (:thread-count article)
         indent (get article :indent 0)]
     [
      :regular
      (apply str (repeat indent "•"))
-     (if (> thread-count 0)
-       :open-button
-       :null-button)
      :bold
      (abbreviate-author (:author article))
      :regular
@@ -66,8 +63,7 @@
      :pos 80
      (format-time (:time article))
      :new-line
-     :multi-line (abbreviate-body (:body article))
-     :line
+     (abbreviate-body (:body article))
      :new-line]))
 
 (defn markup-author [[pubkey name]]

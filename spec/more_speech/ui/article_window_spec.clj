@@ -73,7 +73,8 @@
     20)
   )
 
-(declare state frame)
+(declare state frame
+         text-event nicknames)
 
 (describe "article frame"
   (context "setup"
@@ -84,7 +85,26 @@
           )
     (with frame {:x 0 :y 0 :w 500 :h 500})
     (it "determines number of article headers fit in the frame"
-      (let [frame (setup-article-frame @state @frame)]
+      (let [frame (setup-header-frame @state @frame)]
         (should= 10 (:n-headers frame)))
       )
-    ))
+    )
+
+  (context "update"
+    (with text-event {:pubkey 42
+                      :created-at 1000
+                      :content "the content"
+                      :references [1]
+                      :indent 1})
+    (with nicknames {42 "name"})
+    (it "converts a text event to a header."
+      (should= [:regular "•"
+                :bold "name"
+                :regular " (1)"
+                :bold :pos 40 "?"
+                :regular :pos 80 "31 Dec 69 18:16:40 CST"
+                :new-line
+                "the content"
+                :new-line]
+               (event->header @text-event @nicknames))))
+  )

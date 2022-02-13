@@ -79,8 +79,9 @@
          (keyword? (first markup)) (let [k (first markup)
                                          f (get artifacts k)]
                                      (recur (f cursor) (rest markup)))
-         (string? (first markup)) (recur (draw-text cursor (first markup))
-                                         (rest markup))
-         :else (recur (draw-text cursor (prn-str (first markup)))
+         (string? (first markup)) (let [the-string (first (string/split-lines (first markup)))]
+                                    (recur (draw-text cursor the-string)
+                                           (rest markup)))
+         :else (recur (draw-text cursor (prn-str 'unknown (first markup)))
                       (rest markup)))
        ))))

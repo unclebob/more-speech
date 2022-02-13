@@ -11,27 +11,27 @@
     [more-speech.nostr.util :refer [num->hex-string]]
     [clojure.set :as set]))
 
-(declare draw-article-frame
-         draw-articles
+(declare draw-header-frame
+         draw-headers
          draw-article-window
          scroll-up
          scroll-down
-         update-article-frame
-         setup-article-frame
+         update-header-frame
+         setup-header-frame
          thread-events)
 
-(defrecord article-frame [x y w h display-position]
+(defrecord header-frame [x y w h display-position]
   widget
   (setup-widget [widget state]
-    (setup-article-frame state widget))
+    (setup-header-frame state widget))
   (update-widget [widget state]
-    (update-article-frame state widget))
+    (update-header-frame state widget))
   (draw-widget [widget state]
-    (draw-article-frame state widget)
+    (draw-header-frame state widget)
     state)
   )
 
-(defn setup-article-frame [state frame]
+(defn setup-header-frame [state frame]
   (let [graphics (get-in state [:application :graphics])
         line-height (g/line-height graphics)
         header-height (+ config/header-bottom-margin
@@ -41,7 +41,20 @@
         frame (assoc frame :n-headers headers)]
     frame))
 
-(defn- update-article-frame [state frame]
+(defn event->header [text-event nicknames]
+  (let [{:keys [pubkey created-at content references indent]} text-event
+        name (get nicknames pubkey (num->hex-string pubkey))
+        ref-count (count references)
+        header (a/make-header name created-at content ref-count indent)
+        header (a/markup-header header)]
+    header
+    )
+  )
+
+(defn events->headers [events nicknames]
+  (map #(event->header % nicknames) events))
+
+(defn- update-header-frame [state frame]
   (if (get-in state [:application :update-articles] true)
     (let [application (:application state)
           event-map (:text-event-map application)
@@ -49,15 +62,16 @@
           threaded-events (thread-events events event-map (:open-thread application))
           display-position (:display-position frame)
           end-position (min (count threaded-events) (+ display-position (:n-headers frame)))
-          articles (subvec threaded-events display-position end-position)
+          displayed-events (subvec threaded-events display-position end-position)
+          nicknames (:nicknames application)
+          headers (events->headers displayed-events nicknames)
           frame-path (:path frame)
-          state (assoc-in state (conj frame-path :displayed-articles) articles)
-          state (assoc-in state (conj frame-path :last-display-position) display-position)
+          state (assoc-in state (conj frame-path :displayed-headers) headers)
           state (assoc-in state [:application :update-articles] false)]
       state)
     state))
 
-(defn draw-article-frame [state frame]
+(defn draw-header-frame [state frame]
   (let [{:keys [x y w h]} frame
         application (:application state)
         g (:graphics application)]
@@ -68,20 +82,20 @@
         (g/stroke-weight g 2)
         (g/no-fill g)
         (g/rect g [0 0 w h])
-        (draw-articles state frame)))))
+        (draw-headers state frame)))))
 
 (defrecord article-window [x y w h page-up page-down]
   widget
   (setup-widget [widget state]
-    (let [frame-path (conj (:path widget) :article-frame)
+    (let [frame-path (conj (:path widget) :header-frame)
           scroll-up (partial scroll-up frame-path)
           scroll-down (partial scroll-down frame-path)]
       (assoc widget
-        :article-frame (map->article-frame {:x (inc x)
-                                            :y (inc y)
-                                            :w (- w 30)
-                                            :h (dec h)
-                                            :display-position 0})
+        :header-frame (map->header-frame {:x (inc x)
+                                           :y (inc y)
+                                           :w (- w 30)
+                                           :h (dec h)
+                                           :display-position 0})
         :page-up (map->button {:x (+ x w -20) :y (+ y 20) :h 20 :w 20
                                :left-down scroll-down
                                :left-held scroll-down
@@ -151,39 +165,31 @@
                     (conj processed-events event-id)))))
        ))))
 
-(defn- open-button [cursor]
-  (cursor/draw-text cursor "+"))
-
-(defn- null-button [cursor]
-  (cursor/draw-text cursor " "))
-
-(defn draw-article [window cursor article]
-  (let [g (:graphics cursor)]
-    (g/text-align g [:left])
+(defn draw-header [window cursor header index]
+  (let [g (:graphics cursor)
+        header-height (+ config/header-top-margin
+                         config/header-bottom-margin
+                         (* config/header-lines (g/line-height g)))
+        cursor (cursor/set-y cursor (+ config/header-top-margin (* index header-height)))]
+    (g/text-align g [:left :top])
     (g/fill g [0 0 0])
-    (cursor/render cursor window (a/markup-article article)
-                   {:open-button open-button
-                    :null-button null-button}))
+    (cursor/render cursor window header))
   )
 
-(defn draw-articles [state window]
+(defn draw-headers [state window]
   (let [application (:application state)
         g (:graphics application)
-        nicknames (:nicknames application)
-        articles (:displayed-articles window)]
+        headers (:displayed-headers window)]
     (loop [cursor (cursor/->cursor g 0 (g/line-height g) 5)
-           articles articles]
-      (if (empty? articles)
+           headers headers
+           index 0]
+      (if (empty? headers)
         cursor
-        (let [text-event (first articles)]
-          (if (nil? text-event)
-            (recur cursor (rest articles))
-            (let [{:keys [pubkey created-at content references indent]} text-event
-                  name (get nicknames pubkey (num->hex-string pubkey))
-                  ref-count (count references)
-                  article (a/make-article name created-at content ref-count indent)]
-              (recur (draw-article window cursor article)
-                     (rest articles)))))))))
+        (let [header (first headers)]
+          (if (nil? header)
+            (recur cursor (rest headers) index)
+            (recur (draw-header window cursor header index)
+                   (rest headers) (inc index))))))))
 
 (defn draw-article-window [state window]
   (let [application (:application state)

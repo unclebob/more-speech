@@ -33,7 +33,6 @@
 
     (it "is properly formatted"
       (should= [:regular ""
-                :open-button
                 :bold
                 "Bob"
                 :regular
@@ -45,10 +44,10 @@
                 :pos 80
                 "20 Jan 22 06:55:27 CST"
                 :new-line
-                :multi-line "My Message to you."
-                :line
-                :new-line]
-               (markup-article article)))))
+                "My Message to you."
+                :new-line
+                ]
+               (markup-header article)))))
 
 (describe "Formatting an author nickname."
   (let [author-tuple [0 "nickname"]]
