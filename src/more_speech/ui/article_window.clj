@@ -42,11 +42,10 @@
     frame))
 
 (defn event->header [text-event nicknames]
-  (let [{:keys [pubkey created-at content references indent]} text-event
+  (let [{:keys [id pubkey created-at content references indent]} text-event
         name (get nicknames pubkey (num->hex-string pubkey))
         ref-count (count references)
-        header (a/make-header name created-at content ref-count indent)
-        header (a/markup-header header)]
+        header (a/make-header id name created-at content ref-count indent)]
     header
     )
   )
@@ -54,19 +53,128 @@
 (defn events->headers [events nicknames]
   (map #(event->header % nicknames) events))
 
+(defn clear-widgets [frame]
+  (loop [elements (keys frame)
+         frame frame]
+    (if (empty? elements)
+      frame
+      (let [key (first elements)
+            element (get frame key)]
+        (if (and (some? element)
+                 (satisfies? widget element))
+          (recur (rest elements)
+                 (dissoc frame key))
+          (recur (rest elements) frame))))))
+
+(defn draw-minus [graphics {:keys [x y h w button-state]}]
+  (g/with-translation
+    graphics [x y]
+    (fn [graphics]
+      (g/stroke-weight graphics (if (= button-state :in) 2 1))
+      (g/stroke graphics [0 0 0])
+      (g/no-fill graphics)
+      (g/rect graphics [0 0 w h])
+      (g/line graphics [0 (quot h 2) w (quot h 2)])
+      )))
+
+(defn draw-plus [graphics {:keys [x y h w button-state]}]
+  (g/with-translation
+    graphics [x y]
+    (fn [graphics]
+      (g/stroke-weight graphics (if (= button-state :in) 2 1))
+      (g/no-fill graphics)
+      (g/stroke graphics [0 0 0])
+      (g/rect graphics [0 0 w h])
+      (g/line graphics [0 (quot h 2) w (quot h 2)])
+      (g/line graphics [(quot w 2) 0 (quot w 2) h])
+      )))
+
+(defn toggle-thread [button state]
+  (let [id (:id button)
+        open-thread (get-in state [:application :open-thread])
+        open-thread (if (contains? open-thread id)
+                      (disj open-thread id)
+                      (conj open-thread id))
+        state (assoc-in state [:application :open-thread] open-thread)]
+    (assoc-in state [:application :update-articles] true)))
+
+(defrecord button-creator [state frame graphics])
+
+(defn make-button-creator [state frame]
+  (map->button-creator
+    {:state state
+     :frame frame
+     :graphics (get-in state [:application :graphics])
+     }))
+
+(defn- make-thread-button [button-creator id index draw]
+  (let [graphics (:graphics button-creator)
+        frame (:frame button-creator)
+        line-height (g/line-height graphics)
+        header-height (+ config/header-top-margin
+                         config/header-bottom-margin
+                         (* config/header-lines line-height))
+        y-pos (+ config/header-top-margin
+                 (* index header-height))]
+    (map->button {:id id
+                  :x (+ 5 (:x frame))
+                  :y (+ (:y frame) y-pos)
+                  :w 10
+                  :h 10
+                  :draw draw
+                  :path (conj (:path frame) id)
+                  :left-down toggle-thread})))
+
+(defn create-thread-buttons [button-creator headers]
+  (let [state (:state button-creator)
+        open-thread (get-in state [:application :open-thread])]
+    (loop [headers headers
+           buttons []
+           index 0]
+      (if (empty? headers)
+        buttons
+        (let [header (first headers)
+              id (:id header)
+              indent (:indent header)
+              thread-count (:thread-count header)
+              draw-f (if (contains? open-thread id) draw-minus draw-plus)]
+          (if (and (> thread-count 0)
+                   (zero? indent))
+            (recur (rest headers)
+                   (conj buttons (make-thread-button button-creator id index draw-f))
+                   (inc index))
+            (recur (rest headers) buttons (inc index))))))))
+
+(defn add-thread-buttons [frame buttons]
+  (loop [frame frame
+         buttons buttons]
+    (if (empty? buttons)
+      frame
+      (let [button (first buttons)
+            id (:id button)]
+        (recur (assoc frame id button) (rest buttons))))))
+
 (defn- update-header-frame [state frame]
   (if (get-in state [:application :update-articles] true)
     (let [application (:application state)
           event-map (:text-event-map application)
           events (:chronological-text-events application)
-          threaded-events (thread-events events event-map (:open-thread application))
+          open-thread (:open-thread application)
+          threaded-events (thread-events events event-map open-thread)
           display-position (:display-position frame)
           end-position (min (count threaded-events) (+ display-position (:n-headers frame)))
           displayed-events (subvec threaded-events display-position end-position)
           nicknames (:nicknames application)
           headers (events->headers displayed-events nicknames)
+          bc (make-button-creator state frame)
           frame-path (:path frame)
-          state (assoc-in state (conj frame-path :displayed-headers) headers)
+          frame (get-in state frame-path)
+          frame (clear-widgets frame)
+          buttons (create-thread-buttons bc headers)
+          frame (add-thread-buttons frame buttons)
+          marked-up-headers (map a/markup-header headers)
+          frame (assoc frame :displayed-headers marked-up-headers)
+          state (assoc-in state frame-path frame)
           state (assoc-in state [:application :update-articles] false)]
       state)
     state))
@@ -92,10 +200,10 @@
           scroll-down (partial scroll-down frame-path)]
       (assoc widget
         :header-frame (map->header-frame {:x (inc x)
-                                           :y (inc y)
-                                           :w (- w 30)
-                                           :h (dec h)
-                                           :display-position 0})
+                                          :y (inc y)
+                                          :w (- w 30)
+                                          :h (dec h)
+                                          :display-position 0})
         :page-up (map->button {:x (+ x w -20) :y (+ y 20) :h 20 :w 20
                                :left-down scroll-down
                                :left-held scroll-down
@@ -180,7 +288,7 @@
   (let [application (:application state)
         g (:graphics application)
         headers (:displayed-headers window)]
-    (loop [cursor (cursor/->cursor g 0 (g/line-height g) 5)
+    (loop [cursor (cursor/->cursor g 0 (g/line-height g) 20)
            headers headers
            index 0]
       (if (empty? headers)

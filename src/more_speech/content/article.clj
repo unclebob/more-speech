@@ -4,20 +4,22 @@
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
+(s/def ::id number?)
 (s/def ::group string?)
 (s/def ::subject string?)
 (s/def ::author string?)
 (s/def ::time number?)
 (s/def ::body string?)
 (s/def ::thread-count number?)
-(s/def ::article (s/keys :req-un [::group ::subject ::author ::time ::body ::thread-count]))
+(s/def ::header (s/keys :req-un [::id ::group ::subject ::author ::time ::body ::thread-count]))
 
 (s/def ::author-nickname string?)
 (s/def ::author-pubkey string?)
 (s/def ::author-nickname-tuple (s/tuple ::author-pubkey ::author-nickname))
 
-(defn make-header [name time body thread-count indent]
-  {:group ""
+(defn make-header [id name time body thread-count indent]
+  {:id id
+   :group ""
    :author name
    :subject "?"
    :time time
@@ -64,7 +66,8 @@
      (format-time (:time article))
      :new-line
      (abbreviate-body (:body article))
-     :new-line]))
+     :new-line
+     ]))
 
 (defn markup-author [[pubkey name]]
   [:bold

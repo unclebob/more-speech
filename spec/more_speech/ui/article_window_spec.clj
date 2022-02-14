@@ -2,7 +2,9 @@
   (:require [speclj.core :refer :all]
             [more-speech.ui.article-window :refer :all]
             [more-speech.ui.widget :refer [widget setup-widget]]
-            [more-speech.ui.graphics :as g]))
+            [more-speech.ui.graphics :as g]
+            [more-speech.ui.config :as config]
+            [more-speech.ui.button :as b]))
 
 (describe "article window"
   (context "setup"
@@ -73,17 +75,17 @@
     20)
   )
 
+(defrecord mock-widget []
+  widget)
+
 (declare state frame
          text-event nicknames)
 
 (describe "article frame"
+  (with state {:application
+               {:graphics (->mock-graphics)}})
+  (with frame {:x 0 :y 0 :w 500 :h 500})
   (context "setup"
-    (with state {:application
-                 {:graphics (->mock-graphics)
-                  }
-                 }
-          )
-    (with frame {:x 0 :y 0 :w 500 :h 500})
     (it "determines number of article headers fit in the frame"
       (let [frame (setup-header-frame @state @frame)]
         (should= 10 (:n-headers frame)))
@@ -97,14 +99,47 @@
                       :references [1]
                       :indent 1})
     (with nicknames {42 "name"})
+
     (it "converts a text event to a header."
-      (should= [:regular "•"
-                :bold "name"
-                :regular " (1)"
-                :bold :pos 40 "?"
-                :regular :pos 80 "31 Dec 69 18:16:40 CST"
-                :new-line
-                "the content"
-                :new-line]
-               (event->header @text-event @nicknames))))
+      (should= {:id nil,
+                :group "",
+                :author "name",
+                :subject "?",
+                :time 1000,
+                :body "the content",
+                :thread-count 1,
+                :indent 1}
+               (event->header @text-event @nicknames)))
+
+    (it "clears out the widgets from the header frame"
+      (let [frame {:x :not-widget :w1 (->mock-widget)}
+            frame (clear-widgets frame)]
+        (should-be-nil (:w1 frame))
+        (should= {:x :not-widget} frame)))
+
+    (it "creates buttons for threads"
+      (let [headers [{:id 1 :thread-count 1 :indent 0}
+                     {:id 2 :thread-count 1 :indent 1}
+                     {:id 3 :thread-count 1 :indent 0}
+                     {:id 4 :thread-count 0 :indent 0}]
+            open-thread #{1}
+            state (assoc-in @state [:application :open-thread] open-thread)
+            button-creator (make-button-creator state @frame)
+            buttons (create-thread-buttons button-creator headers)
+            header-height (+ config/header-top-margin
+                             config/header-bottom-margin
+                             (* config/header-lines 20))]
+        (should= [1 3] (map :id buttons))
+        (should= [draw-minus draw-plus]
+                 (map :draw buttons))
+        (should= [true true] (map #(satisfies? widget %) buttons))
+        (should=
+          [config/header-top-margin
+           (+ config/header-top-margin (* 2 header-height))]
+          (map :y buttons)))
+      )
+    (it "adds buttons to the frame"
+      (let [frame (add-thread-buttons {} [{:id 1} {:id 2}])]
+        (should= #{1 2} (set (keys frame)))))
+    )
   )
