@@ -9,7 +9,7 @@
                                            update-child-widgets]]
             [more-speech.ui.application :refer [map->application]]
             [more-speech.ui.graphics :as g]
-            ))
+            [more-speech.ui.widget :as w]))
 
 (def events (atom []))
 
@@ -21,7 +21,7 @@
         regular (q/create-font "CourierNewPSMT" 14)
         fonts {:bold bold :regular regular}
         graphics (g/->quil-graphics fonts)
-        application (map->application {:path [:application] :graphics graphics })
+        application (map->application {:path [:application] :graphics graphics})
         application (setup-widget application {})
         state {:application application}]
     (q/text-font bold)
@@ -50,6 +50,17 @@
   (draw-widget application state)
   )
 
+(defn mouse-wheel [state clicks]
+  (let [application (:application state)
+        x (q/mouse-x)
+        y (q/mouse-y)
+        widget (w/find-deepest-mouse-target application x y)
+        wheel-f (get widget :mouse-wheel)]
+    (if (some? wheel-f)
+      (wheel-f widget state clicks)
+      state))
+  )
+
 (declare more-speech)
 (defn ^:export -main [& args]
   (q/defsketch more-speech
@@ -58,6 +69,7 @@
                :setup setup
                :update update-state
                :draw draw-state
+               :mouse-wheel mouse-wheel
                :middleware [m/fun-mode])
   (reset! events (read-string (slurp "nostr-messages")))
   args

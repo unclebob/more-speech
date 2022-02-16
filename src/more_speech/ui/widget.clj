@@ -1,13 +1,14 @@
-(ns more-speech.ui.widget)
+(ns more-speech.ui.widget
+  (:require [more-speech.util.geometry :refer [inside-rect]]))
 
 (defprotocol widget
   (setup-widget [widget state] "returns the setup widget")
   (update-widget [widget state] "returns state updated.")
   (draw-widget [widget state] "returns nothing.  No state change.")
-)
-
+  )
 
 (defn get-child-widgets [parent]
+  "returns the tags of all children that satisfy the widget protocol."
   (loop [tags (keys parent)
          children []]
     (if (empty? tags)
@@ -64,3 +65,15 @@
         (recur state (rest child-tags))))
     )
   )
+
+(defn find-deepest-mouse-target [parent mx my]
+  (loop [widgets (get-child-widgets parent)]
+    (if (empty? widgets)
+      nil
+      (let [{:keys [x y w h] :as child} (get parent (first widgets))]
+        (if (inside-rect [x y w h] [mx my])
+          (let [grandchild (find-deepest-mouse-target child mx my)]
+            (if (some? grandchild)
+              grandchild
+              child))
+          (recur (rest widgets)))))))

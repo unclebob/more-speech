@@ -18,7 +18,8 @@
          scroll-down
          update-header-frame
          setup-header-frame
-         thread-events)
+         thread-events
+         mouse-wheel)
 
 (defrecord header-frame [x y w h display-position]
   widget
@@ -38,7 +39,8 @@
                          config/header-top-margin
                          (* config/header-lines line-height))
         headers (quot (:h frame) header-height)
-        frame (assoc frame :n-headers headers)]
+        frame (assoc frame :n-headers headers
+                           :mouse-wheel mouse-wheel)]
     frame))
 
 (defn event->header [text-event nicknames]
@@ -219,24 +221,26 @@
     (draw-article-window state widget))
   )
 
-(defn- scroll-up [widget-path button state]
-  (let [article-window (get-in state widget-path)
+(defn scroll-frame [frame-path state delta]
+  (let [frame (get-in state frame-path)
         articles (get-in state [:application :chronological-text-events])
-        display-position (:display-position article-window)
-        display-position (min (count articles) (inc display-position))
-        article-window (assoc article-window :display-position display-position)
-        state (assoc-in state widget-path article-window)
+        display-position (:display-position frame)
+        display-position (+ display-position delta)
+        display-position (min (count articles) display-position)
+        display-position (max 0 display-position)
+        frame (assoc frame :display-position display-position)
+        state (assoc-in state frame-path frame)
         state (assoc-in state [:application :update-articles] true)]
     state))
 
-(defn- scroll-down [widget-path button state]
-  (let [article-window (get-in state widget-path)
-        display-position (:display-position article-window)
-        display-position (max 0 (dec display-position))
-        article-window (assoc article-window :display-position display-position)
-        state (assoc-in state widget-path article-window)
-        state (assoc-in state [:application :update-articles] true)]
-    state))
+(defn mouse-wheel [widget state clicks]
+  (scroll-frame (:path widget) state clicks))
+
+(defn- scroll-up [frame-path button state]
+  (scroll-frame frame-path state 1))
+
+(defn- scroll-down [frame-path button state]
+  (scroll-frame frame-path state -1))
 
 (defn thread-events
   "returns articles in threaded order."
