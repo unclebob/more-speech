@@ -14,7 +14,7 @@
   (setup-widget [widget state]
     (assoc widget :child (->child))))
 
-(defn- f [widget state] (assoc-in state (conj (:path widget) :did-f) true))
+(defn- f [widget state] (assoc-in state (concat (:path widget) [:did-f]) true))
 
 (describe "Widgets"
   (context "get child widgets"

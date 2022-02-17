@@ -2,7 +2,8 @@
   (:require [clojure.spec.alpha :as s]
             [more-speech.content.article :as article]
             [clojure.data.json :as json]
-            [more-speech.nostr.util :refer [hex-string->num]]))
+            [more-speech.nostr.util :refer [hex-string->num]]
+            [more-speech.ui.app-util :as app]))
 (s/def ::id number?)
 (s/def ::pubkey number?)
 (s/def ::created-at number?)
@@ -59,7 +60,7 @@
             (recur (rest refs)
                    (update-in
                      state
-                     (conj referent-path :references)
+                     (concat referent-path [:references])
                      conj id))))))))
 
 (defn translate-text-event [event]
@@ -78,7 +79,7 @@
         id (:id event)
         state (assoc-in state [:application :text-event-map id] event)
         state (update-in state [:application :chronological-text-events] conj id)
-        state (assoc-in state [:application :update-articles] true)
+        state (app/update-articles state)
         ]
 
     (process-references state event)))

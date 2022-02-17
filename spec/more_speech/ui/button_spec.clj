@@ -10,13 +10,13 @@
   (get-time [graphics] time))
 
 (defn- left-up [button state]
-  (assoc-in state (conj (:path button) :left-came-up) true))
+  (assoc-in state (concat (:path button) [:left-came-up]) true))
 
 (defn- left-down [button state]
-  (assoc-in state (conj (:path button) :left-went-down) true))
+  (assoc-in state (concat (:path button) [:left-went-down]) true))
 
 (defn- left-held [button state]
-  (assoc-in state (conj (:path button) :left-held-down) true))
+  (assoc-in state (concat (:path button) [:left-held-down]) true))
 
 (def NOW 1234)                                              ; mock time of day
 (def mouse-out (map->mock-graphic {:x 0 :y 0}))

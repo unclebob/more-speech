@@ -10,17 +10,20 @@
     [more-speech.ui.header-frame :refer [scroll-up
                                          scroll-down
                                          map->header-frame]]
+    [more-speech.ui.app-util :as app]
     ))
 
 (declare draw-article-window
          update-article-window
          drag-thumb
+         lock-thumb
+         unlock-thumb
          thumb-position)
 
 (defrecord article-window [x y w h page-up page-down]
   widget
   (setup-widget [widget state]
-    (let [frame-path (conj (:path widget) :header-frame)
+    (let [frame-path (concat (:path widget) [:header-frame])
           scroll-up (partial scroll-up frame-path)
           scroll-down (partial scroll-down frame-path)
           frame (map->header-frame {:x (inc x)
@@ -40,7 +43,10 @@
                                  :draw down-arrow})
         :thumb (map->button {:x (+ x w -17) :y (thumb-position frame) :h 30 :w 15
                              :draw thumb
-                             :left-held drag-thumb}))))
+                             :left-held drag-thumb
+                             :left-down lock-thumb
+                             :left-up unlock-thumb
+                             }))))
 
   (update-widget [widget state]
     (update-article-window widget state))
@@ -50,8 +56,8 @@
 (defn update-article-window [widget state]
   (let [header-frame (:header-frame widget)
         thumb-pos (thumb-position header-frame)
-        thumb-path (conj (:path widget) :thumb)]
-    (assoc-in state (conj thumb-path :y) thumb-pos)))
+        thumb-path (concat (:path widget) [:thumb])]
+    (assoc-in state (concat thumb-path [:y]) thumb-pos)))
 
 (defn draw-article-window [state window]
   (let [application (:application state)
@@ -90,5 +96,10 @@
         state (assoc-in state
                         (concat header-frame-path [:display-position])
                         display-position)]
-    (assoc-in state [:application :update-articles] true))
-  )
+    (app/update-articles state)))
+
+(defn- lock-thumb [widget state]
+  (app/lock-mouse state widget))
+
+(defn- unlock-thumb [widget state]
+  (app/unlock-mouse state))

@@ -1,7 +1,8 @@
 (ns more-speech.ui.button
   (:require [more-speech.ui.widget :as w]
             [more-speech.ui.graphics :as g]
-            [more-speech.util.geometry :as util]))
+            [more-speech.util.geometry :as util]
+            [more-speech.ui.app-util :as app]))
 
 (declare update-button)
 
@@ -53,12 +54,12 @@
   (let [previous-state (:button-state button)
         g (get-in state [:application :graphics])]
     (if (and (= :in previous-state) (= :left which))
-      (assoc-in state (conj (:path button) :left-time) (g/get-time g))
+      (assoc-in state (concat (:path button) [:left-time]) (g/get-time g))
       state)))
 
 (defn check-erase-left-time [state button which]
   (if (nil? which)
-    (assoc-in state (conj (:path button) :left-time) nil)
+    (assoc-in state (concat (:path button) [:left-time]) nil)
     state))
 
 (defn update-button [button state]
@@ -67,10 +68,14 @@
         button (get-in state (:path button))
         {:keys [x y w h]} button
         in? (util/inside-rect [x y w h] [mx my])
-        button-state (if in?
+        lock (app/get-mouse-lock state)
+        button-target? (if (nil? lock)
+                         in?
+                         (= lock (:path button)))
+        button-state (if button-target?
                        (get-button-state which)
                        :out)
-        state (if in?
+        state (if button-target?
                 (-> state
                     (check-set-left-time button which)
                     (check-call-left-down button which)
@@ -79,7 +84,7 @@
                 state)
         state (check-erase-left-time state button which)
         ]
-    (assoc-in state (conj (:path button) :button-state) button-state))
+    (assoc-in state (concat (:path button) [:button-state]) button-state))
   )
 
 (defn up-arrow [graphics {:keys [x y w h button-state]}]
@@ -128,11 +133,11 @@
 
 (defn thumb [graphics {:keys [x y w h button-state]}]
   (g/stroke graphics [0 0 0])
-   (let [weight (if (= button-state :in) 2 1)
-         fill (if (= button-state :left) [150 150 150] [200 200 200])]
-     (g/with-translation
-       graphics [x y]
-       (fn [graphics]
-         (g/stroke-weight graphics weight)
-         (g/fill graphics fill)
-         (g/rect graphics [0 0 w h])))))
+  (let [weight (if (= button-state :in) 2 1)
+        fill (if (= button-state :left) [150 150 150] [200 200 200])]
+    (g/with-translation
+      graphics [x y]
+      (fn [graphics]
+        (g/stroke-weight graphics weight)
+        (g/fill graphics fill)
+        (g/rect graphics [0 0 w h])))))

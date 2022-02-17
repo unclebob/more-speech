@@ -1,15 +1,16 @@
 (ns more-speech.ui.header-frame
   (:require
-      [more-speech.ui.config :as config]
-      [more-speech.ui.cursor :as cursor]
-      [more-speech.content.article :as a]
-      [more-speech.ui.widget :refer [widget]]
-      [more-speech.ui.button :refer [map->button
-                                     up-arrow
-                                     down-arrow]]
-      [more-speech.ui.graphics :as g]
-      [more-speech.nostr.util :refer [num->hex-string]]
-      [clojure.set :as set]))
+    [more-speech.ui.config :as config]
+    [more-speech.ui.cursor :as cursor]
+    [more-speech.content.article :as a]
+    [more-speech.ui.widget :refer [widget]]
+    [more-speech.ui.button :refer [map->button
+                                   up-arrow
+                                   down-arrow]]
+    [more-speech.ui.graphics :as g]
+    [more-speech.nostr.util :refer [num->hex-string]]
+    [clojure.set :as set]
+    [more-speech.ui.app-util :as app]))
 
 (declare setup-header-frame
          update-header-frame
@@ -96,7 +97,7 @@
                       (disj open-thread id)
                       (conj open-thread id))
         state (assoc-in state [:application :open-thread] open-thread)]
-    (assoc-in state [:application :update-articles] true)))
+    (app/update-articles state)))
 
 (defrecord button-creator [state frame graphics])
 
@@ -122,7 +123,7 @@
                   :w 10
                   :h 10
                   :draw draw
-                  :path (conj (:path frame) id)
+                  :path (concat (:path frame) [id])
                   :left-down toggle-thread})))
 
 (defn create-thread-buttons [button-creator headers]
@@ -155,7 +156,7 @@
         (recur (assoc frame id button) (rest buttons))))))
 
 (defn- update-header-frame [state frame]
-  (if (get-in state [:application :update-articles] true)
+  (if (app/update-articles? state)
     (let [application (:application state)
           event-map (:text-event-map application)
           events (:chronological-text-events application)
@@ -177,7 +178,7 @@
           frame (assoc frame :displayed-headers marked-up-headers
                              :total-headers total-events)
           state (assoc-in state frame-path frame)
-          state (assoc-in state [:application :update-articles] false)]
+          state (app/articles-updated state)]
       state)
     state))
 
@@ -203,7 +204,7 @@
         display-position (max 0 display-position)
         frame (assoc frame :display-position display-position)
         state (assoc-in state frame-path frame)
-        state (assoc-in state [:application :update-articles] true)]
+        state (app/update-articles state)]
     state))
 
 (defn mouse-wheel [widget state clicks]

@@ -25,7 +25,7 @@
     (if (empty? child-tags)
       nil
       (let [child-tag (first child-tags)
-            child-path (conj path child-tag)
+            child-path (concat path [child-tag])
             child (get-in state child-path)
             _ (f child state)
             _ (do-children child state f)]
@@ -37,7 +37,7 @@
     (if (empty? child-tags)
       state
       (let [child-tag (first child-tags)
-            child-path (conj path child-tag)
+            child-path (concat path [child-tag])
             child (get-in state child-path)
             state (f child state)
             child (get-in state child-path)
@@ -56,7 +56,7 @@
     (if (empty? child-tags)
       state
       (let [child-tag (first child-tags)
-            child-path (conj path child-tag)
+            child-path (concat path [child-tag])
             child (get-in state child-path)
             child (assoc child :path child-path)
             child (setup-widget child state)
