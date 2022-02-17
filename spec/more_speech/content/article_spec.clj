@@ -16,8 +16,9 @@
 
   (it "abbreviates bodies"
     (should= "short" (abbreviate-body "short"))
-    (should= (str (apply str (repeat 100 "*")) "...")
-             (abbreviate-body (apply str (repeat 200 "*")))))
+    (let [abbreviated (abbreviate-body (apply str (repeat 200 "*")))]
+      (should= "***" (.substring abbreviated 0 3))
+      (should= "..." (.substring abbreviated (- (count abbreviated) 3)))))
   )
 
 (defn- valid-markup-token? [token]

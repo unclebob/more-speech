@@ -13,16 +13,9 @@
     ))
 
 (declare draw-article-window
-         update-article-window)
-
-(defn- thumb-position [header-frame]
-  (let [display-position (get header-frame :display-position 0)
-        total-headers (get header-frame :total-headers 0)
-        height (- (:h header-frame) 65)]
-    (if (zero? total-headers)
-      0
-      (+ (:y header-frame) 25
-         (* height (/ display-position total-headers))))))
+         update-article-window
+         drag-thumb
+         thumb-position)
 
 (defrecord article-window [x y w h page-up page-down]
   widget
@@ -45,8 +38,9 @@
                                  :left-down scroll-up
                                  :left-held scroll-up
                                  :draw down-arrow})
-        :thumb (map->button {:x (+ x w -17) :y (thumb-position frame) :h 15 :w 15
-                             :draw thumb}))))
+        :thumb (map->button {:x (+ x w -17) :y (thumb-position frame) :h 30 :w 15
+                             :draw thumb
+                             :left-held drag-thumb}))))
 
   (update-widget [widget state]
     (update-article-window widget state))
@@ -69,3 +63,32 @@
         (g/stroke-weight g 2)
         (g/fill g [255 255 255])
         (g/rect g [0 0 (:w window) (:h window)])))))
+
+(defn- thumb-position [header-frame]
+  (let [display-position (get header-frame :display-position 0)
+        total-headers (get header-frame :total-headers 0)
+        height (- (:h header-frame) 80)]
+    (if (zero? total-headers)
+      0
+      (+ (:y header-frame) 25
+         (* height (/ display-position total-headers))))))
+
+(defn- drag-thumb [button state]
+  (let [graphics (get-in state [:application :graphics])
+        thumb-path (:path button)
+        article-window-path (drop-last thumb-path)
+        header-frame-path (concat article-window-path [:header-frame])
+        header-frame (get-in state header-frame-path)
+        total-headers (get header-frame :total-headers 0)
+        height (- (:h header-frame) 80)
+        top (+ (:y header-frame) 45)
+        [_ my _] (g/get-mouse graphics)
+        dy (- my top)
+        dy (max dy 0)
+        dy (min dy height)
+        display-position (* (/ dy height) total-headers)
+        state (assoc-in state
+                        (concat header-frame-path [:display-position])
+                        display-position)]
+    (assoc-in state [:application :update-articles] true))
+  )
