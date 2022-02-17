@@ -40,7 +40,7 @@
     (str (subs s 0 n) "...")))
 
 (defn abbreviate-body [body]
-  (abbreviate body 100))
+  (abbreviate body 95))
 
 (defn abbreviate-author [author]
   (abbreviate author 20))

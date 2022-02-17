@@ -37,6 +37,7 @@
                          (* config/header-lines line-height))
         headers (quot (:h frame) header-height)
         frame (assoc frame :n-headers headers
+                           :header-height header-height
                            :mouse-wheel mouse-wheel)]
     frame))
 
@@ -160,6 +161,7 @@
           events (:chronological-text-events application)
           open-thread (:open-thread application)
           threaded-events (thread-events events event-map open-thread)
+          total-events (count threaded-events)
           display-position (:display-position frame)
           end-position (min (count threaded-events) (+ display-position (:n-headers frame)))
           displayed-events (subvec threaded-events display-position end-position)
@@ -172,7 +174,8 @@
           buttons (create-thread-buttons bc headers)
           frame (add-thread-buttons frame buttons)
           marked-up-headers (map a/markup-header headers)
-          frame (assoc frame :displayed-headers marked-up-headers)
+          frame (assoc frame :displayed-headers marked-up-headers
+                             :total-headers total-events)
           state (assoc-in state frame-path frame)
           state (assoc-in state [:application :update-articles] false)]
       state)
@@ -247,7 +250,7 @@
                     (conj processed-events event-id)))))
        ))))
 
-(defn draw-header [window cursor header index]
+(defn draw-header [frame cursor header index]
   (let [g (:graphics cursor)
         header-height (+ config/header-top-margin
                          config/header-bottom-margin
@@ -255,13 +258,13 @@
         cursor (cursor/set-y cursor (+ config/header-top-margin (* index header-height)))]
     (g/text-align g [:left :top])
     (g/fill g [0 0 0])
-    (cursor/render cursor window header))
+    (cursor/render cursor frame header))
   )
 
-(defn draw-headers [state window]
+(defn draw-headers [state frame]
   (let [application (:application state)
         g (:graphics application)
-        headers (:displayed-headers window)]
+        headers (:displayed-headers frame)]
     (loop [cursor (cursor/->cursor g 0 (g/line-height g) 20)
            headers headers
            index 0]
@@ -270,5 +273,5 @@
         (let [header (first headers)]
           (if (nil? header)
             (recur cursor (rest headers) index)
-            (recur (draw-header window cursor header index)
+            (recur (draw-header frame cursor header index)
                    (rest headers) (inc index))))))))

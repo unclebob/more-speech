@@ -104,8 +104,6 @@
         (g/fill graphics fill)
         (g/polygon graphics [pa pb pc pd pe pf pg pa])))))
 
-
-
 (defn down-arrow [graphics {:keys [x y w h button-state]}]
   (g/stroke graphics [0 0 0])
   (let [weight (if (= button-state :in) 2 1)
@@ -127,3 +125,14 @@
         (g/stroke-weight graphics weight)
         (g/fill graphics fill)
         (g/polygon graphics [pa pb pc pd pe pf pg pa])))))
+
+(defn thumb [graphics {:keys [x y w h button-state]}]
+  (g/stroke graphics [0 0 0])
+   (let [weight (if (= button-state :in) 2 1)
+         fill (if (= button-state :left) [150 150 150] [200 200 200])]
+     (g/with-translation
+       graphics [x y]
+       (fn [graphics]
+         (g/stroke-weight graphics weight)
+         (g/fill graphics fill)
+         (g/rect graphics [0 0 w h])))))
