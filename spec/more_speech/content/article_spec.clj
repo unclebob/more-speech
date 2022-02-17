@@ -20,6 +20,11 @@
              (abbreviate-body (apply str (repeat 200 "*")))))
   )
 
+(defn- valid-markup-token? [token]
+  (or
+    (keyword? token)
+    (string? token)
+    (number? token)))
 
 (describe "Formatting an article"
   (let [article {:group "comp.lang.c++"
@@ -32,22 +37,9 @@
       (should (s/valid? ::a/article article)))
 
     (it "is properly formatted"
-      (should= [:regular ""
-                :bold
-                "Bob"
-                :regular
-                " (15)"
-                :bold
-                :pos 40
-                "Subject"
-                :regular
-                :pos 80
-                "20 Jan 22 06:55:27 CST"
-                :new-line
-                "My Message to you."
-                :new-line
-                ]
-               (markup-header article)))))
+      (let [markup(markup-header article)]
+        (should (vector? markup))
+        (should (every? valid-markup-token? markup))))))
 
 (describe "Formatting an author nickname."
   (let [author-tuple [0 "nickname"]]

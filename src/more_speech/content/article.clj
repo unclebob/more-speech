@@ -57,12 +57,14 @@
      :bold
      (abbreviate-author (:author article))
      :regular
-     (str " (" thread-count ")")
+     (if (pos? thread-count)
+       (str " (" thread-count ")")
+       "")
      :bold
-     :pos 40
+     :pos 30
      (:subject article)
      :regular
-     :pos 80
+     :pos 60
      (format-time (:time article))
      :new-line
      (abbreviate-body (:body article))

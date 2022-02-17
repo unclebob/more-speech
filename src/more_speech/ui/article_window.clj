@@ -22,14 +22,14 @@
       (assoc widget
         :header-frame (map->header-frame {:x (inc x)
                                           :y (inc y)
-                                          :w (- w 30)
+                                          :w (- w 20)
                                           :h (dec h)
                                           :display-position 0})
-        :page-up (map->button {:x (+ x w -20) :y (+ y 20) :h 20 :w 20
+        :page-up (map->button {:x (+ x w -17) :y (+ y 5) :h 15 :w 15
                                :left-down scroll-down
                                :left-held scroll-down
                                :draw up-arrow})
-        :page-down (map->button {:x (+ x w -20) :y (+ y h -30) :h 20 :w 20
+        :page-down (map->button {:x (+ x w -17) :y (+ y h -20) :h 15 :w 15
                                  :left-down scroll-up
                                  :left-held scroll-up
                                  :draw down-arrow}))))
