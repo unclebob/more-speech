@@ -2,7 +2,8 @@
   (:require [more-speech.ui.widget :as w]
             [more-speech.ui.graphics :as g]
             [more-speech.util.geometry :as util]
-            [more-speech.ui.app-util :as app]))
+            [more-speech.ui.app-util :as app]
+            [more-speech.ui.config :as config]))
 
 (declare update-button)
 
@@ -88,9 +89,9 @@
   )
 
 (defn up-arrow [graphics {:keys [x y w h button-state]}]
-  (g/stroke graphics [0 0 0])
+  (g/stroke graphics config/black)
   (let [weight (if (= button-state :in) 2 1)
-        fill (if (= button-state :left) [0 0 0] [nil])
+        fill (if (= button-state :left) config/black config/no-fill)
         w2 (/ w 2)
         h2 (/ h 2)
         w3 (/ w 3)
@@ -112,7 +113,7 @@
 (defn down-arrow [graphics {:keys [x y w h button-state]}]
   (g/stroke graphics [0 0 0])
   (let [weight (if (= button-state :in) 2 1)
-        fill (if (= button-state :left) [0 0 0] [nil])
+        fill (if (= button-state :left) config/black config/no-fill)
         w2 (/ w 2)
         h2 (/ h 2)
         w3 (/ w 3)
@@ -132,9 +133,11 @@
         (g/polygon graphics [pa pb pc pd pe pf pg pa])))))
 
 (defn thumb [graphics {:keys [x y w h button-state]}]
-  (g/stroke graphics [0 0 0])
+  (g/stroke graphics config/black)
   (let [weight (if (= button-state :in) 2 1)
-        fill (if (= button-state :left) [150 150 150] [200 200 200])]
+        fill (if (= button-state :left)
+               config/thumb-dragged
+               config/thumb-normal)]
     (g/with-translation
       graphics [x y]
       (fn [graphics]

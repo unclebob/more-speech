@@ -9,7 +9,8 @@
             [more-speech.ui.author-window :refer [map->author-window
                                                   draw-author-window]]
             [more-speech.ui.graphics :as g]
-            [more-speech.nostr.events :as events]))
+            [more-speech.nostr.events :as events]
+            [more-speech.ui.config :as config]))
 
 (s/def ::nicknames (s/map-of number? string?))
 (s/def ::chronological-text-events (s/coll-of number?))
@@ -45,7 +46,10 @@
       :text-event-map {}
       :open-thread #{}
       :article-window (map->article-window
-                        {:x 50 :y 10 :w (g/pos-width graphics 105) :h (- (g/screen-height graphics) 100)})
+                        {:x (:x config/article-window-dimensions)
+                         :y (:y config/article-window-dimensions)
+                         :w (g/pos-width graphics (:char-width config/article-window-dimensions))
+                         :h (- (g/screen-height graphics) (:bottom-margin config/article-window-dimensions))})
 
       :author-window (map->author-window
                        {:x (+ 50 (g/pos-width graphics 110)) :y 10

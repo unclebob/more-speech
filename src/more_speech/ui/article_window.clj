@@ -11,6 +11,7 @@
                                          scroll-down
                                          map->header-frame]]
     [more-speech.ui.app-util :as app]
+    [more-speech.ui.config :as config]
     ))
 
 (declare draw-article-window
@@ -23,13 +24,15 @@
 (defrecord article-window [x y w h page-up page-down]
   widget
   (setup-widget [widget state]
-    (let [frame-path (concat (:path widget) [:header-frame])
+    (let [dim config/header-frame-dimensions
+          frame-path (concat (:path widget) [:header-frame])
           scroll-up (partial scroll-up frame-path)
           scroll-down (partial scroll-down frame-path)
-          frame (map->header-frame {:x (inc x)
-                                    :y (inc y)
-                                    :w (- w 20)
-                                    :h (dec h)
+          frame (map->header-frame {:x (+ x (:left-margin dim))
+                                    :y (+ y (:top-margin dim))
+                                    :w (- w (:right-margin dim)
+                                          config/scroll-bar-w)
+                                    :h (- h (:bottom-margin dim))
                                     :display-position 0})]
       (assoc widget
         :header-frame frame
