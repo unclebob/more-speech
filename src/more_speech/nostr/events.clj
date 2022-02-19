@@ -79,7 +79,6 @@
         id (:id event)
         state (assoc-in state [:application :text-event-map id] event)
         state (update-in state [:application :chronological-text-events] conj id)
-        state (app/update-articles state)
+        state (app/update-widget state [:application :article-window])
         ]
-
     (process-references state event)))

@@ -30,7 +30,10 @@
 
 (defn update-state [{:keys [application] :as state}]
   (let [state (update-widget application state)
-        state (update-child-widgets (:application state) state)]
+        state (update-child-widgets (:application state) state)
+        next-update (get-in state [:application :next-update])
+        state (assoc-in state [:application :this-update] next-update)
+        state (assoc-in state [:application :next-update] #{})]
     (if (empty? @events)
       state
       (let [n-events (count @events)

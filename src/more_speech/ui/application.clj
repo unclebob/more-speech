@@ -4,7 +4,9 @@
 ;;
 ;; Members
 ;; :graphics -- The instance of the graphics protocol.
-;; :update-articles -- Set to true if the article window content needs updating.
+;; :this-update -- Set of widgets to update on this pass. Cleared at end of pass.
+;; :next-update -- Set of widgets to update on next pass.  Moved to :this-update
+;;                 at end of pass.
 ;; :mouse-locked-to -- nil if no lock.  Otherwise the path of the widget to which
 ;;                     the mouse is locked.
 ;;
@@ -15,8 +17,7 @@
                                            draw-widget
                                            draw-child-widgets
                                            setup-child-widgets]]
-            [more-speech.ui.article-window :refer [map->article-window
-                                                   draw-article-window]]
+            [more-speech.ui.article-window :refer [map->article-window]]
             [more-speech.ui.author-window :refer [map->author-window
                                                   draw-author-window]]
             [more-speech.ui.graphics :as g]
@@ -30,10 +31,12 @@
 (s/def ::chronological-text-events (s/coll-of number?))
 (s/def ::text-event-map (s/map-of number? ::events/event))
 (s/def ::open-thread (s/coll-of number? :kind set?))
-(s/def ::update-articles boolean?)
+(s/def ::this-update (s/coll-of ::path :kind set?))
+(s/def ::next-update (s/coll-of ::path :kind set?))
 (s/def ::application (s/keys :req-un [::path
                                       ::graphics
-                                      ::update-articles
+                                      ::this-update
+                                      ::next-update
                                       ::mouse-locked-to
                                       ::nicknames
                                       ::chronological-text-events
@@ -58,6 +61,8 @@
         bold (get-in graphics [:fonts :bold])]
     (g/text-font graphics bold)
     (assoc application
+      :this-update #{}
+      :next-update #{}
       :nicknames {}
       :chronological-text-events []
       :text-event-map {}

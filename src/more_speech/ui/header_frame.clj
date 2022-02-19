@@ -92,12 +92,13 @@
 
 (defn toggle-thread [button state]
   (let [id (:id button)
+        frame-path (drop-last (:path button))
         open-thread (get-in state [:application :open-thread])
         open-thread (if (contains? open-thread id)
                       (disj open-thread id)
                       (conj open-thread id))
         state (assoc-in state [:application :open-thread] open-thread)]
-    (app/update-articles state)))
+    (app/update-widget state frame-path)))
 
 (defrecord button-creator [state frame graphics])
 
@@ -156,7 +157,7 @@
         (recur (assoc frame id button) (rest buttons))))))
 
 (defn- update-header-frame [state frame]
-  (if (app/update-articles? state)
+  (if (app/update-widget? state frame)
     (let [application (:application state)
           event-map (:text-event-map application)
           events (:chronological-text-events application)
@@ -177,8 +178,7 @@
           marked-up-headers (map a/markup-header headers)
           frame (assoc frame :displayed-headers marked-up-headers
                              :total-headers total-events)
-          state (assoc-in state frame-path frame)
-          state (app/articles-updated state)]
+          state (assoc-in state frame-path frame)]
       state)
     state))
 
@@ -204,7 +204,7 @@
         display-position (max 0 display-position)
         frame (assoc frame :display-position display-position)
         state (assoc-in state frame-path frame)
-        state (app/update-articles state)]
+        state (app/update-widget state frame)]
     state))
 
 (defn mouse-wheel [widget state clicks]

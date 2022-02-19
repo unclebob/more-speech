@@ -111,6 +111,7 @@
 (defn- drag-thumb [button state]
   (let [graphics (get-in state [:application :graphics])
         thumb-path (:path button)
+        parent-path (drop-last thumb-path)
         article-window-path (drop-last thumb-path)
         header-frame-path (concat article-window-path [:header-frame])
         header-frame (get-in state header-frame-path)
@@ -125,7 +126,7 @@
         state (assoc-in state
                         (concat header-frame-path [:display-position])
                         display-position)]
-    (app/update-articles state)))
+    (app/update-widget state parent-path)))
 
 (defn- lock-thumb [widget state]
   (app/lock-mouse state widget))
