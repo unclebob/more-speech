@@ -4,7 +4,7 @@
     [more-speech.ui.button :refer [map->button
                                    up-arrow
                                    down-arrow
-                                   thumb]]
+                                   draw-thumb]]
     [more-speech.ui.graphics :as g]
     [more-speech.nostr.util :refer [num->hex-string]]
     [more-speech.ui.header-frame :refer [scroll-up
@@ -33,23 +33,36 @@
                                     :w (- w (:right-margin dim)
                                           config/scroll-bar-w)
                                     :h (- h (:bottom-margin dim))
-                                    :display-position 0})]
-      (assoc widget
-        :header-frame frame
-        :page-up (map->button {:x (+ x w -17) :y (+ y 5) :h 15 :w 15
-                               :left-down scroll-down
-                               :left-held scroll-down
-                               :draw up-arrow})
-        :page-down (map->button {:x (+ x w -17) :y (+ y h -20) :h 15 :w 15
-                                 :left-down scroll-up
-                                 :left-held scroll-up
-                                 :draw down-arrow})
-        :thumb (map->button {:x (+ x w -17) :y (thumb-position frame) :h 30 :w 15
-                             :draw thumb
-                             :left-held drag-thumb
-                             :left-down lock-thumb
-                             :left-up unlock-thumb
-                             }))))
+                                    :display-position 0})
+          sb-button-offset (+ (/ config/scroll-bar-w 2)
+                              (/ config/scroll-bar-button-w 2))
+          sb-button-x (+ x w (- sb-button-offset) 0.5)
+          widget (assoc widget
+                   :header-frame frame
+                   :page-up (map->button {:x sb-button-x
+                                          :y (+ y config/scroll-bar-button-top-margin)
+                                          :h config/scroll-bar-button-h
+                                          :w config/scroll-bar-button-w
+                                          :left-down scroll-down
+                                          :left-held scroll-down
+                                          :draw up-arrow})
+                   :page-down (map->button {:x sb-button-x
+                                            :y (+ y h (- config/scroll-bar-button-bottom-margin))
+                                            :h config/scroll-bar-button-h
+                                            :w config/scroll-bar-button-w
+                                            :left-down scroll-up
+                                            :left-held scroll-up
+                                            :draw down-arrow})
+                   :thumb (map->button {:x sb-button-x
+                                        :y (thumb-position frame)
+                                        :h config/thumb-h
+                                        :w config/scroll-bar-button-w
+                                        :draw draw-thumb
+                                        :left-held drag-thumb
+                                        :left-down lock-thumb
+                                        :left-up unlock-thumb
+                                        }))]
+      widget))
 
   (update-widget [widget state]
     (update-article-window widget state))
@@ -70,16 +83,29 @@
       (fn [g]
         (g/stroke g [0 0 0])
         (g/stroke-weight g 2)
-        (g/fill g [255 255 255])
+        (g/fill g config/white)
         (g/rect g [0 0 (:w window) (:h window)])))))
+
+(defn- thumb-drag-height [frame]
+  (- (:h frame)
+     (* 2 (+ config/scroll-bar-button-top-margin
+             config/scroll-bar-button-h
+             config/thumb-margin))
+     config/thumb-h))
+
+(defn- thumb-origin [frame]
+  (+ (:y frame)
+     config/scroll-bar-button-top-margin
+     config/scroll-bar-button-h
+     config/thumb-margin))
 
 (defn- thumb-position [header-frame]
   (let [display-position (get header-frame :display-position 0)
         total-headers (get header-frame :total-headers 0)
-        height (- (:h header-frame) 80)]
+        height (thumb-drag-height header-frame)]
     (if (zero? total-headers)
-      0
-      (+ (:y header-frame) 25
+      (thumb-origin header-frame)
+      (+ (thumb-origin header-frame)
          (* height (/ display-position total-headers))))))
 
 (defn- drag-thumb [button state]
@@ -89,8 +115,8 @@
         header-frame-path (concat article-window-path [:header-frame])
         header-frame (get-in state header-frame-path)
         total-headers (get header-frame :total-headers 0)
-        height (- (:h header-frame) 80)
-        top (+ (:y header-frame) 45)
+        height (thumb-drag-height header-frame)
+        top (thumb-origin header-frame)
         [_ my _] (g/get-mouse graphics)
         dy (- my top)
         dy (max dy 0)

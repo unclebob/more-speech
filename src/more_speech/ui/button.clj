@@ -132,7 +132,7 @@
         (g/fill graphics fill)
         (g/polygon graphics [pa pb pc pd pe pf pg pa])))))
 
-(defn thumb [graphics {:keys [x y w h button-state]}]
+(defn draw-thumb [graphics {:keys [x y w h button-state]}]
   (g/stroke graphics config/black)
   (let [weight (if (= button-state :in) 2 1)
         fill (if (= button-state :left)
