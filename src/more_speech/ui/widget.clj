@@ -1,3 +1,19 @@
+;; Widgets form a hierarchy. Any member of a widget that satisfies? the widget
+;; protocol will be considered a child widget.  The setup-widget, update-widget,
+;; and draw-widget functions are propagated through all the children.
+;;
+;; Widgets are addressed through their path from the state. The :path member
+;; contains that path.  (get-in state (:path widget)) will return the current
+;; version of the widget.  (assoc-in state (:path widget) widget) puts any
+;; updates to the widget back into the state.
+;;
+;; The :x and :y members are in global (screen) coordinates.  The :h and :w
+;; members are in pixels.  By convention child widgets should fit within the
+;; x,y,w,h bounds of their parents.
+;;
+;; Mouse gestures are typically routed to the deepest child that contains them.
+;;
+
 (ns more-speech.ui.widget
   (:require [more-speech.util.geometry :refer [inside-rect]]))
 
