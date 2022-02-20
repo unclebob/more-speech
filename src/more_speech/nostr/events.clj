@@ -22,10 +22,10 @@
 (declare process-text-event)
 
 (defn process-event [{:keys [application] :as state} event]
-  (let [{:keys [articles nicknames]} application
+  (let [{:keys [_articles nicknames]} application
         name-of (fn [pubkey] (get nicknames pubkey pubkey))
-        [name subscription-id inner-event :as decoded-msg] event
-        {:strs [id pubkey created_at kind tags content sig]} inner-event]
+        [_name _subscription-id inner-event :as _decoded-msg] event
+        {:strs [_id pubkey created_at kind _tags content _sig]} inner-event]
     (condp = kind
       0 (let [pubkey (hex-string->num pubkey)
               name (get (json/read-str content) "name" "tilt")]
@@ -47,7 +47,7 @@
 (defn process-tags [tags]
   (map process-tag tags))
 
-(defn process-references [state {:keys [id tags] :as event}]
+(defn process-references [state {:keys [id tags] :as _event}]
   (let [e-tags (filter #(= :e (first %)) tags)
         refs (map second e-tags)]
     (loop [refs refs

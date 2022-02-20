@@ -6,8 +6,8 @@
 
 (defrecord mock-graphic [x y which time]
   g/graphics
-  (get-mouse [graphics] [x y which])
-  (get-time [graphics] time))
+  (get-mouse [_graphics] [x y which])
+  (get-time [_graphics] time))
 
 (defn- left-up [button state]
   (assoc-in state (concat (:path button) [:left-came-up]) true))

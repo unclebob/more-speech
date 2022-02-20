@@ -31,7 +31,7 @@
   (draw-widget [widget state]
     (draw-article-window state widget)))
 
-(defn setup-article-window [widget state]
+(defn setup-article-window [widget _state]
   (let [{:keys [x y w h]} widget
         dim config/header-frame-dimensions
         frame-path (concat (:path widget) [:header-frame])
@@ -135,5 +135,5 @@
 (defn- lock-thumb [widget state]
   (app/lock-mouse state widget))
 
-(defn- unlock-thumb [widget state]
+(defn- unlock-thumb [_widget state]
   (app/unlock-mouse state))

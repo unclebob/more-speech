@@ -1,17 +1,16 @@
 (ns more-speech.ui.widget-spec
   (:require [speclj.core :refer :all]
             [more-speech.ui.application :refer [map->application]]
-            [more-speech.ui.graphics :as g]
             [more-speech.ui.widget :refer :all]))
 
 (defrecord child []
   widget
-  (setup-widget [widget state]
+  (setup-widget [widget _state]
     (assoc widget :setup true)))
 
 (defrecord child-with-child []
   widget
-  (setup-widget [widget state]
+  (setup-widget [widget _state]
     (assoc widget :child (->child))))
 
 (defn- f [widget state] (assoc-in state (concat (:path widget) [:did-f]) true))
@@ -101,7 +100,7 @@
 
 (defrecord mock-widget [x y w h]
   widget
-  (setup-widget [widget state]
+  (setup-widget [widget _state]
     widget))
 
 (describe "mouse operations"

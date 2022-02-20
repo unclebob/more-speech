@@ -50,13 +50,13 @@
   widget
   (setup-widget [widget state]
     (setup-application widget path state))
-  (update-widget [widget state]
+  (update-widget [_widget state]
     state)
   (draw-widget [application state]
     (draw-child-widgets application state))
   )
 
-(defn- setup-application [application path state]
+(defn- setup-application [application _path _state]
   (let [graphics (:graphics application)
         bold (get-in graphics [:fonts :bold])]
     (g/text-font graphics bold)

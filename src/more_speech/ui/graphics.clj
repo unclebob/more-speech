@@ -32,47 +32,47 @@
 
 (defrecord quil-graphics [fonts]
   graphics
-  (screen-height [graphics]
+  (screen-height [_graphics]
     (q/screen-height))
-  (screen-width [graphics]
+  (screen-width [_graphics]
     (q/screen-width))
-  (text-align [graphics alignment]
+  (text-align [_graphics alignment]
     (apply q/text-align alignment))
-  (text-color [graphics color]
+  (text-color [_graphics color]
     (apply q/fill color))
-  (stroke [graphics color]
+  (stroke [_graphics color]
     (apply q/stroke color))
-  (stroke-weight [graphics weight]
+  (stroke-weight [_graphics weight]
     (q/stroke-weight weight))
-  (fill [graphics color]
+  (fill [_graphics color]
     (apply q/fill color))
-  (no-fill [graphics]
+  (no-fill [_graphics]
     (q/no-fill))
-  (rect [graphics rect]
+  (rect [_graphics rect]
     (apply q/rect rect))
-  (line [graphics line]
+  (line [_graphics line]
     (apply q/line line))
-  (polygon [graphics points]
+  (polygon [_graphics points]
     (draw-polygon points))
   (with-translation [graphics translation f]
     (q/with-translation translation (f graphics)))
-  (text-font [graphics font]
+  (text-font [_graphics font]
     (q/text-font font))
-  (line-height [graphics]
+  (line-height [_graphics]
     (+ (q/text-ascent) (q/text-descent)))
-  (pos-width [graphics pos]
+  (pos-width [_graphics pos]
       (let [s (apply str (repeat pos "X"))]
         (q/text-width s)))
-  (text-width [graphics s]
+  (text-width [_graphics s]
     (q/text-width s))
-  (text [graphics text-spec]
+  (text [_graphics text-spec]
     (apply q/text text-spec))
-  (get-mouse [graphics]
+  (get-mouse [_graphics]
     (let [x (q/mouse-x)
           y (q/mouse-y)
           which (if (q/mouse-pressed?) (q/mouse-button) nil)]
       [x y which]))
-  (get-time [graphics]
+  (get-time [_graphics]
     (System/currentTimeMillis))
   )
 

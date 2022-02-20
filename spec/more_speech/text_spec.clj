@@ -1,7 +1,6 @@
 (ns more-speech.text-spec
   (:require [speclj.core :refer :all]
-            [more-speech.ui.cursor :refer :all]
-            [quil.core :as q]))
+            [more-speech.ui.cursor :refer :all]))
 
 (describe "Text Utilities"
   (context "nil->blank"

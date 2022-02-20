@@ -7,7 +7,7 @@
 
 (defrecord mock-graphics []
   g/graphics
-  (line-height [graphics]
+  (line-height [_graphics]
     20)
   )
 

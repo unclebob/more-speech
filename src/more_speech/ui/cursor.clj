@@ -19,14 +19,14 @@
 (defrecord cursor [graphics x y l-margin]
   Cursor
 
-  (set-x [c x]
-    (assoc c :x x))
+  (set-x [c new-x]
+    (assoc c :x new-x))
 
-  (set-y [c y]
-    (assoc c :y y))
+  (set-y [c new-y]
+    (assoc c :y new-y))
 
-  (set-xy [c x y]
-    (assoc c :x x :y y))
+  (set-xy [c new-x new-y]
+    (assoc c :x new-x :y new-y))
 
   (set-pos [c pos]
     (set-x c (g/pos-width graphics pos)))

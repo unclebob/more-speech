@@ -9,7 +9,7 @@
 
 (defrecord button [x y h w button-state left-up]
   w/widget
-  (setup-widget [widget state]
+  (setup-widget [widget _state]
     widget)
   (update-widget [widget state]
     (update-button widget state))

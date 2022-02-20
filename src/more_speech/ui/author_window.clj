@@ -10,9 +10,9 @@
 
 (defrecord author-window [x y w h fonts]
   widget
-  (setup-widget [widget state]
+  (setup-widget [widget _state]
     widget)
-  (update-widget [widget state]
+  (update-widget [_widget state]
     state)
   (draw-widget [widget state]
     (draw-author-window (:application state) widget))
