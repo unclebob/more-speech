@@ -5,59 +5,6 @@
             [more-speech.ui.graphics :as g]
             [more-speech.ui.config :as config]))
 
-(describe "threading of events"
-  (it "does not thread if open events that have no references"
-    (let [event1 {:id 1}
-          event2 {:id 2}
-          event-map {1 event1
-                     2 event2}
-          events [1 2]
-          open-events #{1 2}
-          threaded-events (thread-events events event-map open-events)]
-      (should= [1 2] (map :id threaded-events))
-      (should= [0 0] (map :indent threaded-events)))
-    )
-
-  (it "does not thread events that have references but are not open"
-    (let [event1 {:id 1 :references [3]}
-          event2 {:id 2}
-          event3 {:id 3}
-          event-map {1 event1
-                     2 event2
-                     3 event3}
-          events [1 2 3]
-          open-events #{}
-          threaded-events (thread-events events event-map open-events)]
-      (should= [1 2 3] (map :id threaded-events))
-      (should= [0 0 0] (map :indent threaded-events))))
-
-  (it "threads events that have references and are open"
-    (let [event1 {:id 1 :references [3]}
-          event2 {:id 2}
-          event3 {:id 3}
-          event-map {1 event1
-                     2 event2
-                     3 event3}
-          events [1 2 3]
-          open-events #{1}
-          threaded-events (thread-events events event-map open-events)]
-      (should= [1 3 2] (map :id threaded-events))
-      (should= [0 1 0] (map :indent threaded-events))))
-
-  (it "treats all articles threaded below an open article as open"
-    (let [event1 {:id 1 :references [2]}
-          event2 {:id 2 :references [3]}
-          event3 {:id 3}
-          event-map {1 event1
-                     2 event2
-                     3 event3}
-          events [1 2 3]
-          open-events #{1}
-          threaded-events (thread-events events event-map open-events)]
-      (should= [1 2 3] (map :id threaded-events))
-      (should= [0 1 2] (map :indent threaded-events))))
-  )
-
 (defrecord mock-graphics []
   g/graphics
   (line-height [graphics]
@@ -99,12 +46,6 @@
                 :thread-count 1,
                 :indent 1}
                (event->header @text-event @nicknames)))
-
-    (it "clears out the widgets from the header frame"
-      (let [frame {:x :not-widget :w1 (->mock-widget)}
-            frame (clear-widgets frame)]
-        (should-be-nil (:w1 frame))
-        (should= {:x :not-widget} frame)))
 
     (it "creates buttons for threads"
       (let [headers [{:id 1 :thread-count 1 :indent 0}

@@ -23,10 +23,10 @@
    :bottom-margin 100})
 
 (def header-frame-dimensions
-  {:left-margin 1
+  {:left-margin 0
    :right-margin 0
-   :top-margin 1
-   :bottom-margin 1})
+   :top-margin 0
+   :bottom-margin 0})
 
 (def header-lines 2)
 (def header-top-margin 5)

@@ -20,9 +20,7 @@
   (with state {:application {:path [:application]
                              :next-update #{}
                              :this-update #{}
-                             :child @child-widget
-                             }
-               })
+                             :child @child-widget}})
 
 
   (it "adds a widget path"
@@ -52,13 +50,11 @@
           state (assoc-in state
                           [:application :this-update]
                           (get-in state [:application :next-update]))]
-      (should (update-widget? state @grandchild-widget)))
-    )
+      (should (update-widget? state @grandchild-widget))))
 
   (it "does not update parents"
     (let [state (update-widget @state @grandchild-widget)]
-      (should-not (update-widget? state @child-widget)))
-    )
+      (should-not (update-widget? state @child-widget))))
 
   (it "checks for ancestors"
     (should (is-ancestor? [:x] [:x]))
@@ -70,7 +66,11 @@
     (should-not (is-ancestor? [] [:x]))
     (should-not (is-ancestor? [:x] [:y]))
     (should-not (is-ancestor? [:x :y] [:x :z]))
-    (should-not (is-ancestor? [:x :y :z] [:x :y]))
+    (should-not (is-ancestor? [:x :y :z] [:x :y]))))
 
-    )
-  )
+(describe "clear-widgets"
+  (it "clears out the widgets from the header frame"
+    (let [frame {:x :not-widget :w1 (->mock-widget)}
+          frame (clear-widgets frame)]
+      (should-be-nil (:w1 frame))
+      (should= {:x :not-widget} frame))))

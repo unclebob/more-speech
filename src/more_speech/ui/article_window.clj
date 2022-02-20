@@ -14,7 +14,8 @@
     [more-speech.ui.config :as config]
     ))
 
-(declare draw-article-window
+(declare setup-article-window
+         draw-article-window
          update-article-window
          drag-thumb
          lock-thumb
@@ -24,50 +25,53 @@
 (defrecord article-window [x y w h page-up page-down]
   widget
   (setup-widget [widget state]
-    (let [dim config/header-frame-dimensions
-          frame-path (concat (:path widget) [:header-frame])
-          scroll-up (partial scroll-up frame-path)
-          scroll-down (partial scroll-down frame-path)
-          frame (map->header-frame {:x (+ x (:left-margin dim))
-                                    :y (+ y (:top-margin dim))
-                                    :w (- w (:right-margin dim)
-                                          config/scroll-bar-w)
-                                    :h (- h (:bottom-margin dim))
-                                    :display-position 0})
-          sb-button-offset (+ (/ config/scroll-bar-w 2)
-                              (/ config/scroll-bar-button-w 2))
-          sb-button-x (+ x w (- sb-button-offset) 0.5)
-          widget (assoc widget
-                   :header-frame frame
-                   :page-up (map->button {:x sb-button-x
-                                          :y (+ y config/scroll-bar-button-top-margin)
-                                          :h config/scroll-bar-button-h
-                                          :w config/scroll-bar-button-w
-                                          :left-down scroll-down
-                                          :left-held scroll-down
-                                          :draw up-arrow})
-                   :page-down (map->button {:x sb-button-x
-                                            :y (+ y h (- config/scroll-bar-button-bottom-margin))
-                                            :h config/scroll-bar-button-h
-                                            :w config/scroll-bar-button-w
-                                            :left-down scroll-up
-                                            :left-held scroll-up
-                                            :draw down-arrow})
-                   :thumb (map->button {:x sb-button-x
-                                        :y (thumb-position frame)
-                                        :h config/thumb-h
-                                        :w config/scroll-bar-button-w
-                                        :draw draw-thumb
-                                        :left-held drag-thumb
-                                        :left-down lock-thumb
-                                        :left-up unlock-thumb
-                                        }))]
-      widget))
-
+    (setup-article-window widget state))
   (update-widget [widget state]
     (update-article-window widget state))
   (draw-widget [widget state]
     (draw-article-window state widget)))
+
+(defn setup-article-window [widget state]
+  (let [{:keys [x y w h]} widget
+        dim config/header-frame-dimensions
+        frame-path (concat (:path widget) [:header-frame])
+        scroll-up (partial scroll-up frame-path)
+        scroll-down (partial scroll-down frame-path)
+        frame (map->header-frame {:x (+ x (:left-margin dim))
+                                  :y (+ y (:top-margin dim))
+                                  :w (- w (:right-margin dim)
+                                        config/scroll-bar-w)
+                                  :h (- h (:bottom-margin dim))
+                                  :display-position 0})
+        sb-button-offset (+ (/ config/scroll-bar-w 2)
+                            (/ config/scroll-bar-button-w 2))
+        sb-button-x (+ x w (- sb-button-offset) 0.5)
+        widget (assoc widget
+                 :header-frame frame
+                 :page-up (map->button {:x sb-button-x
+                                        :y (+ y config/scroll-bar-button-top-margin)
+                                        :h config/scroll-bar-button-h
+                                        :w config/scroll-bar-button-w
+                                        :left-down scroll-down
+                                        :left-held scroll-down
+                                        :draw up-arrow})
+                 :page-down (map->button {:x sb-button-x
+                                          :y (+ y h (- config/scroll-bar-button-bottom-margin))
+                                          :h config/scroll-bar-button-h
+                                          :w config/scroll-bar-button-w
+                                          :left-down scroll-up
+                                          :left-held scroll-up
+                                          :draw down-arrow})
+                 :thumb (map->button {:x sb-button-x
+                                      :y (thumb-position frame)
+                                      :h config/thumb-h
+                                      :w config/scroll-bar-button-w
+                                      :draw draw-thumb
+                                      :left-held drag-thumb
+                                      :left-down lock-thumb
+                                      :left-up unlock-thumb
+                                      }))]
+    widget))
 
 (defn update-article-window [widget state]
   (let [header-frame (:header-frame widget)

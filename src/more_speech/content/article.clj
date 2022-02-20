@@ -1,6 +1,7 @@
 (ns more-speech.content.article
   (:require [clojure.spec.alpha :as s]
-            [more-speech.nostr.util :refer [num->hex-string]])
+            [more-speech.nostr.util :refer [num->hex-string]]
+            [clojure.set :as set])
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
@@ -79,3 +80,38 @@
    name
    :new-line
    ])
+
+(defn thread-events
+  "returns events in threaded order."
+  ([events event-map open-events]
+   (thread-events events event-map open-events 0))
+  ([events event-map open-events indent]
+   (loop [events events
+          threaded-events []
+          processed-events #{}]
+     (cond
+       (empty? events)
+       threaded-events
+
+       (contains? processed-events (first events))
+       (recur (rest events) threaded-events processed-events)
+
+       :else
+       (let [event-id (first events)
+             event (get event-map event-id)
+             references (:references event)
+             no-references? (empty? references)
+             not-open? (nil? (open-events event-id))
+             no-thread? (or no-references? (and (zero? indent) not-open?))]
+         (if no-thread?
+           (recur (rest events)
+                  (conj threaded-events (assoc event :indent indent))
+                  (conj processed-events event-id))
+           (let [thread (thread-events references event-map open-events (inc indent))
+                 threaded-events (conj threaded-events (assoc event :indent indent))
+                 threaded-events (vec (concat threaded-events thread))
+                 processed-events (set/union processed-events (set (map :id thread)))]
+             (recur (rest events)
+                    threaded-events
+                    (conj processed-events event-id)))))
+       ))))

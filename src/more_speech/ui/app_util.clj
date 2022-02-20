@@ -53,3 +53,16 @@
 (defn get-mouse-lock [state]
   "returns path of locked widget or nil."
   (get-in state mouse-lock-path nil))
+
+(defn clear-widgets [frame]
+  (loop [elements (keys frame)
+         frame frame]
+    (if (empty? elements)
+      frame
+      (let [key (first elements)
+            element (get frame key)]
+        (if (and (some? element)
+                 (satisfies? w/widget element))
+          (recur (rest elements)
+                 (dissoc frame key))
+          (recur (rest elements) frame))))))

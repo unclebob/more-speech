@@ -9,14 +9,12 @@
                                    down-arrow]]
     [more-speech.ui.graphics :as g]
     [more-speech.nostr.util :refer [num->hex-string]]
-    [clojure.set :as set]
     [more-speech.ui.app-util :as app]))
 
 (declare setup-header-frame
          update-header-frame
          draw-header-frame
          mouse-wheel
-         thread-events
          draw-headers)
 
 (defrecord header-frame [x y w h display-position]
@@ -53,19 +51,6 @@
 
 (defn events->headers [events nicknames]
   (map #(event->header % nicknames) events))
-
-(defn clear-widgets [frame]
-  (loop [elements (keys frame)
-         frame frame]
-    (if (empty? elements)
-      frame
-      (let [key (first elements)
-            element (get frame key)]
-        (if (and (some? element)
-                 (satisfies? widget element))
-          (recur (rest elements)
-                 (dissoc frame key))
-          (recur (rest elements) frame))))))
 
 (defn draw-minus [graphics {:keys [x y h w button-state]}]
   (g/with-translation
@@ -162,7 +147,7 @@
           event-map (:text-event-map application)
           events (:chronological-text-events application)
           open-thread (:open-thread application)
-          threaded-events (thread-events events event-map open-thread)
+          threaded-events (a/thread-events events event-map open-thread)
           total-events (count threaded-events)
           display-position (:display-position frame)
           end-position (min (count threaded-events) (+ display-position (:n-headers frame)))
@@ -172,7 +157,7 @@
           bc (make-button-creator state frame)
           frame-path (:path frame)
           frame (get-in state frame-path)
-          frame (clear-widgets frame)
+          frame (app/clear-widgets frame)
           buttons (create-thread-buttons bc headers)
           frame (add-thread-buttons frame buttons)
           marked-up-headers (map a/markup-header headers)
@@ -210,46 +195,11 @@
 (defn mouse-wheel [widget state clicks]
   (scroll-frame (:path widget) state clicks))
 
-(defn scroll-up [frame-path button state]
+(defn scroll-up [frame-path _button state]
   (scroll-frame frame-path state 1))
 
-(defn scroll-down [frame-path button state]
+(defn scroll-down [frame-path _button state]
   (scroll-frame frame-path state -1))
-
-(defn thread-events
-  "returns articles in threaded order."
-  ([events event-map open-events]
-   (thread-events events event-map open-events 0))
-  ([events event-map open-events indent]
-   (loop [events events
-          threaded-events []
-          processed-events #{}]
-     (cond
-       (empty? events)
-       threaded-events
-
-       (contains? processed-events (first events))
-       (recur (rest events) threaded-events processed-events)
-
-       :else
-       (let [event-id (first events)
-             event (get event-map event-id)
-             references (:references event)
-             no-references? (empty? references)
-             not-open? (nil? (open-events event-id))
-             no-thread? (or no-references? (and (zero? indent) not-open?))]
-         (if no-thread?
-           (recur (rest events)
-                  (conj threaded-events (assoc event :indent indent))
-                  (conj processed-events event-id))
-           (let [thread (thread-events references event-map open-events (inc indent))
-                 threaded-events (conj threaded-events (assoc event :indent indent))
-                 threaded-events (vec (concat threaded-events thread))
-                 processed-events (set/union processed-events (set (map :id thread)))]
-             (recur (rest events)
-                    threaded-events
-                    (conj processed-events event-id)))))
-       ))))
 
 (defn draw-header [frame cursor header index]
   (let [g (:graphics cursor)
