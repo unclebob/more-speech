@@ -22,12 +22,6 @@
    :char-width 105
    :bottom-margin 100})
 
-(def header-frame-dimensions
-  {:left-margin 0
-   :right-margin 0
-   :top-margin 0
-   :bottom-margin 0})
-
 (def header-lines 2)
 (def header-top-margin 5)
 (def header-bottom-margin 5)

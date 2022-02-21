@@ -15,6 +15,7 @@
          update-header-frame
          draw-header-frame
          mouse-wheel
+         scroll-frame
          draw-headers)
 
 (defrecord header-frame [x y w h display-position]
@@ -37,7 +38,8 @@
         headers (quot (:h frame) header-height)
         frame (assoc frame :n-headers headers
                            :header-height header-height
-                           :mouse-wheel mouse-wheel)]
+                           :mouse-wheel mouse-wheel
+                           :scroll-frame scroll-frame)]
     frame))
 
 (defn event->header [text-event nicknames]
@@ -161,8 +163,8 @@
           buttons (create-thread-buttons bc headers)
           frame (add-thread-buttons frame buttons)
           marked-up-headers (map a/markup-header headers)
-          frame (assoc frame :displayed-headers marked-up-headers
-                             :total-headers total-events)
+          frame (assoc frame :displayed-elements marked-up-headers
+                             :total-elements total-events)
           state (assoc-in state frame-path frame)]
       state)
     state))
@@ -195,12 +197,6 @@
 (defn mouse-wheel [widget state clicks]
   (scroll-frame (:path widget) state clicks))
 
-(defn scroll-up [frame-path _button state]
-  (scroll-frame frame-path state 1))
-
-(defn scroll-down [frame-path _button state]
-  (scroll-frame frame-path state -1))
-
 (defn draw-header [frame cursor header index]
   (let [g (:graphics cursor)
         header-height (+ config/header-top-margin
@@ -215,7 +211,7 @@
 (defn draw-headers [state frame]
   (let [application (:application state)
         g (:graphics application)
-        headers (:displayed-headers frame)]
+        headers (:displayed-elements frame)]
     (loop [cursor (cursor/->cursor g 0 (g/line-height g) 20)
            headers headers
            index 0]

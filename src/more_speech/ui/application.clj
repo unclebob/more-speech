@@ -17,7 +17,8 @@
                                            draw-widget
                                            draw-child-widgets
                                            setup-child-widgets]]
-            [more-speech.ui.article-window :refer [map->article-window]]
+            [more-speech.ui.text-window :refer [map->text-window]]
+            [more-speech.ui.header-frame :refer [map->header-frame]]
             [more-speech.ui.author-window :refer [map->author-window
                                                   draw-author-window]]
             [more-speech.ui.graphics :as g]
@@ -58,7 +59,8 @@
 
 (defn- setup-application [application _path _state]
   (let [graphics (:graphics application)
-        bold (get-in graphics [:fonts :bold])]
+        bold (get-in graphics [:fonts :bold])
+        ]
     (g/text-font graphics bold)
     (assoc application
       :this-update #{}
@@ -67,11 +69,13 @@
       :chronological-text-events []
       :text-event-map {}
       :open-thread #{}
-      :article-window (map->article-window
+      :article-window (map->text-window
                         {:x (:x config/article-window-dimensions)
                          :y (:y config/article-window-dimensions)
                          :w (g/pos-width graphics (:char-width config/article-window-dimensions))
-                         :h (- (g/screen-height graphics) (:bottom-margin config/article-window-dimensions))})
+                         :h (- (g/screen-height graphics) (:bottom-margin config/article-window-dimensions))
+                         :frame-constructor map->header-frame
+                         })
 
       :author-window (map->author-window
                        {:x (+ 50 (g/pos-width graphics 110)) :y 10
