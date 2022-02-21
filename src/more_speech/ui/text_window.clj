@@ -1,6 +1,7 @@
 (ns more-speech.ui.text-window
   (:require
     [more-speech.ui.widget :refer [widget]]
+    [more-speech.ui.text-frame :refer [map->text-frame]]
     [more-speech.ui.button :refer [map->button
                                    up-arrow
                                    down-arrow
@@ -21,7 +22,7 @@
          scroll-up
          scroll-down)
 
-(defrecord text-window [x y w h page-up page-down frame-constructor]
+(defrecord text-window [x y w h page-up page-down controls]
   widget
   (setup-widget [widget state]
     (setup-text-window widget state))
@@ -30,28 +31,29 @@
   (draw-widget [widget state]
     (draw-text-window state widget)))
 
-(defn setup-text-window [widget _state]
-  (let [{:keys [x y w h frame-constructor]} widget
-        frame-path (concat (:path widget) [:text-frame])
+(defn setup-text-window [window _state]
+  (let [{:keys [x y w h controls]} window
+        frame-path (concat (:path window) [:text-frame])
         scroll-up (partial scroll-up frame-path)
         scroll-down (partial scroll-down frame-path)
-        frame (frame-constructor {:x x
-                                  :y y
-                                  :w (- w config/scroll-bar-w)
-                                  :h h
-                                  :display-position 0})
+        frame (map->text-frame {:x x
+                                :y y
+                                :w (- w config/scroll-bar-w)
+                                :h h
+                                :controls controls
+                                :display-position 0})
         sb-button-offset (+ (/ config/scroll-bar-w 2)
                             (/ config/scroll-bar-button-w 2))
         sb-button-x (+ x w (- sb-button-offset) 0.5)
-        widget (assoc widget
+        widget (assoc window
                  :text-frame frame
                  :scroll-down (map->button {:x sb-button-x
-                                        :y (+ y config/scroll-bar-button-top-margin)
-                                        :h config/scroll-bar-button-h
-                                        :w config/scroll-bar-button-w
-                                        :left-down scroll-down
-                                        :left-held scroll-down
-                                        :draw up-arrow})
+                                            :y (+ y config/scroll-bar-button-top-margin)
+                                            :h config/scroll-bar-button-h
+                                            :w config/scroll-bar-button-w
+                                            :left-down scroll-down
+                                            :left-held scroll-down
+                                            :draw up-arrow})
                  :scroll-up (map->button {:x sb-button-x
                                           :y (+ y h (- config/scroll-bar-button-bottom-margin))
                                           :h config/scroll-bar-button-h

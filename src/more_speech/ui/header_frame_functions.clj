@@ -7,9 +7,31 @@
             [more-speech.ui.button :refer [map->button
                                            up-arrow
                                            down-arrow]]
-            [more-speech.ui.app-util :as app-util]))
+            [more-speech.ui.app-util :as app-util]
+            [more-speech.ui.text-frame :refer [text-window-controls
+                                               get-element-height
+                                               draw-elements
+                                               update-elements
+                                               scroll-elements]]))
 
-(defn get-element-height [state]
+(declare get-header-height
+         draw-headers
+         update-headers
+         scroll-headers)
+
+(defrecord header-controls []
+  text-window-controls
+  (get-element-height [_c state]
+    (get-header-height state))
+  (draw-elements [_c state frame]
+    (draw-headers state frame))
+  (update-elements [_c state frame]
+    (update-headers state frame))
+  (scroll-elements [_c state frame delta]
+    (scroll-headers state frame delta))
+  )
+
+(defn get-header-height [state]
   (let [graphics (get-in state [:application :graphics])
         line-height (g/line-height graphics)
         header-height (+ config/header-bottom-margin
@@ -109,6 +131,30 @@
             id (:id button)]
         (recur (assoc frame id button) (rest buttons))))))
 
+(defn update-headers [state frame]
+  (let [application (:application state)
+        event-map (:text-event-map application)
+        events (:chronological-text-events application)
+        open-thread (:open-thread application)
+        threaded-events (a/thread-events events event-map open-thread)
+        total-events (count threaded-events)
+        display-position (:display-position frame)
+        end-position (min (count threaded-events) (+ display-position (:n-elements frame)))
+        displayed-events (subvec threaded-events display-position end-position)
+        nicknames (:nicknames application)
+        headers (events->headers displayed-events nicknames)
+        bc (make-button-creator state frame)
+        frame-path (:path frame)
+        frame (get-in state frame-path)
+        frame (app-util/clear-widgets frame)
+        buttons (create-thread-buttons bc headers)
+        frame (add-thread-buttons frame buttons)
+        marked-up-headers (map a/markup-header headers)
+        frame (assoc frame :displayed-elements marked-up-headers
+                           :total-elements total-events)
+        state (assoc-in state frame-path frame)]
+    state))
+
 
 (defn draw-header [frame cursor header index]
   (let [g (:graphics cursor)
@@ -136,3 +182,13 @@
             (recur cursor (rest headers) index)
             (recur (draw-header frame cursor header index)
                    (rest headers) (inc index))))))))
+
+(defn scroll-headers [state frame delta]
+  (let [articles (get-in state [:application :chronological-text-events])
+        display-position (:display-position frame)
+        display-position (+ display-position delta)
+        display-position (min (count articles) display-position)
+        display-position (max 0 display-position)
+        frame (assoc frame :display-position display-position)]
+    frame))
+

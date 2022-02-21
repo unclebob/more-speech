@@ -12,6 +12,11 @@
     20)
   )
 
+(defrecord mock-controls []
+  text-window-controls
+  (get-element-height [_c _state]
+    2))
+
 (defrecord mock-widget []
   widget)
 
@@ -21,11 +26,11 @@
 (describe "article frame"
   (with state {:application
                {:graphics (->mock-graphics)}})
-  (with frame {:x 0 :y 0 :w 500 :h 500})
+  (with frame {:x 0 :y 0 :w 500 :h 500 :controls (->mock-controls)})
   (context "setup"
     (it "determines number of article headers fit in the frame"
       (let [frame (setup-text-frame @state @frame)]
-        (should= 10 (:n-elements frame)))
+        (should= 250 (:n-elements frame)))
       )
     )
 

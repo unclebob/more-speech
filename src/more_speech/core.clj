@@ -53,14 +53,14 @@
   (draw-widget application state)
   )
 
-(defn mouse-wheel [state clicks]
+(defn mouse-wheel [state delta]
   (let [application (:application state)
         x (q/mouse-x)
         y (q/mouse-y)
         widget (w/find-deepest-mouse-target application x y)
         wheel-f (get widget :mouse-wheel)]
     (if (some? wheel-f)
-      (wheel-f widget state clicks)
+      (wheel-f widget state delta)
       state))
   )
 

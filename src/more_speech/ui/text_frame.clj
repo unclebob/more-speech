@@ -2,13 +2,19 @@
   (:require
     [more-speech.ui.widget :refer [widget]]
     [more-speech.ui.graphics :as g]
-    [more-speech.content.article :as a]
     [more-speech.ui.app-util :as app-util]
-    [more-speech.ui.header-frame-functions
-     :refer [get-element-height
-             draw-headers]
-     :as funcs]
     ))
+
+(defprotocol text-window-controls
+  (get-element-height [controls state]
+    "returns the fixed height, in pixels, of the scrolled element.")
+  (draw-elements [controls state frame]
+    "draws :displayed-elements.")
+  (update-elements [controls state frame]
+    "Called only if the widget is in [:application :this-update]
+    sets :total-elements and :displayed-elements")
+  (scroll-elements [controls state frame delta]
+    "sets :display-position"))
 
 (declare setup-text-frame
          update-text-frame
@@ -16,7 +22,7 @@
          mouse-wheel
          scroll-frame)
 
-(defrecord text-frame [x y w h display-position]
+(defrecord text-frame [x y w h display-position controls]
   widget
   (setup-widget [widget state]
     (setup-text-frame state widget))
@@ -28,7 +34,8 @@
   )
 
 (defn setup-text-frame [state frame]
-  (let [element-height (get-element-height state)
+  (let [controls (:controls frame)
+        element-height (get-element-height controls state)
         elements (quot (:h frame) element-height)
         frame (assoc frame :n-elements elements
                            :mouse-wheel mouse-wheel
@@ -37,32 +44,11 @@
 
 (defn- update-text-frame [state frame]
   (if (app-util/update-widget? state frame)
-    (let [application (:application state)
-          event-map (:text-event-map application)
-          events (:chronological-text-events application)
-          open-thread (:open-thread application)
-          threaded-events (a/thread-events events event-map open-thread)
-          total-events (count threaded-events)
-          display-position (:display-position frame)
-          end-position (min (count threaded-events) (+ display-position (:n-elements frame)))
-          displayed-events (subvec threaded-events display-position end-position)
-          nicknames (:nicknames application)
-          headers (funcs/events->headers displayed-events nicknames)
-          bc (funcs/make-button-creator state frame)
-          frame-path (:path frame)
-          frame (get-in state frame-path)
-          frame (app-util/clear-widgets frame)
-          buttons (funcs/create-thread-buttons bc headers)
-          frame (funcs/add-thread-buttons frame buttons)
-          marked-up-headers (map a/markup-header headers)
-          frame (assoc frame :displayed-elements marked-up-headers
-                             :total-elements total-events)
-          state (assoc-in state frame-path frame)]
-      state)
+    (update-elements (:controls frame) state frame)
     state))
 
 (defn draw-text-frame [state frame]
-  (let [{:keys [x y w h]} frame
+  (let [{:keys [x y w h controls]} frame
         application (:application state)
         g (:graphics application)]
     (g/with-translation
@@ -72,20 +58,15 @@
         (g/stroke-weight g 2)
         (g/no-fill g)
         (g/rect g [0 0 w h])
-        (draw-headers state frame)))))
+        (draw-elements controls state frame)))))
 
 (defn scroll-frame [frame-path state delta]
   (let [frame (get-in state frame-path)
-        articles (get-in state [:application :chronological-text-events])
-        display-position (:display-position frame)
-        display-position (+ display-position delta)
-        display-position (min (count articles) display-position)
-        display-position (max 0 display-position)
-        frame (assoc frame :display-position display-position)
-        state (assoc-in state frame-path frame)
+        controls (:controls frame)
+        state (assoc-in state frame-path (scroll-elements controls state frame delta))
         state (app-util/update-widget state frame)]
     state))
 
-(defn mouse-wheel [widget state clicks]
-  (scroll-frame (:path widget) state clicks))
+(defn mouse-wheel [frame state clicks]
+  (scroll-frame  (:path frame) state clicks))
 
