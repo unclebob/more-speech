@@ -1,46 +1,21 @@
-(ns more-speech.ui.header-frame
-  (:require
-    [more-speech.ui.config :as config]
-    [more-speech.ui.cursor :as cursor]
-    [more-speech.content.article :as a]
-    [more-speech.ui.widget :refer [widget]]
-    [more-speech.ui.button :refer [map->button
-                                   up-arrow
-                                   down-arrow]]
-    [more-speech.ui.graphics :as g]
-    [more-speech.nostr.util :refer [num->hex-string]]
-    [more-speech.ui.app-util :as app]))
+(ns more-speech.ui.header-frame-functions
+  (:require [more-speech.ui.config :as config]
+            [more-speech.ui.graphics :as g]
+            [more-speech.ui.cursor :as cursor]
+            [more-speech.nostr.util :refer [num->hex-string]]
+            [more-speech.content.article :as a]
+            [more-speech.ui.button :refer [map->button
+                                           up-arrow
+                                           down-arrow]]
+            [more-speech.ui.app-util :as app-util]))
 
-(declare setup-header-frame
-         update-header-frame
-         draw-header-frame
-         mouse-wheel
-         scroll-frame
-         draw-headers)
-
-(defrecord header-frame [x y w h display-position]
-  widget
-  (setup-widget [widget state]
-    (setup-header-frame state widget))
-  (update-widget [widget state]
-    (update-header-frame state widget))
-  (draw-widget [widget state]
-    (draw-header-frame state widget)
-    state)
-  )
-
-(defn setup-header-frame [state frame]
+(defn get-element-height [state]
   (let [graphics (get-in state [:application :graphics])
         line-height (g/line-height graphics)
         header-height (+ config/header-bottom-margin
                          config/header-top-margin
-                         (* config/header-lines line-height))
-        headers (quot (:h frame) header-height)
-        frame (assoc frame :n-headers headers
-                           :header-height header-height
-                           :mouse-wheel mouse-wheel
-                           :scroll-frame scroll-frame)]
-    frame))
+                         (* config/header-lines line-height))]
+    header-height))
 
 (defn event->header [text-event nicknames]
   (let [{:keys [id pubkey created-at content references indent]} text-event
@@ -77,15 +52,6 @@
       (g/line graphics [(quot w 2) 0 (quot w 2) h])
       )))
 
-(defn toggle-thread [button state]
-  (let [id (:id button)
-        frame-path (drop-last (:path button))
-        open-thread (get-in state [:application :open-thread])
-        open-thread (if (contains? open-thread id)
-                      (disj open-thread id)
-                      (conj open-thread id))
-        state (assoc-in state [:application :open-thread] open-thread)]
-    (app/update-widget state frame-path)))
 
 (defrecord button-creator [state frame graphics])
 
@@ -112,7 +78,7 @@
                   :h 10
                   :draw draw
                   :path (concat (:path frame) [id])
-                  :left-down toggle-thread})))
+                  :left-down app-util/toggle-event-thread})))
 
 (defn create-thread-buttons [button-creator headers]
   (let [state (:state button-creator)
@@ -143,59 +109,6 @@
             id (:id button)]
         (recur (assoc frame id button) (rest buttons))))))
 
-(defn- update-header-frame [state frame]
-  (if (app/update-widget? state frame)
-    (let [application (:application state)
-          event-map (:text-event-map application)
-          events (:chronological-text-events application)
-          open-thread (:open-thread application)
-          threaded-events (a/thread-events events event-map open-thread)
-          total-events (count threaded-events)
-          display-position (:display-position frame)
-          end-position (min (count threaded-events) (+ display-position (:n-headers frame)))
-          displayed-events (subvec threaded-events display-position end-position)
-          nicknames (:nicknames application)
-          headers (events->headers displayed-events nicknames)
-          bc (make-button-creator state frame)
-          frame-path (:path frame)
-          frame (get-in state frame-path)
-          frame (app/clear-widgets frame)
-          buttons (create-thread-buttons bc headers)
-          frame (add-thread-buttons frame buttons)
-          marked-up-headers (map a/markup-header headers)
-          frame (assoc frame :displayed-elements marked-up-headers
-                             :total-elements total-events)
-          state (assoc-in state frame-path frame)]
-      state)
-    state))
-
-(defn draw-header-frame [state frame]
-  (let [{:keys [x y w h]} frame
-        application (:application state)
-        g (:graphics application)]
-    (g/with-translation
-      g [x y]
-      (fn [g]
-        (g/stroke g [0 0 0])
-        (g/stroke-weight g 2)
-        (g/no-fill g)
-        (g/rect g [0 0 w h])
-        (draw-headers state frame)))))
-
-(defn scroll-frame [frame-path state delta]
-  (let [frame (get-in state frame-path)
-        articles (get-in state [:application :chronological-text-events])
-        display-position (:display-position frame)
-        display-position (+ display-position delta)
-        display-position (min (count articles) display-position)
-        display-position (max 0 display-position)
-        frame (assoc frame :display-position display-position)
-        state (assoc-in state frame-path frame)
-        state (app/update-widget state frame)]
-    state))
-
-(defn mouse-wheel [widget state clicks]
-  (scroll-frame (:path widget) state clicks))
 
 (defn draw-header [frame cursor header index]
   (let [g (:graphics cursor)
@@ -207,6 +120,7 @@
     (g/fill g [0 0 0])
     (cursor/render cursor frame header))
   )
+
 
 (defn draw-headers [state frame]
   (let [application (:application state)

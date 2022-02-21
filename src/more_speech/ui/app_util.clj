@@ -66,3 +66,13 @@
           (recur (rest elements)
                  (dissoc frame key))
           (recur (rest elements) frame))))))
+
+(defn toggle-event-thread [button state]
+  (let [id (:id button)
+        frame-path (drop-last (:path button))
+        open-thread (get-in state [:application :open-thread])
+        open-thread (if (contains? open-thread id)
+                      (disj open-thread id)
+                      (conj open-thread id))
+        state (assoc-in state [:application :open-thread] open-thread)]
+    (update-widget state frame-path)))

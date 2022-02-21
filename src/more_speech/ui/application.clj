@@ -18,7 +18,7 @@
                                            draw-child-widgets
                                            setup-child-widgets]]
             [more-speech.ui.text-window :refer [map->text-window]]
-            [more-speech.ui.header-frame :refer [map->header-frame]]
+            [more-speech.ui.text-frame :refer [map->text-frame]]
             [more-speech.ui.author-window :refer [map->author-window
                                                   draw-author-window]]
             [more-speech.ui.graphics :as g]
@@ -74,7 +74,7 @@
                          :y (:y config/article-window-dimensions)
                          :w (g/pos-width graphics (:char-width config/article-window-dimensions))
                          :h (- (g/screen-height graphics) (:bottom-margin config/article-window-dimensions))
-                         :frame-constructor map->header-frame
+                         :frame-constructor map->text-frame
                          })
 
       :author-window (map->author-window
@@ -82,4 +82,5 @@
                         :w (g/pos-width graphics 30) :h (- (g/screen-height graphics) 100)})
       )
     ))
+
 

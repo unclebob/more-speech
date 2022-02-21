@@ -1,6 +1,7 @@
 (ns more-speech.ui.header-frame-spec
   (:require [speclj.core :refer :all]
-            [more-speech.ui.header-frame :refer :all]
+            [more-speech.ui.text-frame :refer :all]
+            [more-speech.ui.header-frame-functions :refer :all]
             [more-speech.ui.widget :refer [widget setup-widget]]
             [more-speech.ui.graphics :as g]
             [more-speech.ui.config :as config]))
@@ -23,8 +24,8 @@
   (with frame {:x 0 :y 0 :w 500 :h 500})
   (context "setup"
     (it "determines number of article headers fit in the frame"
-      (let [frame (setup-header-frame @state @frame)]
-        (should= 10 (:n-headers frame)))
+      (let [frame (setup-text-frame @state @frame)]
+        (should= 10 (:n-elements frame)))
       )
     )
 
