@@ -11,13 +11,11 @@
             [more-speech.ui.text-frame :refer [text-window-controls
                                                get-element-height
                                                draw-elements
-                                               update-elements
-                                               scroll-elements]]))
+                                               update-elements]]))
 
 (declare get-header-height
          draw-headers
-         update-headers
-         scroll-headers)
+         update-headers)
 
 (defrecord header-controls []
   text-window-controls
@@ -27,8 +25,6 @@
     (draw-headers state frame))
   (update-elements [_c state frame]
     (update-headers state frame))
-  (scroll-elements [_c state frame delta]
-    (scroll-headers state frame delta))
   )
 
 (defn get-header-height [state]
@@ -183,12 +179,4 @@
             (recur (draw-header frame cursor header index)
                    (rest headers) (inc index))))))))
 
-(defn scroll-headers [state frame delta]
-  (let [articles (get-in state [:application :chronological-text-events])
-        display-position (:display-position frame)
-        display-position (+ display-position delta)
-        display-position (min (count articles) display-position)
-        display-position (max 0 display-position)
-        frame (assoc frame :display-position display-position)]
-    frame))
 

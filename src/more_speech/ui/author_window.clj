@@ -9,7 +9,6 @@
 
 (declare get-author-height
          draw-authors
-         scroll-authors
          update-authors)
 
 (defrecord author-window-controls []
@@ -20,25 +19,12 @@
     (draw-authors state frame))
   (update-elements [_c state frame]
     (update-authors state frame))
-  (scroll-elements [_c state frame delta]
-    (scroll-authors state frame delta)))
+  )
 
 (defn get-author-height [state]
   (let [graphics (get-in state [:application :graphics])
         line-height (g/line-height graphics)]
     line-height))
-
-(declare draw-author-window)
-
-(defrecord author-window [x y w h fonts]
-  widget
-  (setup-widget [widget _state]
-    widget)
-  (update-widget [_widget state]
-    state)
-  (draw-widget [widget state]
-    (draw-author-window state widget))
-  )
 
 (defn draw-author [frame cursor author]
   (let [g (:graphics cursor)]
@@ -62,30 +48,9 @@
       (if (empty? authors)
         cursor
         (recur (draw-author frame cursor (first authors))
-               (rest authors)))))
-  )
+               (rest authors))))))
 
 (defn update-authors [state frame]
   (let [frame-path (:path frame)
         authors (get-in state [:application :nicknames])]
     (assoc-in state (concat frame-path [:total-elements]) (count authors))))
-
-(defn scroll-authors [state frame delta]
-  (let [n-authors (count (get-in state [:application :nicknames]))
-        display-position (:display-position frame)
-        display-position (+ display-position delta)
-        display-position (min n-authors display-position)
-        display-position (max 0 display-position)
-        frame (assoc frame :display-position display-position)]
-    frame))
-
-(defn draw-author-window [state window]
-  (let [application (:application state)
-        g (:graphics application)]
-    (g/with-translation
-      g [(:x window) (:y window)]
-      (fn [g] (g/stroke g [0 0 0])
-        (g/stroke-weight g 2)
-        (g/fill g [255 255 255])
-        (g/rect g [0 0 (:w window) (:h window)])
-        (draw-authors state window)))))

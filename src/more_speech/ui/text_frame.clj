@@ -13,8 +13,7 @@
   (update-elements [controls state frame]
     "Called only if the widget is in [:application :this-update]
     sets :total-elements.")
-  (scroll-elements [controls state frame delta]
-    "sets :display-position"))
+  )
 
 (declare setup-text-frame
          update-text-frame
@@ -62,11 +61,17 @@
 
 (defn scroll-frame [frame-path state delta]
   (let [frame (get-in state frame-path)
-        controls (:controls frame)
-        state (assoc-in state frame-path (scroll-elements controls state frame delta))
-        state (app-util/update-widget state frame)]
+        display-position (:display-position frame)
+        total-elements (get frame :total-elements 0)
+        display-position (+ display-position delta)
+        display-position (min total-elements display-position)
+        display-position (max 0 display-position)
+        frame (assoc frame :display-position display-position)
+        state (assoc-in state frame-path frame)
+        state (app-util/update-widget state frame)
+        ]
     state))
 
 (defn mouse-wheel [frame state clicks]
-  (scroll-frame  (:path frame) state clicks))
+  (scroll-frame (:path frame) state clicks))
 

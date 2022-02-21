@@ -20,9 +20,7 @@
             [more-speech.ui.text-window :refer [map->text-window]]
             [more-speech.ui.text-frame :refer [map->text-frame]]
             [more-speech.ui.header-frame-functions :refer [->header-controls]]
-            [more-speech.ui.author-window :refer [map->author-window
-                                                  draw-author-window
-                                                  ->author-window-controls]]
+            [more-speech.ui.author-window :refer [->author-window-controls]]
             [more-speech.ui.graphics :as g]
             [more-speech.nostr.events :as events]
             [more-speech.ui.config :as config]))
