@@ -21,7 +21,8 @@
             [more-speech.ui.text-frame :refer [map->text-frame]]
             [more-speech.ui.header-frame-functions :refer [->header-controls]]
             [more-speech.ui.author-window :refer [map->author-window
-                                                  draw-author-window]]
+                                                  draw-author-window
+                                                  ->author-window-controls]]
             [more-speech.ui.graphics :as g]
             [more-speech.nostr.events :as events]
             [more-speech.ui.config :as config]))
@@ -78,9 +79,12 @@
                          :controls (->header-controls)
                          })
 
-      :author-window (map->author-window
-                       {:x (+ 50 (g/pos-width graphics 110)) :y 10
-                        :w (g/pos-width graphics 30) :h (- (g/screen-height graphics) 100)})
+      :author-window (map->text-window
+                       {:x (+ 50 (g/pos-width graphics 110))
+                        :y 10
+                        :w (g/pos-width graphics 30)
+                        :h (- (g/screen-height graphics) 100)
+                        :controls (->author-window-controls)})
       )
     ))
 

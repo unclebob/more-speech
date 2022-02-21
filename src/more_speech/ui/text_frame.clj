@@ -12,7 +12,7 @@
     "draws :displayed-elements.")
   (update-elements [controls state frame]
     "Called only if the widget is in [:application :this-update]
-    sets :total-elements and :displayed-elements")
+    sets :total-elements.")
   (scroll-elements [controls state frame delta]
     "sets :display-position"))
 

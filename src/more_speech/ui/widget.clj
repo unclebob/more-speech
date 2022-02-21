@@ -72,7 +72,7 @@
     (if (empty? child-tags)
       state
       (let [child-tag (first child-tags)
-            child-path (concat path [child-tag])
+            child-path (vec (concat path [child-tag]))
             child (get-in state child-path)
             child (assoc child :path child-path)
             child (setup-widget child state)
