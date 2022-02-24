@@ -1,6 +1,7 @@
 (ns more-speech.ui.header-frame-spec
   (:require [speclj.core :refer :all]
-            [more-speech.ui.text-frame :refer :all]
+            [more-speech.ui.text-window :refer [text-window-controls
+                                                setup-text-frame]]
             [more-speech.ui.header-frame-functions :refer :all]
             [more-speech.ui.widget :refer [widget setup-widget]]
             [more-speech.ui.graphics :as g]

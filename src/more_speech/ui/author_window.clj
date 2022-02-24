@@ -2,7 +2,7 @@
   (:require
     [clojure.string :as string]
     [more-speech.ui.widget :refer [widget]]
-    [more-speech.ui.text-frame :refer [text-window-controls]]
+    [more-speech.ui.text-window :refer [text-window-controls]]
     [more-speech.ui.cursor :as text]
     [more-speech.content.article :as a]
     [more-speech.ui.graphics :as g]))

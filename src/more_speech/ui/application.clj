@@ -18,7 +18,6 @@
                                            draw-child-widgets
                                            setup-child-widgets]]
             [more-speech.ui.text-window :refer [map->text-window]]
-            [more-speech.ui.text-frame :refer [map->text-frame]]
             [more-speech.ui.header-frame-functions :refer [->header-controls]]
             [more-speech.ui.author-window :refer [->author-window-controls]]
             [more-speech.ui.graphics :as g]

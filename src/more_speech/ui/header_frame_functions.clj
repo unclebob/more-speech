@@ -8,7 +8,7 @@
                                            up-arrow
                                            down-arrow]]
             [more-speech.ui.app-util :as app-util]
-            [more-speech.ui.text-frame :refer [text-window-controls
+            [more-speech.ui.text-window :refer [text-window-controls
                                                get-element-height
                                                draw-elements
                                                update-elements]]))
