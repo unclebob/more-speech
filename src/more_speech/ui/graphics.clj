@@ -9,6 +9,7 @@
   (text-align [graphics alignment])
   (text-color [graphics color])
   (stroke [graphics color])
+  (no-stroke [graphics])
   (stroke-weight [graphics weight])
   (fill [graphics color])
   (no-fill [graphics])
@@ -42,6 +43,8 @@
     (apply q/fill color))
   (stroke [_graphics color]
     (apply q/stroke color))
+  (no-stroke [_graphics]
+    (q/no-stroke))
   (stroke-weight [_graphics weight]
     (q/stroke-weight weight))
   (fill [_graphics color]

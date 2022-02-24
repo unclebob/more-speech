@@ -9,9 +9,9 @@
                                            down-arrow]]
             [more-speech.ui.app-util :as app-util]
             [more-speech.ui.text-window :refer [text-window-controls
-                                               get-element-height
-                                               draw-elements
-                                               update-elements]]))
+                                                get-element-height
+                                                draw-elements
+                                                update-elements]]))
 
 (declare get-header-height
          draw-headers
@@ -95,7 +95,6 @@
                   :w 10
                   :h 10
                   :draw draw
-                  :path (concat (:path frame) [id])
                   :left-down app-util/toggle-event-thread})))
 
 (defn create-thread-buttons [button-creator headers]
@@ -118,14 +117,70 @@
                    (inc index))
             (recur (rest headers) buttons (inc index))))))))
 
-(defn add-thread-buttons [frame buttons]
+(defn add-buttons [frame prefix buttons]
   (loop [frame frame
-         buttons buttons]
+         buttons buttons
+         index 1]
     (if (empty? buttons)
       frame
       (let [button (first buttons)
-            id (:id button)]
-        (recur (assoc frame id button) (rest buttons))))))
+            tag (str prefix index)
+            button (assoc button :path (concat (:path frame) [tag]))]
+        (recur (assoc frame tag button) (rest buttons) (inc index))))))
+
+(defn add-thread-buttons [frame buttons]
+  (add-buttons frame "T" buttons))
+
+(defn draw-selector [graphics {:keys [x y h w button-state]}]
+  (when (= button-state :in)
+    (g/fill graphics [0 0 0 10])
+    (g/no-stroke graphics)
+    (g/rect graphics [x y w h]))
+  )
+
+(defn defer-mouse-wheel-to-parent [widget state delta]
+  (let [widget-path (:path widget)
+        parent-path (drop-last widget-path)
+        parent (get-in state parent-path nil)]
+    (if (nil? parent)
+      nil
+      (let [mw-f (get parent :mouse-wheel)]
+        (if (nil? mw-f)
+          nil
+          (mw-f parent state delta))))))
+
+(defn- make-selection-button [button-creator id index]
+  (let [graphics (:graphics button-creator)
+        frame (:frame button-creator)
+        line-height (g/line-height graphics)
+        header-height (+ config/header-top-margin
+                         config/header-bottom-margin
+                         (* config/header-lines line-height))
+        y-pos (+ config/header-top-margin
+                 (* index header-height))]
+    (map->button {:id id
+                  :x (+ 20 (:x frame))
+                  :y (+ (:y frame) y-pos)
+                  :w (- (:w frame) 20)
+                  :h (* config/header-lines line-height)
+                  :draw draw-selector
+                  :left-down app-util/toggle-event-thread
+                  :mouse-wheel defer-mouse-wheel-to-parent})))
+
+(defn create-selection-buttons [button-creator headers]
+  (loop [headers headers
+         buttons []
+         index 0]
+    (if (empty? headers)
+      buttons
+      (let [header (first headers)
+            id (:id header)]
+        (recur (rest headers)
+               (conj buttons (make-selection-button button-creator id index))
+               (inc index))))))
+
+(defn add-selection-buttons [frame buttons]
+  (add-buttons frame "S" buttons))
 
 (defn update-headers [state frame]
   (let [application (:application state)
@@ -143,8 +198,10 @@
         frame-path (:path frame)
         frame (get-in state frame-path)
         frame (app-util/clear-widgets frame)
-        buttons (create-thread-buttons bc headers)
-        frame (add-thread-buttons frame buttons)
+        thread-buttons (create-thread-buttons bc headers)
+        frame (add-thread-buttons frame thread-buttons)
+        selection-buttons (create-selection-buttons bc headers)
+        frame (add-selection-buttons frame selection-buttons)
         marked-up-headers (map a/markup-header headers)
         frame (assoc frame :displayed-elements marked-up-headers
                            :total-elements total-events)

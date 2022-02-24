@@ -75,8 +75,38 @@
            (+ config/header-top-margin (* 2 header-height))]
           (map :y buttons)))
       )
-    (it "adds buttons to the frame"
-      (let [frame (add-thread-buttons {} [{:id 1} {:id 2}])]
-        (should= #{1 2} (set (keys frame)))))
+    (it "adds thread buttons to the frame"
+      (let [frame (add-thread-buttons {:path [:frame]} [{:id 111} {:id 222}])]
+        (should= 111 (get-in frame ["T1" :id]))
+        (should= 222 (get-in frame ["T2" :id]))
+        (should= [:frame "T1"] (get-in frame ["T1" :path]))
+        (should= [:frame "T2"] (get-in frame ["T2" :path]))))
+
+    (it "creates buttons for header selection"
+      (let [headers [{:id 1}
+                     {:id 2}]
+            button-creator (make-button-creator @state @frame)
+            buttons (create-selection-buttons button-creator headers)
+            header-height (+ config/header-top-margin
+                             config/header-bottom-margin
+                             (* config/header-lines 20))]
+        (should= [1 2] (map :id buttons))
+        (should= [draw-selector draw-selector]
+                 (map :draw buttons))
+        (should= [true true] (map #(satisfies? widget %) buttons))
+        (should=
+          [config/header-top-margin
+           (+ config/header-top-margin  header-height)]
+          (map :y buttons))
+        (should= 20 (:x (first buttons)))
+        (should= 40 (:h (first buttons)))
+        (should= 480 (:w (first buttons)))))
+
+    (it "adds selection buttons to the frame"
+          (let [frame (add-selection-buttons {:path [:frame]} [{:id 111} {:id 222}])]
+            (should= 111 (get-in frame ["S1" :id]))
+            (should= 222 (get-in frame ["S2" :id]))
+            (should= [:frame "S1"] (get-in frame ["S1" :path]))
+            (should= [:frame "S2"] (get-in frame ["S2" :path]))))
     )
   )
