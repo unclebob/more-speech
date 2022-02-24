@@ -138,17 +138,6 @@
     (g/rect graphics [x y w h]))
   )
 
-(defn defer-mouse-wheel-to-parent [widget state delta]
-  (let [widget-path (:path widget)
-        parent-path (drop-last widget-path)
-        parent (get-in state parent-path nil)]
-    (if (nil? parent)
-      nil
-      (let [mw-f (get parent :mouse-wheel)]
-        (if (nil? mw-f)
-          nil
-          (mw-f parent state delta))))))
-
 (defn- make-selection-button [button-creator id index]
   (let [graphics (:graphics button-creator)
         frame (:frame button-creator)
@@ -164,8 +153,7 @@
                   :w (- (:w frame) 20)
                   :h (* config/header-lines line-height)
                   :draw draw-selector
-                  :left-down app-util/toggle-event-thread
-                  :mouse-wheel defer-mouse-wheel-to-parent})))
+                  :left-down app-util/toggle-event-thread})))
 
 (defn create-selection-buttons [button-creator headers]
   (loop [headers headers

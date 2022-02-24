@@ -54,15 +54,19 @@
   )
 
 (defn mouse-wheel [state delta]
+  "find deepest widget that the mouse is in that also has a :mouse-wheel function."
   (let [application (:application state)
         x (q/mouse-x)
         y (q/mouse-y)
-        widget (w/find-deepest-mouse-target application x y)
-        wheel-f (get widget :mouse-wheel)]
-    (if (some? wheel-f)
-      (wheel-f widget state delta)
-      state))
-  )
+        widget (w/find-deepest-mouse-target application x y)]
+    (loop [path (:path widget)]
+      (let [widget (get-in state path)]
+        (if (empty? path)
+          state
+          (let [wheel-f (get widget :mouse-wheel)]
+            (if (nil? wheel-f)
+              (recur (drop-last path))
+              (wheel-f widget state delta))))))))
 
 (declare more-speech)
 (defn ^:export -main [& args]
