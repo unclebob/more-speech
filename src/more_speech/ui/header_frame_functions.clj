@@ -131,15 +131,22 @@
 (defn add-thread-buttons [frame buttons]
   (add-buttons frame "T" buttons))
 
-(defn draw-selector [graphics {:keys [x y h w button-state]}]
-  (when (= button-state :in)
-    (g/fill graphics [0 0 0 10])
-    (g/no-stroke graphics)
-    (g/rect graphics [x y w h]))
+(defn draw-selector [state graphics {:keys [x y h w button-state id]}]
+  (let [selected-header (get-in state [:application :selected-header])
+        fill-color
+        (cond (= selected-header id) [0 0 0 30]
+              (= button-state :in) [0 0 0 10]
+              :else :no-fill)]
+    (when (not= fill-color :no-fill)
+      (g/fill graphics fill-color)
+      (g/no-stroke graphics)
+      (g/rect graphics [x y w h]))
+    )
   )
 
 (defn- make-selection-button [button-creator id index]
   (let [graphics (:graphics button-creator)
+        state (:state button-creator)
         frame (:frame button-creator)
         line-height (g/line-height graphics)
         header-height (+ config/header-top-margin
@@ -152,8 +159,8 @@
                   :y (+ (:y frame) y-pos)
                   :w (- (:w frame) 20)
                   :h (* config/header-lines line-height)
-                  :draw draw-selector
-                  :left-down app-util/toggle-event-thread})))
+                  :draw (partial draw-selector state)
+                  :left-down app-util/select-header})))
 
 (defn create-selection-buttons [button-creator headers]
   (loop [headers headers

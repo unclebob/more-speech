@@ -22,7 +22,6 @@
                              :this-update #{}
                              :child @child-widget}})
 
-
   (it "adds a widget path"
     (let [widget-path (:path @child-widget)
           state (update-widget @state widget-path)
@@ -74,3 +73,20 @@
           frame (clear-widgets frame)]
       (should-be-nil (:w1 frame))
       (should= {:x :not-widget} frame))))
+
+(declare button)
+(describe "select headers"
+  (with application {:selected-header nil})
+  (with state {:application @application})
+  (with button {:id 42})
+
+  (it "selects the article"
+    (let [state (select-header @button @state)]
+      (should= 42 (get-in state [:application :selected-header]))))
+
+  (it "deselects the selected article."
+    (let [state (select-header @button @state)
+          state (select-header @button state)]
+          (should= nil (get-in state [:application :selected-header]))))
+
+  )

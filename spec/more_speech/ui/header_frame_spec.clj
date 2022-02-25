@@ -91,8 +91,6 @@
                              config/header-bottom-margin
                              (* config/header-lines 20))]
         (should= [1 2] (map :id buttons))
-        (should= [draw-selector draw-selector]
-                 (map :draw buttons))
         (should= [true true] (map #(satisfies? widget %) buttons))
         (should=
           [config/header-top-margin

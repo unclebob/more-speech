@@ -76,3 +76,12 @@
                       (conj open-thread id))
         state (assoc-in state [:application :open-thread] open-thread)]
     (update-widget state frame-path)))
+
+(defn select-header [button state]
+  (let [id (:id button)
+        selected (get-in state [:application :selected-header])
+        frame-path (drop-last (:path button))
+        state (if (= id selected)
+                (assoc-in state [:application :selected-header] nil)
+                (assoc-in state [:application :selected-header] (:id button)))]
+    (update-widget state frame-path)))
