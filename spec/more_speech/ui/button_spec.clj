@@ -62,48 +62,10 @@
           b (get-in state [:application :button])]
       (should= :right (:button-state b))))
 
-  (it "calls :left-up if left button comes up while inside."
-    (let [state (make-state mouse-in)
-          state (assoc-in state [:application :button :button-state] :left)
-          state (w/update-widget b state)
-          b (get-in state [:application :button])]
-      (should (:left-came-up b))))
-
-  (it "records when the left button goes down."
-    (let [state (make-state mouse-in-left-down)
-          state (assoc-in state [:application :button :button-state] :in)
-          state (w/update-widget b state)
-          b (get-in state [:application :button])]
-      (should= NOW (:left-time b)))
-    )
-
-  (it "erases left button down time when left button comes up"
-    (let [state (make-state mouse-in)
-          state (assoc-in state [:application :button :button-state] :left)
-          state (assoc-in state [:application :button :left-time] NOW)
-          state (w/update-widget b state)
-          b (get-in state [:application :button])]
-      (should= nil (:left-time b))))
-
-  (it "calls :left-down when left button goes down while in"
-    (let [state (make-state mouse-in-left-down)
-          state (assoc-in state [:application :button :button-state] :in)
-          state (w/update-widget b state)
-          b (get-in state [:application :button])]
-      (should (:left-went-down b))))
-
-  (it "does not call :left-down if left already down."
-    (let [state (make-state mouse-in-left-down)
-          state (assoc-in state [:application :button :button-state] :left)
-          state (w/update-widget b state)
-          b (get-in state [:application :button])]
-      (should-not (:left-went-down b))))
-
   (it "calls :left-held if left already down."
-      (let [state (make-state mouse-in-left-down)
-            state (assoc-in state [:application :button :button-state] :left)
-            state (w/update-widget b state)
-            b (get-in state [:application :button])]
-        (should (:left-held-down b))))
-
+        (let [state (make-state mouse-in-left-down)
+              state (assoc-in state [:application :button :button-state] :left)
+              state (w/update-widget b state)
+              b (get-in state [:application :button])]
+          (should (:left-held-down b))))
   )

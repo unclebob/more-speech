@@ -11,7 +11,8 @@
             [more-speech.ui.text-window :refer [text-window-controls
                                                 get-element-height
                                                 draw-elements
-                                                update-elements]]))
+                                                update-elements]]
+            [more-speech.ui.widget :as w]))
 
 (declare get-header-height
          draw-headers
@@ -192,7 +193,7 @@
         bc (make-button-creator state frame)
         frame-path (:path frame)
         frame (get-in state frame-path)
-        frame (app-util/clear-widgets frame)
+        frame (w/clear-widgets frame)
         thread-buttons (create-thread-buttons bc headers)
         frame (add-thread-buttons frame thread-buttons)
         selection-buttons (create-selection-buttons bc headers)

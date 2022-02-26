@@ -29,9 +29,8 @@
                                    draw-thumb]]
     [more-speech.ui.graphics :as g]
     [more-speech.nostr.util :refer [num->hex-string]]
-    [more-speech.ui.app-util :as app-util]
     [more-speech.ui.config :as config]
-    ))
+    [more-speech.ui.widget :as w]))
 
 (declare setup-text-window
          update-text-window
@@ -39,9 +38,9 @@
          scroll-up
          scroll-down
          thumb-position
-         drag-thumb
          lock-thumb
          unlock-thumb
+         drag-thumb
          setup-text-frame
          update-text-frame
          draw-text-frame
@@ -186,13 +185,13 @@
         state (assoc-in state
                         (concat text-frame-path [:display-position])
                         display-position)]
-    (app-util/update-widget state parent-path)))
+    (w/redraw-widget state parent-path)))
 
 (defn- lock-thumb [widget state]
-  (app-util/lock-mouse state widget))
+  (w/lock-mouse state widget))
 
 (defn- unlock-thumb [_widget state]
-  (app-util/unlock-mouse state))
+  (w/unlock-mouse state))
 
 (defn setup-text-frame [state frame]
   (let [controls (:controls frame)
@@ -204,7 +203,7 @@
     frame))
 
 (defn- update-text-frame [state frame]
-  (if (app-util/update-widget? state frame)
+  (if (w/redraw-widget? state frame)
     (update-elements (:controls frame) state frame)
     state))
 
@@ -230,7 +229,7 @@
         display-position (max 0 display-position)
         frame (assoc frame :display-position display-position)
         state (assoc-in state frame-path frame)
-        state (app-util/update-widget state frame)
+        state (w/redraw-widget state frame)
         ]
     state))
 

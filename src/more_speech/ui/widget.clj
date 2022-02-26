@@ -15,13 +15,81 @@
 ;;
 
 (ns more-speech.ui.widget
-  (:require [more-speech.util.geometry :refer [inside-rect]]))
+  (:require [more-speech.util.geometry :refer [inside-rect]]
+            [more-speech.ui.graphics :as g]))
 
 (defprotocol widget
   (setup-widget [widget state] "returns the setup widget")
   (update-widget [widget state] "returns state updated.")
   (draw-widget [widget state] "returns nothing.  No state change.")
   )
+
+(def next-update-path [:application :next-update])
+(def this-update-path [:application :this-update])
+(def mouse-lock-path [:application :mouse-locked-to])
+
+(defn redraw-widget [state maybe-widget]
+  (cond
+    (satisfies? widget maybe-widget)
+    (update-in state next-update-path conj (:path maybe-widget))
+
+    (coll? maybe-widget)
+    (update-in state next-update-path conj maybe-widget)
+
+    :else
+    (assert false "Bad widget in redraw-widget")
+    ))
+
+(defn is-ancestor? [ancestor child]
+  (let [ancestor-count (count ancestor)]
+    (cond
+      (zero? ancestor-count)
+      false
+
+      (= ancestor child)
+      true
+
+      (> ancestor-count (count child))
+      false
+
+      (= (take ancestor-count child) ancestor)
+      true
+
+      :else false
+      )))
+
+(defn redraw-widget? [state widget]
+  (let [path (:path widget)]
+    (loop [update-set (get-in state this-update-path [])]
+      (if (empty? update-set)
+        false
+        (if (is-ancestor? (first update-set) path)
+          true
+          (recur (rest update-set)))))))
+
+(defn lock-mouse [state widget]
+  (assoc-in state mouse-lock-path (:path widget)))
+
+(defn unlock-mouse [state]
+  (assoc-in state mouse-lock-path nil))
+
+(defn get-mouse-lock [state]
+  "returns path of locked widget or nil."
+  (get-in state mouse-lock-path nil))
+
+(defn clear-widgets [frame]
+  (loop [elements (keys frame)
+         frame frame]
+    (if (empty? elements)
+      frame
+      (let [key (first elements)
+            element (get frame key)]
+        (if (and (some? element)
+                 (satisfies? widget element))
+          (recur (rest elements)
+                 (dissoc frame key))
+          (recur (rest elements) frame))))))
+
 
 (defn get-child-widgets [parent]
   "returns the tags of all children that satisfy the widget protocol."
@@ -93,3 +161,53 @@
               grandchild
               child))
           (recur (rest widgets)))))))
+
+(defn find-deepest-responder [state function]
+  (let [application (:application state)
+        graphics (:graphics application)
+        [x y _] (g/get-mouse graphics)
+        widget (find-deepest-mouse-target application x y)]
+    (loop [path (:path widget)]
+      (let [widget (get-in state path)]
+        (if (empty? path)
+          nil
+          (let [f (get widget function)]
+            (if (nil? f)
+              (recur (drop-last path))
+              widget)))))))
+
+(defn find-mouse-responder [state function]
+  "returns widget that should respond to the specified function."
+  (let [lock-path (get-mouse-lock state)
+        locked-widget (if (some? lock-path) (get-in state lock-path) nil)]
+    (if (some? locked-widget)
+      (if (some? (function locked-widget))
+        locked-widget
+        nil)
+      (find-deepest-responder state function))))
+
+(defn mouse-wheel [state delta]
+  (let [responder (find-mouse-responder state :mouse-wheel)]
+    (if (nil? responder)
+      state
+      ((:mouse-wheel responder) responder state delta))))
+
+(defn mouse-pressed [state _ #_{:keys [x y button]}]
+  (let [responder (find-mouse-responder state :left-down)]
+    (if (nil? responder)
+      state
+      ((:left-down responder) responder state))))
+
+(defn mouse-released [state _ #_{:keys [x y]}]
+  (let [responder (find-mouse-responder state :left-up)]
+    (if (nil? responder)
+      state
+      ((:left-up responder) responder state))))
+
+(defn mouse-moved [state _ #_{:keys [x y p-x p-y]}] state)
+
+(defn mouse-dragged [state _ #_{:keys [x y p-x p-y button]}]
+  (let [responder (find-mouse-responder state :left-held)]
+    (if (nil? responder)
+      state
+      ((:left-held responder) responder state))))

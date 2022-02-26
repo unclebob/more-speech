@@ -3,7 +3,7 @@
             [more-speech.content.article :as article]
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]
-            [more-speech.ui.app-util :as app]))
+            [more-speech.ui.widget :as w]))
 (s/def ::id number?)
 (s/def ::pubkey number?)
 (s/def ::created-at number?)
@@ -79,6 +79,6 @@
         id (:id event)
         state (assoc-in state [:application :text-event-map id] event)
         state (update-in state [:application :chronological-text-events] conj id)
-        state (app/update-widget state [:application :article-window])
+        state (w/redraw-widget state [:application :article-window])
         ]
     (process-references state event)))

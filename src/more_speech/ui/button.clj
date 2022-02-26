@@ -2,7 +2,6 @@
   (:require [more-speech.ui.widget :as w]
             [more-speech.ui.graphics :as g]
             [more-speech.util.geometry :as util]
-            [more-speech.ui.app-util :as app]
             [more-speech.ui.config :as config]))
 
 (declare update-button)
@@ -24,25 +23,6 @@
     :in
     which))
 
-(defn- check-call-left-up [state button which]
-  (let [previous-state (:button-state button)
-        left-up (:left-up button)]
-    (if (and left-up
-             (nil? which)
-             (= :left previous-state))
-      (left-up button state)
-      state)))
-
-(defn- check-call-left-down [state button which]
-  (let [button (get-in state (:path button))
-        previous-state (:button-state button)
-        left-down (:left-down button)]
-    (if (and left-down
-             (= :in previous-state)
-             (= :left which))
-      (left-down button state)
-      state)))
-
 (defn- check-call-left-held [state button which]
   (let [button (get-in state (:path button))
         left-held (:left-held button)]
@@ -51,25 +31,13 @@
       (left-held button state)
       state)))
 
-(defn- check-set-left-time [state button which]
-  (let [previous-state (:button-state button)
-        g (get-in state [:application :graphics])]
-    (if (and (= :in previous-state) (= :left which))
-      (assoc-in state (concat (:path button) [:left-time]) (g/get-time g))
-      state)))
-
-(defn check-erase-left-time [state button which]
-  (if (nil? which)
-    (assoc-in state (concat (:path button) [:left-time]) nil)
-    state))
-
 (defn update-button [button state]
   (let [g (get-in state [:application :graphics])
         [mx my which] (g/get-mouse g)
         button (get-in state (:path button))
         {:keys [x y w h]} button
         in? (util/inside-rect [x y w h] [mx my])
-        lock (app/get-mouse-lock state)
+        lock (w/get-mouse-lock state)
         button-target? (if (nil? lock)
                          in?
                          (= lock (:path button)))
@@ -77,13 +45,8 @@
                        (get-button-state which)
                        :out)
         state (if button-target?
-                (-> state
-                    (check-set-left-time button which)
-                    (check-call-left-down button which)
-                    (check-call-left-held button which)
-                    (check-call-left-up button which))
+                (check-call-left-held state button which)
                 state)
-        state (check-erase-left-time state button which)
         ]
     (assoc-in state (concat (:path button) [:button-state]) button-state))
   )
