@@ -1,7 +1,8 @@
 (ns more-speech.ui.widget-spec
   (:require [speclj.core :refer :all]
             [more-speech.ui.application :refer [map->application]]
-            [more-speech.ui.widget :refer :all]))
+            [more-speech.ui.widget :refer :all]
+            [more-speech.ui.graphics :as g]))
 
 (defrecord child []
   widget
@@ -171,6 +172,11 @@
       (should-be-nil (:w1 frame))
       (should= {:x :not-widget} frame))))
 
+(defrecord mock-graphics [x y]
+  g/graphics
+  (get-mouse [_graphics]
+    [x y :left]))
+
 (describe "mouse operations"
   (context "find mouse target"
     (it "does not return a target if there are no application widgets."
@@ -201,8 +207,8 @@
     (it "finds deepest child containing the mouse."
       (let [widget1 (->mock-widget 10 10 10 10)
             widget2 (->mock-widget 30 10 20 20)
-            widget2-1 (->mock-widget  35 15 5 5)
-            widget2 (assoc widget2 :w2-1 widget2-1);
+            widget2-1 (->mock-widget 35 15 5 5)
+            widget2 (assoc widget2 :w2-1 widget2-1)         ;
             application (map->application {:path [:application] :w1 widget1 :w2 widget2})
             state {:application application}
             state (setup-child-widgets application state)
@@ -210,5 +216,37 @@
             target (find-deepest-mouse-target application 36 16)]
         (should= [:application :w2 :w2-1] (:path target)))
       )
+
+    (it "finds deepest responder"
+      (let [widget1 (->mock-widget 10 10 10 10)
+            widget2 (->mock-widget 30 10 20 20)
+            widget2-1 (->mock-widget 35 15 5 5)
+            widget2 (assoc widget2 :w2-1 widget2-1
+                                   :responder :place-holder)
+            application (map->application {:path [:application]
+                                           :graphics (->mock-graphics 36 16)
+                                           :w1 widget1 :w2 widget2})
+            state {:application application}
+            state (setup-child-widgets application state)
+            target (find-mouse-responder state :responder)]
+        (should= [:application :w2] (:path target)))
+      )
+
+    (it "finds locked responder"
+          (let [widget1 (->mock-widget 10 10 10 10)
+                widget2 (->mock-widget 30 10 20 20)
+                widget2-1 (->mock-widget 35 15 5 5)
+                widget1 (assoc widget1 :responder :place-holder)
+                widget2 (assoc widget2 :w2-1 widget2-1
+                                       :responder :place-holder)
+                application (map->application {:path [:application]
+                                               :graphics (->mock-graphics 36 16)
+                                               :mouse-locked-to [:application :w1]
+                                               :w1 widget1 :w2 widget2})
+                state {:application application}
+                state (setup-child-widgets application state)
+                target (find-mouse-responder state :responder)]
+            (should= [:application :w1] (:path target)))
+          )
     )
   )
