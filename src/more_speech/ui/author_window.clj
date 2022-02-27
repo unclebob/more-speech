@@ -30,17 +30,12 @@
   (let [g (:graphics cursor)]
     (g/text-align g [:left])
     (g/text-color g [0 0 0])
-    (text/render cursor frame (a/markup-author author))))
+    (text/render cursor frame author)))
 
 (defn draw-authors [state frame]
   (let [application (:application state)
         g (:graphics application)
-        display-position (get frame :display-position 0)
-        n-elements (get frame :n-elements 60)
-        authors (:nicknames application)
-        authors (sort-by #(string/lower-case (text/nil->blank (second %))) authors)
-        authors (drop display-position authors)
-        authors (take n-elements authors)]
+        authors (:displayed-elements frame)]
     (g/text-align g [:left])
     (g/text-color g [0 0 0])
     (loop [cursor (text/->cursor g 0 (g/line-height g) 5)
@@ -52,5 +47,15 @@
 
 (defn update-authors [state frame]
   (let [frame-path (:path frame)
-        authors (get-in state [:application :nicknames])]
-    (assoc-in state (concat frame-path [:total-elements]) (count authors))))
+        frame (get-in state frame-path)
+        authors (get-in state [:application :nicknames])
+        frame (assoc frame :total-elements (count authors))
+        display-position (get frame :display-position 0)
+        n-elements (min (count authors)  (:n-elements frame))
+        sorted-authors (sort-by #(string/lower-case (text/nil->blank (second %))) authors)
+        authors-to-display (drop display-position sorted-authors)
+        authors-to-display (take n-elements authors-to-display)
+        marked-up-authors (map a/markup-author authors-to-display)
+        frame (assoc frame :displayed-elements marked-up-authors)
+        state (assoc-in state frame-path frame)]
+    state))

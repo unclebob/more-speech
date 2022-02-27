@@ -19,7 +19,8 @@
                                 ::sig
                                 ::tags
                                 ::references]))
-(declare process-text-event)
+(declare process-text-event
+         process-name-event)
 
 (defn process-event [{:keys [application] :as state} event]
   (let [{:keys [_articles nicknames]} application
@@ -27,10 +28,7 @@
         [_name _subscription-id inner-event :as _decoded-msg] event
         {:strs [_id pubkey created_at kind _tags content _sig]} inner-event]
     (condp = kind
-      0 (let [pubkey (hex-string->num pubkey)
-              name (get (json/read-str content) "name" "tilt")]
-          (update-in
-            state [:application :nicknames] assoc pubkey name))
+      0 (process-name-event state inner-event)
       3 (do (printf "%s: %s %s %s\n" kind (article/format-time created_at) (name-of pubkey) content)
             state)
       1 (process-text-event state inner-event)
@@ -38,6 +36,13 @@
             state)
       (do (prn "unknown event: " event)
           state))))
+
+(defn process-name-event [state {:strs [_id pubkey _created_at _kind _tags content _sig]}]
+  (let [pubkey (hex-string->num pubkey)
+        name (get (json/read-str content) "name" "tilt")
+        state (w/redraw-widget state [:application :author-window])]
+    (update-in
+      state [:application :nicknames] assoc pubkey name)))
 
 (defn process-tag [[type hex arg]]
   [(keyword type)
