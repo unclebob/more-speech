@@ -49,26 +49,26 @@
 (defn abbreviate-key [pubkey]
   (abbreviate pubkey 8))
 
-(defn markup-header [article]
-  (let [thread-count (:thread-count article)
-        indent (get article :indent 0)]
+(defn markup-header [header]
+  (let [thread-count (:thread-count header)
+        indent (get header :indent 0)]
     [
      :regular
      (apply str (repeat indent "•"))
      :bold
-     (abbreviate-author (:author article))
+     (abbreviate-author (:author header))
      :regular
      (if (pos? thread-count)
        (str " (" thread-count ")")
        "")
      :bold
      :pos 30
-     (:subject article)
+     (:subject header)
      :regular
      :pos 60
-     (format-time (:time article))
+     (format-time (:time header))
      :new-line
-     (abbreviate-body (:body article))
+     (abbreviate-body (:body header))
      :new-line
      ]))
 

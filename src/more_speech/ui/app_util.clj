@@ -15,8 +15,9 @@
 (defn select-header [button state]
   (let [id (:id button)
         selected (get-in state [:application :selected-header])
-        frame-path (drop-last (:path button))
         state (if (= id selected)
                 (assoc-in state [:application :selected-header] nil)
-                (assoc-in state [:application :selected-header] (:id button)))]
-    (w/redraw-widget state frame-path)))
+                (assoc-in state [:application :selected-header] (:id button)))
+        state (w/redraw-widget state [:application :article-window])
+        state (w/redraw-widget state [:application :header-window])]
+    state))
