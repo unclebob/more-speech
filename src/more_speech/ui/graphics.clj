@@ -34,9 +34,9 @@
 (defrecord quil-graphics [fonts]
   graphics
   (screen-height [_graphics]
-    (q/screen-height))
+    (q/height))
   (screen-width [_graphics]
-    (q/screen-width))
+    (q/width))
   (text-align [_graphics alignment]
     (apply q/text-align alignment))
   (text-color [_graphics color]

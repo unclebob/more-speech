@@ -9,7 +9,8 @@
                                            update-child-widgets]]
             [more-speech.ui.application :refer [map->application]]
             [more-speech.ui.graphics :as g]
-            [more-speech.ui.widget :as w]))
+            [more-speech.ui.widget :as w]
+            [more-speech.ui.config :as config]))
 
 (def events (atom []))
 
@@ -59,7 +60,7 @@
 (defn ^:export -main [& args]
   (q/defsketch more-speech
                :title "More Speech"
-               :size [(q/screen-width) (q/screen-height)]
+               :size [(q/screen-width) (- (q/screen-height) config/window-margin)]
                :setup setup
                :update update-state
                :draw draw-state

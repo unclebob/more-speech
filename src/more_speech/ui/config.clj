@@ -4,6 +4,8 @@
 (def black [0 0 0])
 (def white [255 255 255])
 
+(def window-margin 60); vertical space taken up by menu bar and window title.
+
 
 (def thumb-normal [200 200 200])
 (def thumb-dragged [150 150 150])
@@ -17,11 +19,14 @@
 (def scroll-bar-button-bottom-margin (+ scroll-bar-button-top-margin
                                         scroll-bar-button-h))
 
-(def article-window-dimensions
-  {:x 50 :y 10
+(def header-window-dimensions
+  {:x 20 :y 10
    :char-width 105
-   :bottom-margin 100})
+   :height-fraction 5/8})
+
+(def article-window-top-margin 10)
+(def article-window-bottom-margin 10)
 
 (def header-lines 2)
-(def header-top-margin 5)
-(def header-bottom-margin 5)
+(def header-top-margin 2)
+(def header-bottom-margin 2)

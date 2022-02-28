@@ -1,4 +1,4 @@
-(ns more-speech.ui.header-frame-functions
+(ns more-speech.ui.header-window-controls
   (:require [more-speech.ui.config :as config]
             [more-speech.ui.graphics :as g]
             [more-speech.ui.cursor :as cursor]
@@ -18,7 +18,7 @@
          draw-headers
          update-headers)
 
-(defrecord header-controls []
+(defrecord header-window-controls []
   text-window-controls
   (get-element-height [_c state]
     (get-header-height state))

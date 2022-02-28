@@ -18,7 +18,8 @@
                                            draw-child-widgets
                                            setup-child-widgets]]
             [more-speech.ui.text-window :refer [map->text-window]]
-            [more-speech.ui.header-frame-functions :refer [->header-controls]]
+            [more-speech.ui.header-window-controls :refer [->header-window-controls]]
+            [more-speech.ui.article-window-controls :refer [->article-window-controls]]
             [more-speech.ui.author-window :refer [->author-window-controls]]
             [more-speech.ui.graphics :as g]
             [more-speech.nostr.events :as events]
@@ -59,7 +60,17 @@
 (defn- setup-application [application _path _state]
   (let [graphics (:graphics application)
         bold (get-in graphics [:fonts :bold])
-        ]
+        screen-height (g/screen-height graphics)
+        header-window-height (* screen-height (:height-fraction config/header-window-dimensions))
+        header-window-width (g/pos-width graphics (:char-width config/header-window-dimensions))
+        header-window-left (:x config/header-window-dimensions)
+        header-window-top (:y config/header-window-dimensions)
+        article-window-left header-window-left
+        article-window-top (+ header-window-top header-window-height config/article-window-top-margin)
+        article-window-width header-window-width
+        article-window-height (- screen-height
+                                 article-window-top
+                                 config/article-window-bottom-margin)]
     (g/text-font graphics bold)
     (assoc application
       :this-update #{}
@@ -68,19 +79,26 @@
       :chronological-text-events []
       :text-event-map {}
       :open-thread #{}
-      :article-window (map->text-window
-                        {:x (:x config/article-window-dimensions)
-                         :y (:y config/article-window-dimensions)
-                         :w (g/pos-width graphics (:char-width config/article-window-dimensions))
-                         :h (- (g/screen-height graphics) (:bottom-margin config/article-window-dimensions))
-                         :controls (->header-controls)
+      :header-window (map->text-window
+                        {:x header-window-left
+                         :y header-window-top
+                         :w header-window-width
+                         :h header-window-height
+                         :controls (->header-window-controls)
                          })
+
+      :article-window (map->text-window
+                        {:x article-window-left
+                         :y article-window-top
+                         :w article-window-width
+                         :h article-window-height
+                         :controls (->article-window-controls)})
 
       :author-window (map->text-window
                        {:x (+ 50 (g/pos-width graphics 110))
                         :y 10
                         :w (g/pos-width graphics 30)
-                        :h (- (g/screen-height graphics) 100)
+                        :h (- screen-height 100)
                         :controls (->author-window-controls)})
       )
     ))

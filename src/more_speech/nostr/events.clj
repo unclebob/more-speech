@@ -84,6 +84,6 @@
         id (:id event)
         state (assoc-in state [:application :text-event-map id] event)
         state (update-in state [:application :chronological-text-events] conj id)
-        state (w/redraw-widget state [:application :article-window])
+        state (w/redraw-widget state [:application :header-window])
         ]
     (process-references state event)))

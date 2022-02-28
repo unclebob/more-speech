@@ -2,7 +2,7 @@
   (:require [speclj.core :refer :all]
             [more-speech.ui.text-window :refer [text-window-controls
                                                 setup-text-frame]]
-            [more-speech.ui.header-frame-functions :refer :all]
+            [more-speech.ui.header-window-controls :refer :all]
             [more-speech.ui.widget :refer [widget setup-widget]]
             [more-speech.ui.graphics :as g]
             [more-speech.ui.config :as config]))
