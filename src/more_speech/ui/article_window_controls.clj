@@ -59,20 +59,24 @@
 
 (defn draw-article [state frame]
   (let [application (:application state)
-        selected-header (:selected-header application)]
-    (when (some? selected-header)
+        displayed-article (:displayed-article frame)]
+    (when (some? displayed-article)
       (let [g (:graphics application)
-            event-map (:text-event-map application)
-            event (get event-map selected-header)
-            nicknames (:nicknames application)
-            marked-up-article (markup-article (event->article event nicknames))
             cursor (cursor/->cursor g 0 (g/line-height g) 20)]
         (g/text-align g [:left])
         (g/text-color g [0 0 0])
-        (cursor/render cursor frame marked-up-article)))))
+        (cursor/render cursor frame displayed-article)))))
 
 (defn update-article [state frame]
-  (if (some? (get-in state [:application :selected-header]))
-    (assoc-in state (concat (:path frame) [:total-elements]) 2) ;hack
-    (assoc-in state (concat (:path frame) [:total-elements]) 0))
-  )
+  (let [application (:application state)
+        selected-header (:selected-header application)
+        frame (if (nil? selected-header)
+                (assoc frame :displayed-article nil
+                             :total-elements 0)
+                (let [event-map (:text-event-map application)
+                      event (get event-map selected-header)
+                      nicknames (:nicknames application)
+                      marked-up-article (markup-article (event->article event nicknames))]
+                  (assoc frame :displayed-article marked-up-article
+                               :total-elements 2)))]
+    (assoc-in state (:path frame) frame)))
