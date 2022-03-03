@@ -63,7 +63,7 @@
         _ (g/text-font graphics bold)
         screen-height (g/screen-height graphics)
         header-window-height (* screen-height (:height-fraction config/header-window-dimensions))
-        header-window-width (g/pos-width graphics (:char-width config/header-window-dimensions))
+        header-window-width (g/pos-width graphics (:width config/header-window-dimensions))
         header-window-left (:x config/header-window-dimensions)
         header-window-top (:y config/header-window-dimensions)
         article-window-left header-window-left

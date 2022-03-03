@@ -309,7 +309,11 @@
   (let [application (:application state)
         g (:graphics application)
         headers (:displayed-elements frame)]
-    (loop [cursor (cursor/->cursor g 0 (g/line-height g) 10)
+    (loop [cursor (cursor/->cursor
+                    g
+                    0
+                    (g/line-height g)
+                    (:left-margin config/header-window-dimensions))
            headers headers
            index 0]
       (if (empty? headers)

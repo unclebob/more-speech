@@ -6,7 +6,8 @@
             [more-speech.nostr.util :refer [num->hex-string]]
             [more-speech.ui.graphics :as g]
             [more-speech.ui.formatters :as f]
-            [more-speech.ui.cursor :as cursor]))
+            [more-speech.ui.cursor :as cursor]
+            [more-speech.ui.config :as config]))
 
 (declare get-article-line-height
          draw-article
@@ -44,7 +45,8 @@
    :pos 60
    (f/format-time (:time article))
    :new-line
-   (:body article)
+   :multi-line
+   (f/reformat-article (:body article) (:text-width config/article-window-dimensions))
    ])
 
 (defn event->article [text-event nicknames]
