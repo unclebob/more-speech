@@ -18,8 +18,8 @@
                                            draw-child-widgets
                                            setup-child-widgets]]
             [more-speech.ui.text-window :refer [map->text-window]]
-            [more-speech.ui.header-window-controls :refer [->header-window-controls]]
-            [more-speech.ui.article-window-controls :refer [->article-window-controls]]
+            [more-speech.ui.header-window :refer [->header-window-controls]]
+            [more-speech.ui.article-window :refer [->article-window-controls]]
             [more-speech.ui.author-window :refer [->author-window-controls]]
             [more-speech.ui.graphics :as g]
             [more-speech.nostr.events :as events]
@@ -27,7 +27,7 @@
 
 (s/def ::path (s/tuple [keyword?]))
 (s/def ::graphics #(satisfies? g/graphics %))
-(s/def ::mouse-locked-to #(or (nil? %) (satisfies? widget %)))
+(s/def ::mouse-locked-to #(or (nil? %) (s/coll-of keyword?)))
 (s/def ::nicknames (s/map-of number? string?))
 (s/def ::chronological-text-events (s/coll-of number?))
 (s/def ::text-event-map (s/map-of number? ::events/event))

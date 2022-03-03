@@ -52,6 +52,12 @@
       cursor
       (recur (draw-line cursor (first lines)) (rest lines)))))
 
+(defn valid-markup-token? [token]
+  (or
+    (keyword? token)
+    (string? token)
+    (number? token)))
+
 (defn render
   ([cursor window markup]
    (render cursor window markup {}))

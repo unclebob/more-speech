@@ -1,11 +1,11 @@
-(ns more-speech.ui.article-window-controls
+(ns more-speech.ui.article-window
   (:require [more-speech.ui.text-window :refer [text-window-controls
                                                 get-element-height
                                                 draw-elements
                                                 update-elements]]
             [more-speech.nostr.util :refer [num->hex-string]]
             [more-speech.ui.graphics :as g]
-            [more-speech.content.article :as a]
+            [more-speech.ui.formatters :as f]
             [more-speech.ui.cursor :as cursor]))
 
 (declare get-article-line-height
@@ -31,15 +31,18 @@
    :body body}
   )
 
+(defn abbreviate-author [author]
+  (f/abbreviate author 20))
+
 (defn markup-article [article]
   [
    :bold
-   (a/abbreviate-author (:author article))
+   (abbreviate-author (:author article))
    :pos 30
    (:subject article)
    :regular
    :pos 60
-   (a/format-time (:time article))
+   (f/format-time (:time article))
    :new-line
    (:body article)
    ])
@@ -48,9 +51,7 @@
   (let [{:keys [id pubkey created-at content]} text-event
         name (get nicknames pubkey (num->hex-string pubkey))
         article (make-article id name created-at content)]
-    article
-    )
-  )
+    article))
 
 (defn get-article-line-height [state]
   (let [graphics (get-in state [:application :graphics])

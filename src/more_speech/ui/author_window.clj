@@ -1,11 +1,13 @@
 (ns more-speech.ui.author-window
   (:require
     [clojure.string :as string]
+    [more-speech.nostr.util :refer [num->hex-string]]
     [more-speech.ui.widget :refer [widget]]
     [more-speech.ui.text-window :refer [text-window-controls]]
     [more-speech.ui.cursor :as text]
-    [more-speech.content.article :as a]
-    [more-speech.ui.graphics :as g]))
+    [more-speech.ui.graphics :as g]
+    [more-speech.ui.formatters :as f]
+    [clojure.spec.alpha :as s]))
 
 (declare get-author-height
          draw-authors
@@ -25,6 +27,22 @@
   (let [graphics (get-in state [:application :graphics])
         line-height (g/line-height graphics)]
     line-height))
+
+(s/def ::author-nickname string?)
+(s/def ::author-pubkey string?)
+(s/def ::author-nickname-tuple (s/tuple ::author-pubkey ::author-nickname))
+
+(defn abbreviate-key [pubkey]
+  (f/abbreviate pubkey 8))
+
+(defn markup-author [[pubkey name]]
+  [:bold
+   (abbreviate-key (num->hex-string pubkey))
+   :regular
+   " - "
+   name
+   :new-line
+   ])
 
 (defn draw-author [frame cursor author]
   (let [g (:graphics cursor)]
@@ -55,7 +73,7 @@
         sorted-authors (sort-by #(string/lower-case (text/nil->blank (second %))) authors)
         authors-to-display (drop display-position sorted-authors)
         authors-to-display (take n-elements authors-to-display)
-        marked-up-authors (map a/markup-author authors-to-display)
+        marked-up-authors (map markup-author authors-to-display)
         frame (assoc frame :displayed-elements marked-up-authors)
         state (assoc-in state frame-path frame)]
     state))

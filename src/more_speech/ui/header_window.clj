@@ -1,9 +1,10 @@
-(ns more-speech.ui.header-window-controls
+(ns more-speech.ui.header-window
   (:require [more-speech.ui.config :as config]
+            [clojure.spec.alpha :as s]
+            [more-speech.ui.formatters :as f]
             [more-speech.ui.graphics :as g]
             [more-speech.ui.cursor :as cursor]
             [more-speech.nostr.util :refer [num->hex-string]]
-            [more-speech.content.article :as a]
             [more-speech.ui.button :refer [map->button
                                            up-arrow
                                            down-arrow]]
@@ -12,7 +13,8 @@
                                                 get-element-height
                                                 draw-elements
                                                 update-elements]]
-            [more-speech.ui.widget :as w]))
+            [more-speech.ui.widget :as w]
+            [clojure.set :as set]))
 
 (declare get-header-height
          draw-headers
@@ -36,11 +38,31 @@
                          (* config/header-lines line-height))]
     header-height))
 
+(s/def ::id number?)
+(s/def ::group string?)
+(s/def ::subject string?)
+(s/def ::author string?)
+(s/def ::time number?)
+(s/def ::body string?)
+(s/def ::thread-count number?)
+(s/def ::header (s/keys :req-un [::id ::group ::subject ::author ::time ::body ::thread-count]))
+
+(defn make-header [id name time body thread-count indent]
+  {:id id
+   :group ""
+   :author name
+   :subject "?"
+   :time time
+   :body body
+   :thread-count thread-count
+   :indent indent}
+  )
+
 (defn event->header [text-event nicknames]
   (let [{:keys [id pubkey created-at content references indent]} text-event
         name (get nicknames pubkey (num->hex-string pubkey))
         ref-count (count references)
-        header (a/make-header id name created-at content ref-count indent)]
+        header (make-header id name created-at content ref-count indent)]
     header
     )
   )
@@ -178,12 +200,76 @@
 (defn add-selection-buttons [frame buttons]
   (add-buttons frame "S" buttons))
 
+(defn abbreviate-body [body]
+  (f/abbreviate body 95))
+
+(defn abbreviate-author [author]
+  (f/abbreviate author 20))
+
+(defn markup-header [header]
+  (let [thread-count (:thread-count header)
+        indent (get header :indent 0)]
+    [
+     :regular
+     (apply str (repeat indent "•"))
+     :bold
+     (abbreviate-author (:author header))
+     :regular
+     (if (pos? thread-count)
+       (str " (" thread-count ")")
+       "")
+     :bold
+     :pos 30
+     (:subject header)
+     :regular
+     :pos 60
+     (f/format-time (:time header))
+     :new-line
+     (abbreviate-body (:body header))
+     :new-line
+     ]))
+
+(defn thread-events
+  "returns events in threaded order."
+  ([events event-map open-events]
+   (thread-events events event-map open-events 0))
+  ([events event-map open-events indent]
+   (loop [events events
+          threaded-events []
+          processed-events #{}]
+     (cond
+       (empty? events)
+       threaded-events
+
+       (contains? processed-events (first events))
+       (recur (rest events) threaded-events processed-events)
+
+       :else
+       (let [event-id (first events)
+             event (get event-map event-id)
+             references (:references event)
+             no-references? (empty? references)
+             not-open? (nil? (open-events event-id))
+             no-thread? (or no-references? (and (zero? indent) not-open?))]
+         (if no-thread?
+           (recur (rest events)
+                  (conj threaded-events (assoc event :indent indent))
+                  (conj processed-events event-id))
+           (let [thread (thread-events references event-map open-events (inc indent))
+                 threaded-events (conj threaded-events (assoc event :indent indent))
+                 threaded-events (vec (concat threaded-events thread))
+                 processed-events (set/union processed-events (set (map :id thread)))]
+             (recur (rest events)
+                    threaded-events
+                    (conj processed-events event-id)))))
+       ))))
+
 (defn update-headers [state frame]
   (let [application (:application state)
         event-map (:text-event-map application)
         events (:chronological-text-events application)
         open-thread (:open-thread application)
-        threaded-events (a/thread-events events event-map open-thread)
+        threaded-events (thread-events events event-map open-thread)
         total-events (count threaded-events)
         display-position (:display-position frame)
         end-position (min (count threaded-events) (+ display-position (:n-elements frame)))
@@ -198,7 +284,7 @@
         frame (add-thread-buttons frame thread-buttons)
         selection-buttons (create-selection-buttons bc headers)
         frame (add-selection-buttons frame selection-buttons)
-        marked-up-headers (map a/markup-header headers)
+        marked-up-headers (map markup-header headers)
         frame (assoc frame :displayed-elements marked-up-headers
                            :total-elements total-events)
         state (assoc-in state frame-path frame)]

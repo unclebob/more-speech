@@ -1,9 +1,9 @@
 (ns more-speech.nostr.events
   (:require [clojure.spec.alpha :as s]
-            [more-speech.content.article :as article]
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]
-            [more-speech.ui.widget :as w]))
+            [more-speech.ui.widget :as w]
+            [more-speech.ui.formatters :as f]))
 (s/def ::id number?)
 (s/def ::pubkey number?)
 (s/def ::created-at number?)
@@ -29,10 +29,10 @@
         {:strs [_id pubkey created_at kind _tags content _sig]} inner-event]
     (condp = kind
       0 (process-name-event state inner-event)
-      3 (do (printf "%s: %s %s %s\n" kind (article/format-time created_at) (name-of pubkey) content)
+      3 (do (printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             state)
       1 (process-text-event state inner-event)
-      4 (do (printf "%s: %s %s %s\n" kind (article/format-time created_at) (name-of pubkey) content)
+      4 (do (printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             state)
       (do (prn "unknown event: " event)
           state))))
