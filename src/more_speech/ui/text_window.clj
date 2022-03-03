@@ -135,6 +135,7 @@
         (g/stroke g [0 0 0])
         (g/stroke-weight g 2)
         (g/fill g config/white)
+        (g/rect-mode g :corner)
         (g/rect g [0 0 (:w window) (:h window)])))))
 
 (defn scroll-up [frame-path _button state]

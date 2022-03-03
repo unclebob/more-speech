@@ -9,6 +9,7 @@
   )
 
 (defn abbreviate [s n]
-  (if (<= (count s) n)
-    s
-    (str (subs s 0 n) "...")))
+  (let [dots "..."]
+    (if (<= (count s) n)
+      s
+      (str (subs s 0 (- n (count dots))) dots))))

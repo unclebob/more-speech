@@ -13,6 +13,7 @@
   (stroke-weight [graphics weight])
   (fill [graphics color])
   (no-fill [graphics])
+  (rect-mode [graphics mode])
   (rect [graphics rect])
   (line [graphics line])
   (polygon [graphics points] "draws a polygon")
@@ -51,6 +52,8 @@
     (apply q/fill color))
   (no-fill [_graphics]
     (q/no-fill))
+  (rect-mode [_graphics mode]
+    (q/rect-mode mode))
   (rect [_graphics rect]
     (apply q/rect rect))
   (line [_graphics line]

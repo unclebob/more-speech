@@ -201,7 +201,9 @@
   (add-buttons frame "S" buttons))
 
 (defn abbreviate-body [body]
-  (f/abbreviate body 95))
+  (f/abbreviate
+    body
+    (:text-width config/header-window-dimensions)))
 
 (defn abbreviate-author [author]
   (f/abbreviate author 20))
@@ -307,7 +309,7 @@
   (let [application (:application state)
         g (:graphics application)
         headers (:displayed-elements frame)]
-    (loop [cursor (cursor/->cursor g 0 (g/line-height g) 20)
+    (loop [cursor (cursor/->cursor g 0 (g/line-height g) 10)
            headers headers
            index 0]
       (if (empty? headers)

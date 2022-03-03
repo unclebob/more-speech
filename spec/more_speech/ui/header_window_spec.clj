@@ -113,7 +113,8 @@
   (context "Formatting Headers"
     (it "abbreviates authors"
       (should= "short" (abbreviate-author "short"))
-      (should= "a very long author n..." (abbreviate-author "a very long author name")))
+      (should= "a very long autho..."
+               (abbreviate-author "a very long author name")))
 
 
     (it "abbreviates bodies"

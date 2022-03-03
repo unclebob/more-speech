@@ -60,6 +60,7 @@
 (defn- setup-application [application _path _state]
   (let [graphics (:graphics application)
         bold (get-in graphics [:fonts :bold])
+        _ (g/text-font graphics bold)
         screen-height (g/screen-height graphics)
         header-window-height (* screen-height (:height-fraction config/header-window-dimensions))
         header-window-width (g/pos-width graphics (:char-width config/header-window-dimensions))
@@ -71,7 +72,7 @@
         article-window-height (- screen-height
                                  article-window-top
                                  config/article-window-bottom-margin)]
-    (g/text-font graphics bold)
+
     (assoc application
       :this-update #{}
       :next-update #{}

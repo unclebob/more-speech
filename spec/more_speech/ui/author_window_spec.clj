@@ -7,7 +7,7 @@
   (context "Abbreviations"
     (it "abbreviates pubkeys"
       (should= "short" (abbreviate-key "short"))
-      (should= "long pub..." (abbreviate-key "long pubkey")))
+      (should= "long ..." (abbreviate-key "long pubkey")))
     )
   )
 
@@ -18,7 +18,7 @@
 
     (it "is properly formatted."
       (should= [:bold
-                "00000000..."
+                "00000..."
                 :regular
                 " - "
                 "nickname"

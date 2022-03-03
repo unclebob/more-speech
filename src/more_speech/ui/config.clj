@@ -22,6 +22,7 @@
 (def header-window-dimensions
   {:x 20 :y 10
    :char-width 105
+   :text-width 100
    :height-fraction 5/8})
 
 (def article-window-top-margin 10)
