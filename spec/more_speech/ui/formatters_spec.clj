@@ -26,6 +26,9 @@
   (it "should preserve existing double line breaks."
     (should= "x\n\nx" (reformat-article "x\n\nx" 7)))
 
-  (it "should preserve leading spaces if more than one."
-    (should= "xxx\n  xxx" (reformat-article "xxx\n  xxx" 6)))
+  (it "should preserve leading spaces."
+    (should= "x\n xxx" (reformat-article "x\n xxx" 6)))
+
+  (it "should give priority to leading spaces"
+    (should= "x\n x\n\nx" (reformat-article "x\n x\n\nx" 20)))
   )

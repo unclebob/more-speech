@@ -15,38 +15,19 @@
       (str (subs s 0 (- n (count dots))) dots))))
 
 (defn reformat-article [article width]
-  (let [double-break (.lastIndexOf article "\n\n" width)
-        break-space (.indexOf article "\n ")]
-    (cond
-      (>= double-break 0)
-      (let [line (.substring article 0 double-break)
-            line (.replaceAll line "\n" " ")]
-        (str line "\n\n"
-             (reformat-article
-               (.substring article (+ 2 double-break))
-               width)))
-
-      (< -1 break-space width)
-      (let [line (.substring article 0 break-space)
-            line (.replaceAll line "\n" " ")]
-        (str line "\n"
-             (reformat-article
-               (.substring article (inc break-space))
-               width)))
-
-      (<= (count article) width)
-      (.replaceAll article "\n" " ")
-
-      :else
-      (let [break-position (.lastIndexOf article " " width)
-            break-position (if (neg-int? break-position)
-                             width
-                             break-position)
-            head (.substring article 0 break-position)
-            head (.replaceAll head "\n" " ")
-            tail (.substring article break-position)]
-        (str
-          (.trim head)
-          "\n"
-          (reformat-article (.trim tail) width)))
-      )))
+  (let [blank-line (.lastIndexOf article "\n\n" width)
+        indentation (.indexOf article "\n ")
+        breakable-space (.lastIndexOf article " " width)
+        [break-point break-string skip]
+        (cond
+          (< -1 indentation width) [indentation "\n " 2]
+          (>= blank-line 0) [blank-line "\n\n" 2]
+          (>= breakable-space 0) [breakable-space "\n" 1]
+          (<= (count article) width) [(count article) "" 0]
+          :else [width "\n" 0])]
+    (let [head (.substring article 0 break-point)
+          head (.replaceAll head "\n" " ")
+          tail (.substring article (+ skip break-point))]
+      (if (empty? tail)
+        head
+        (str head break-string (reformat-article tail width))))))
