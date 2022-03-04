@@ -9,6 +9,8 @@
 ;;                 at end of pass.
 ;; :mouse-locked-to -- nil if no lock.  Otherwise the path of the widget to which
 ;;                     the mouse is locked.
+;; :keyboard-focus -- nil of no focus.  Otherwise the path of the widget holding
+;;                    the focus.
 ;;
 
 (ns more-speech.ui.application
@@ -28,6 +30,7 @@
 (s/def ::path (s/tuple [keyword?]))
 (s/def ::graphics #(satisfies? g/graphics %))
 (s/def ::mouse-locked-to #(or (nil? %) (s/coll-of keyword?)))
+(s/def ::keyboard-focus #(or (nil? %) (s/coll-of keyword?)))
 (s/def ::nicknames (s/map-of number? string?))
 (s/def ::chronological-text-events (s/coll-of number?))
 (s/def ::text-event-map (s/map-of number? ::events/event))
@@ -39,6 +42,7 @@
                                       ::this-update
                                       ::next-update
                                       ::mouse-locked-to
+                                      ::keyboard-focus
                                       ::nicknames
                                       ::chronological-text-events
                                       ::text-event-map
@@ -76,6 +80,8 @@
     (assoc application
       :this-update #{}
       :next-update #{}
+      :mouse-locked-to nil
+      :keyboard-focus nil
       :nicknames {}
       :chronological-text-events []
       :text-event-map {}

@@ -27,6 +27,7 @@
 (def next-update-path [:application :next-update])
 (def this-update-path [:application :this-update])
 (def mouse-lock-path [:application :mouse-locked-to])
+(def keyboard-focus-path [:application :keyboard-focus])
 
 (defn redraw-widget [state maybe-widget]
   (cond
@@ -66,6 +67,15 @@
         (if (is-ancestor? (first update-set) path)
           true
           (recur (rest update-set)))))))
+
+(defn set-keyboard-focus [state widget]
+  (assoc-in state keyboard-focus-path (:path widget)))
+
+(defn clear-keyboard-focus [state]
+  (assoc-in state keyboard-focus-path nil))
+
+(defn get-keyboard-focus [state]
+  (get-in state keyboard-focus-path))
 
 (defn lock-mouse [state widget]
   (assoc-in state mouse-lock-path (:path widget)))
@@ -172,19 +182,32 @@
         (if (empty? path)
           nil
           (let [f (get widget function)]
-            (if (nil? f)
-              (recur (drop-last path))
-              widget)))))))
+            (if (fn? f)
+              widget
+              (recur (drop-last path)))))))))
 
 (defn find-mouse-responder [state function]
   "returns widget that should respond to the specified function."
   (let [lock-path (get-mouse-lock state)
         locked-widget (if (some? lock-path) (get-in state lock-path) nil)]
     (if (some? locked-widget)
-      (if (some? (function locked-widget))
+      (if (fn? (function locked-widget))
         locked-widget
         nil)
       (find-deepest-responder state function))))
+
+(defn pass-to-parent [state widget event & args]
+  (loop [path (drop-last (:path widget))]
+    (if (= [:application] path)
+      state
+      (let [widget (get-in state path)
+            event-f (get widget event)]
+        (if (fn? event-f)
+          (apply event-f
+                 (concat
+                   [widget state]
+                   args))
+          (recur (drop-last path)))))))
 
 (defn mouse-wheel [state delta]
   (let [responder (find-mouse-responder state :mouse-wheel)]
@@ -211,3 +234,6 @@
     (if (nil? responder)
       state
       ((:left-held responder) responder state))))
+
+(defn key-pressed [state _ #_{:keys [key key-code raw-key modifiers]}]
+  state)

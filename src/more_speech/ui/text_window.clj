@@ -45,7 +45,8 @@
          update-text-frame
          draw-text-frame
          mouse-wheel
-         scroll-frame)
+         scroll-frame
+         set-focus)
 
 (defrecord text-window [x y w h controls]
   widget
@@ -93,7 +94,8 @@
         sb-button-offset (+ (/ config/scroll-bar-w 2)
                             (/ config/scroll-bar-button-w 2))
         sb-button-x (+ x w (- sb-button-offset) 0.5)
-        widget (assoc window
+        window (assoc window
+                 :left-down set-focus
                  :text-frame frame
                  :scroll-down (map->button {:x sb-button-x
                                             :y (+ y config/scroll-bar-button-top-margin)
@@ -118,7 +120,10 @@
                                       :left-down lock-thumb
                                       :left-up unlock-thumb
                                       }))]
-    widget))
+    window))
+
+(defn set-focus [widget state]
+  (w/set-keyboard-focus state widget))
 
 (defn update-text-window [widget state]
   (let [text-frame (:text-frame widget)
@@ -128,12 +133,13 @@
 
 (defn draw-text-window [state window]
   (let [application (:application state)
-        g (:graphics application)]
+        g (:graphics application)
+        weight (if (= (:keyboard-focus application) (:path window)) 4 2)]
     (g/with-translation
       g [(:x window) (:y window)]
       (fn [g]
         (g/stroke g [0 0 0])
-        (g/stroke-weight g 2)
+        (g/stroke-weight g weight)
         (g/fill g config/white)
         (g/rect-mode g :corner)
         (g/rect g [0 0 (:w window) (:h window)])))))

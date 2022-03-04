@@ -167,6 +167,11 @@
     )
   )
 
+(defn- select-header [button state]
+  (let [state (app-util/select-header button state)]
+    (w/pass-to-parent state button :left-down)
+    ))
+
 (defn- make-selection-button [button-creator id index]
   (let [graphics (:graphics button-creator)
         state (:state button-creator)
@@ -183,7 +188,7 @@
                   :w (- (:w frame) 20)
                   :h (* config/header-lines line-height)
                   :draw (partial draw-selector state)
-                  :left-down app-util/select-header})))
+                  :left-down select-header})))
 
 (defn create-selection-buttons [button-creator headers]
   (loop [headers headers

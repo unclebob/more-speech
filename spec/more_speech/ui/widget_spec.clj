@@ -222,7 +222,7 @@
             widget2 (->mock-widget 30 10 20 20)
             widget2-1 (->mock-widget 35 15 5 5)
             widget2 (assoc widget2 :w2-1 widget2-1
-                                   :responder :place-holder)
+                                   :responder (fn [] :place-holder))
             application (map->application {:path [:application]
                                            :graphics (->mock-graphics 36 16)
                                            :w1 widget1 :w2 widget2})
@@ -236,7 +236,7 @@
           (let [widget1 (->mock-widget 10 10 10 10)
                 widget2 (->mock-widget 30 10 20 20)
                 widget2-1 (->mock-widget 35 15 5 5)
-                widget1 (assoc widget1 :responder :place-holder)
+                widget1 (assoc widget1 :responder (fn [] :place-holder))
                 widget2 (assoc widget2 :w2-1 widget2-1
                                        :responder :place-holder)
                 application (map->application {:path [:application]

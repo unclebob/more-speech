@@ -54,8 +54,6 @@
   (draw-widget application state)
   )
 
-
-
 (declare more-speech)
 (defn ^:export -main [& args]
   (q/defsketch more-speech
@@ -69,6 +67,7 @@
                :mouse-released w/mouse-released
                :mouse-moved w/mouse-moved
                :mouse-dragged w/mouse-dragged
+               :key-pressed w/key-pressed
                :middleware [m/fun-mode])
   (reset! events (read-string (slurp "nostr-messages")))
   args
