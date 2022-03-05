@@ -12,7 +12,7 @@
   (with button {:id 42})
 
   (it "selects the article"
-    (let [state (select-header @button @state)]
+    (let [state (select-header 42 @state)]
       (should= 42 (get-in state [:application :selected-header]))))
 
   (it "deselects the selected article."

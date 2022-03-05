@@ -20,7 +20,8 @@
 (declare get-header-height
          draw-headers
          update-headers
-         handle-key)
+         handle-key
+         move-selection)
 
 (defrecord header-window-controls []
   text-window-controls
@@ -35,8 +36,10 @@
   )
 
 (defn handle-key [state frame key]
-  (prn 'handle-key (:path frame) key)
-  state)
+  (condp = (:key key)
+    :up (move-selection state frame -1)
+    :down (move-selection state frame 1)
+    state))
 
 (defn get-header-height [state]
   (let [graphics (get-in state [:application :graphics])
@@ -176,7 +179,7 @@
   )
 
 (defn- select-header [button state]
-  (let [state (app-util/select-header button state)]
+  (let [state (app-util/select-header (:id button) state)]
     (w/pass-to-parent state button :left-down)
     ))
 
@@ -276,15 +279,19 @@
                  processed-events (set/union processed-events (set (map :id thread)))]
              (recur (rest events)
                     threaded-events
-                    (conj processed-events event-id)))))
-       ))))
+                    (conj processed-events event-id)))))))))
+
+(defn get-threaded-events [application]
+  (let [event-map (:text-event-map application)
+        events (:chronological-text-events application)
+        open-thread (:open-thread application)
+        threaded-events (thread-events events event-map open-thread)]
+    threaded-events
+    ))
 
 (defn update-headers [state frame]
   (let [application (:application state)
-        event-map (:text-event-map application)
-        events (:chronological-text-events application)
-        open-thread (:open-thread application)
-        threaded-events (thread-events events event-map open-thread)
+        threaded-events (get-threaded-events application)
         total-events (count threaded-events)
         display-position (:display-position frame)
         end-position (min (count threaded-events) (+ display-position (:n-elements frame)))
@@ -305,6 +312,39 @@
         state (assoc-in state frame-path frame)]
     state))
 
+(defn index-of-selection [events id]
+  (let [indices (keep-indexed #(if (= id (:id %2)) %1 nil) events)]
+    (first indices))
+  )
+
+(defn id-of-selection-moved-by [events selected-id delta]
+  (let [index (index-of-selection events selected-id)
+        index (+ index delta)
+        event (get events index)]
+    (:id event))
+  )
+
+(defn move-selection [state frame delta]
+  (let [application (:application state)
+        selection (:selected-header application)]
+    (if (nil? selection)
+      state
+      (let [display-position (:display-position frame)
+            events (get-threaded-events application)
+            new-id (id-of-selection-moved-by events selection delta)]
+        (if (or (nil? selection)
+                (nil? new-id))
+          state
+          (let [
+                state (app-util/select-header new-id state)
+                state (w/redraw-widget state [:application :header-window])
+                frame-path (:path frame)
+                total-elements (count events)
+                display-position (+ delta display-position)
+                display-position (min (max 0 display-position) total-elements)
+                frame (assoc frame :display-position display-position)
+                state (assoc-in state frame-path frame)]
+            state))))))
 
 (defn draw-header [frame cursor header index]
   (let [g (:graphics cursor)

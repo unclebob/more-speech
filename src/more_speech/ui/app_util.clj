@@ -12,12 +12,11 @@
         state (assoc-in state [:application :open-thread] open-thread)]
     (w/redraw-widget state frame-path)))
 
-(defn select-header [button state]
-  (let [id (:id button)
-        selected (get-in state [:application :selected-header])
+(defn select-header [id state]
+  (let [selected (get-in state [:application :selected-header])
         state (if (= id selected)
                 (assoc-in state [:application :selected-header] nil)
-                (assoc-in state [:application :selected-header] (:id button)))
+                (assoc-in state [:application :selected-header] id))
         state (w/redraw-widget state [:application :article-window])
         state (w/redraw-widget state [:application :header-window])]
     state))

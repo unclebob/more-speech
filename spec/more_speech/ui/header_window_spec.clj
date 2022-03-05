@@ -24,7 +24,8 @@
   widget)
 
 (declare state frame
-         text-event nicknames)
+         text-event nicknames
+         events)
 
 (describe "article frame"
   (with state {:application
@@ -189,5 +190,21 @@
             threaded-events (thread-events events event-map open-events)]
         (should= [1 2 3] (map :id threaded-events))
         (should= [0 1 2] (map :indent threaded-events))))
+    )
+
+  (context "Moving the header selection."
+    (with events [{:id 1} {:id 2} {:id 3}])
+    (it "finds the index of a header id."
+        (should-be-nil (index-of-selection @events 4))
+        (should= 0 (index-of-selection @events 1))
+        (should= 1 (index-of-selection @events 2))
+        (should= 2 (index-of-selection @events 3)))
+
+    (it "gets id of a moved selection."
+      (should= 1 (id-of-selection-moved-by @events 2 -1))
+      (should= 1 (id-of-selection-moved-by @events 3 -2))
+      (should= 3 (id-of-selection-moved-by @events 1 2))
+      (should= nil (id-of-selection-moved-by @events 1 4))
+      )
     )
   )
