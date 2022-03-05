@@ -12,13 +12,15 @@
             [more-speech.ui.text-window :refer [text-window-controls
                                                 get-element-height
                                                 draw-elements
-                                                update-elements]]
+                                                update-elements
+                                                key-pressed]]
             [more-speech.ui.widget :as w]
             [clojure.set :as set]))
 
 (declare get-header-height
          draw-headers
-         update-headers)
+         update-headers
+         handle-key)
 
 (defrecord header-window-controls []
   text-window-controls
@@ -28,7 +30,13 @@
     (draw-headers state frame))
   (update-elements [_c state frame]
     (update-headers state frame))
+  (key-pressed [_c state frame key]
+    (handle-key state frame key))
   )
+
+(defn handle-key [state frame key]
+  (prn 'handle-key (:path frame) key)
+  state)
 
 (defn get-header-height [state]
   (let [graphics (get-in state [:application :graphics])

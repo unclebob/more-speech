@@ -21,6 +21,8 @@
     (draw-authors state frame))
   (update-elements [_c state frame]
     (update-authors state frame))
+  (key-pressed [_c state _frame _key]
+    state)
   )
 
 (defn get-author-height [state]

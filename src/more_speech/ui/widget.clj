@@ -11,7 +11,24 @@
 ;; members are in pixels.  By convention child widgets should fit within the
 ;; x,y,w,h bounds of their parents.
 ;;
-;; Mouse gestures are typically routed to the deepest child that contains them.
+;; Mouse gestures are routed to widgets by two means.
+;;  1. If the mouse-lock-path is not nil, then the mouse gesture is routed
+;;     immediately to the widget described by that path.
+;;  2. Otherwise the position of the mouse is used to find the deepest
+;;     widget that contains that position.  The mouse gesture is then
+;;     routed to that widget, or the nearest anscestor widget that contains
+;;     the coresponding responder function.
+;;
+;; Mouse responder functions:
+;;  :mouse-wheel [widget state delta] delta is signed number of clicks.
+;;  :left-down   [widget state]
+;;  :left-up     [widget state]
+;;  :left-held   [widget state]
+
+;; Keyboard gestures are routed to the widget described by keyboard-focus-path.
+;;
+;; Keyboard responder functions:
+;;  :key-pressed [widget state {:keys [key key-code raw-key modifiers]}]
 ;;
 
 (ns more-speech.ui.widget
@@ -235,5 +252,10 @@
       state
       ((:left-held responder) responder state))))
 
-(defn key-pressed [state _ #_{:keys [key key-code raw-key modifiers]}]
-  state)
+(defn key-pressed [state key #_{:keys [key key-code raw-key modifiers]}]
+  (let [responder-path (get-in state keyboard-focus-path)
+        responder (get-in state responder-path)
+        event-f (get responder :key-pressed)]
+    (if (fn? event-f)
+      (event-f responder state key)
+      state)))

@@ -21,6 +21,8 @@
     (draw-article state frame))
   (update-elements [_c state frame]
     (update-article state frame))
+  (key-pressed [_c state _frame _key]
+    state)
   )
 
 (defn make-article [id name time body]

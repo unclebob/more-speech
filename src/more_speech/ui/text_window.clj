@@ -46,7 +46,8 @@
          draw-text-frame
          mouse-wheel
          scroll-frame
-         set-focus)
+         set-focus
+         key-pressed-in-frame)
 
 (defrecord text-window [x y w h controls]
   widget
@@ -65,6 +66,8 @@
   (update-elements [controls state frame]
     "Called only if the widget is in [:application :this-update]
     sets :total-elements.")
+  (key-pressed [controls state frame key]
+    "Called when a key is pressed and this window has the focus.")
   )
 
 (defrecord text-frame [x y w h display-position controls]
@@ -96,6 +99,7 @@
         sb-button-x (+ x w (- sb-button-offset) 0.5)
         window (assoc window
                  :left-down set-focus
+                 :key-pressed key-pressed-in-frame
                  :text-frame frame
                  :scroll-down (map->button {:x sb-button-x
                                             :y (+ y config/scroll-bar-button-top-margin)
@@ -206,8 +210,15 @@
         elements (quot (:h frame) element-height)
         frame (assoc frame :n-elements elements
                            :mouse-wheel mouse-wheel
-                           :scroll-frame scroll-frame)]
+                           :scroll-frame scroll-frame
+                           )]
     frame))
+
+(defn key-pressed-in-frame [window state key]
+  (let [frame (:text-frame window)
+        controls (:controls frame)
+        state (key-pressed controls state frame key)]
+    state))
 
 (defn- update-text-frame [state frame]
   (if (w/redraw-widget? state frame)
