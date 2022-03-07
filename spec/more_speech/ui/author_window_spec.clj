@@ -3,14 +3,6 @@
             [more-speech.ui.author-window :refer :all]
             [clojure.spec.alpha :as s]))
 
-(describe "Formatting Utilities"
-  (context "Abbreviations"
-    (it "abbreviates pubkeys"
-      (should= "short" (abbreviate-key "short"))
-      (should= "long ..." (abbreviate-key "long pubkey")))
-    )
-  )
-
 (describe "Formatting an author nickname."
   (let [author-tuple [0 "nickname"]]
     (it "conforms to spec."
@@ -18,9 +10,8 @@
 
     (it "is properly formatted."
       (should= [:bold
-                "00000..."
+                "000000..."
                 :regular
-                " - "
-                "nickname"
+                " - nickname"
                 :new-line]
                (markup-author author-tuple)))))

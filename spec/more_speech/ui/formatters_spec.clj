@@ -2,6 +2,13 @@
   (:require [speclj.core :refer :all]
             [more-speech.ui.formatters :refer :all]))
 
+(describe "Abbreviations."
+  (it "abbreviates pubkeys"
+    (should= "short" (abbreviate "short" 10))
+    (should= "some lo..." (abbreviate "some long string." 10)))
+
+  )
+
 (describe "reformat article body to fit width."
   (it "should not wrap nothing"
     (should= "" (reformat-article "" 1)))

@@ -75,7 +75,11 @@
         article-window-width header-window-width
         article-window-height (- screen-height
                                  article-window-top
-                                 config/article-window-bottom-margin)]
+                                 config/article-window-bottom-margin)
+        author-window-top-margin (:top-margin config/author-window-dimensions)
+        author-window-left-margin (:left-margin config/author-window-dimensions)
+        author-window-width (:width config/author-window-dimensions)
+        author-window-height (* screen-height (:height-fraction config/author-window-dimensions))]
 
     (assoc application
       :this-update #{}
@@ -102,10 +106,10 @@
                          :controls (->article-window-controls)})
 
       :author-window (map->text-window
-                       {:x (+ 50 (g/pos-width graphics 110))
-                        :y 10
-                        :w (g/pos-width graphics 30)
-                        :h (- screen-height 100)
+                       {:x (+ header-window-left author-window-left-margin header-window-width)
+                        :y author-window-top-margin
+                        :w (g/pos-width graphics author-window-width)
+                        :h author-window-height
                         :controls (->author-window-controls)})
       )
     ))

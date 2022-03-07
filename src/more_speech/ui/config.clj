@@ -35,6 +35,15 @@
    :text-width 98
    })
 
+(def author-window-dimensions
+  {
+   :left-margin 10
+   :top-margin 10
+   :width 40
+   :key-abbreviation 9
+   :height-fraction 1/4
+   })
+
 (def header-lines 2)
 (def header-top-margin 2)
 (def header-bottom-margin 2)

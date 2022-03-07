@@ -7,7 +7,8 @@
     [more-speech.ui.cursor :as text]
     [more-speech.ui.graphics :as g]
     [more-speech.ui.formatters :as f]
-    [clojure.spec.alpha :as s]))
+    [clojure.spec.alpha :as s]
+    [more-speech.ui.config :as config]))
 
 (declare get-author-height
          draw-authors
@@ -34,17 +35,19 @@
 (s/def ::author-pubkey string?)
 (s/def ::author-nickname-tuple (s/tuple ::author-pubkey ::author-nickname))
 
-(defn abbreviate-key [pubkey]
-  (f/abbreviate pubkey 8))
+(defn abbreviate-author [author]
+  (let [author-length (- (:width config/author-window-dimensions) 15)]
+    (f/abbreviate author author-length)))
 
 (defn markup-author [[pubkey name]]
-  [:bold
-   (abbreviate-key (num->hex-string pubkey))
-   :regular
-   " - "
-   name
-   :new-line
-   ])
+  (let [short-key (:key-abbreviation config/author-window-dimensions)
+        long-key (- (:width config/author-window-dimensions) 3)]
+    [:bold
+     (f/abbreviate (num->hex-string pubkey) (if (empty? name) long-key short-key))
+     :regular
+     (if (empty? name) "" (str " - " (abbreviate-author name)))
+     :new-line
+     ]))
 
 (defn draw-author [frame cursor author]
   (let [g (:graphics cursor)]
@@ -71,7 +74,7 @@
         authors (get-in state [:application :nicknames])
         frame (assoc frame :total-elements (count authors))
         display-position (get frame :display-position 0)
-        n-elements (min (count authors)  (:n-elements frame))
+        n-elements (min (count authors) (:n-elements frame))
         sorted-authors (sort-by #(string/lower-case (text/nil->blank (second %))) authors)
         authors-to-display (drop display-position sorted-authors)
         authors-to-display (take n-elements authors-to-display)
