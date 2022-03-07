@@ -31,4 +31,7 @@
 
   (it "should give priority to leading spaces"
     (should= "x\n x\n\nx" (reformat-article "x\n x\n\nx" 20)))
+
+  (it "should not break this line. (bug-fix)"
+    (should= "I found you!" (reformat-article "I found you!" 50)))
   )

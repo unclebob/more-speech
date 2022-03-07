@@ -22,8 +22,8 @@
         (cond
           (< -1 indentation width) [indentation "\n " 2]
           (>= blank-line 0) [blank-line "\n\n" 2]
-          (>= breakable-space 0) [breakable-space "\n" 1]
           (<= (count article) width) [(count article) "" 0]
+          (>= breakable-space 0) [breakable-space "\n" 1]
           :else [width "\n" 0])]
     (let [head (.substring article 0 break-point)
           head (.replaceAll head "\n" " ")
