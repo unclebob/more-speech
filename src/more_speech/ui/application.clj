@@ -91,7 +91,8 @@
       :text-event-map {}
       :open-thread #{}
       :header-window (map->text-window
-                        {:x header-window-left
+                        {:title "Article Headers"
+                         :x header-window-left
                          :y header-window-top
                          :w header-window-width
                          :h header-window-height
@@ -99,14 +100,16 @@
                          })
 
       :article-window (map->text-window
-                        {:x article-window-left
+                        {:title "Selected Article"
+                         :x article-window-left
                          :y article-window-top
                          :w article-window-width
                          :h article-window-height
                          :controls (->article-window-controls)})
 
       :author-window (map->text-window
-                       {:x (+ header-window-left author-window-left-margin header-window-width)
+                       {:title "Authors"
+                        :x (+ header-window-left author-window-left-margin header-window-width)
                         :y author-window-top-margin
                         :w (g/pos-width graphics author-window-width)
                         :h author-window-height

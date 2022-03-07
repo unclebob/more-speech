@@ -88,9 +88,9 @@
         scroll-up (partial scroll-up frame-path)
         scroll-down (partial scroll-down frame-path)
         frame (map->text-frame {:x x
-                                :y y
+                                :y (+ y config/window-title-height)
                                 :w (- w config/scroll-bar-w)
-                                :h h
+                                :h (- h config/window-title-height)
                                 :controls controls
                                 :display-position 0
                                 :total-elements 0})
@@ -135,10 +135,17 @@
         thumb-path (concat (:path widget) [:thumb])]
     (assoc-in state (concat thumb-path [:y]) thumb-pos)))
 
-(defn draw-text-window [state window]
+(defn draw-text-window [state {:keys [w] :as window}]
   (let [application (:application state)
         g (:graphics application)
-        weight (if (= (:keyboard-focus application) (:path window)) 4 2)]
+        weight (if (= (:keyboard-focus application) (:path window)) 4 2)
+        title-font (get-in g [:fonts :regular])
+        _ (g/text-font g title-font)
+        title (:title window)
+        title-width (g/text-width g title)
+        title-pos (- (/ (:w window) 2) (/ title-width 2))
+        title-third-height (/ config/window-title-height 3)
+        title-half-height (/ config/window-title-height 2)]
     (g/with-translation
       g [(:x window) (:y window)]
       (fn [g]
@@ -146,7 +153,23 @@
         (g/stroke-weight g weight)
         (g/fill g config/white)
         (g/rect-mode g :corner)
-        (g/rect g [0 0 (:w window) (:h window)])))))
+        (g/rect g [0 0 (:w window) (:h window)])
+        (g/stroke g config/black)
+        (g/stroke-weight g 1)
+        (g/line g [5 title-third-height
+                   (- title-pos 5) title-third-height])
+        (g/line g [(+ title-pos title-width 5) title-third-height
+                   (- w config/scroll-bar-w) title-third-height])
+        (g/line g [5 (* 2 title-third-height)
+                   (- title-pos 5) (* 2 title-third-height)])
+        (g/line g [(+ title-pos title-width 5) (* 2 title-third-height)
+                   (- w config/scroll-bar-w) (* 2 title-third-height)])
+
+        (g/fill g config/black)
+        (g/text-align g [:left :center])
+        (g/text-font g (get-in g [:fonts :regular]))
+        (g/text g [title title-pos title-half-height])
+        ))))
 
 (defn scroll-up [frame-path _button state]
   (let [frame (get-in state frame-path)]
@@ -157,14 +180,14 @@
     ((:scroll-frame frame) frame-path state -1)))
 
 (defn- thumb-drag-height [frame]
-  (- (:h frame)
+  (- (:h frame) (- config/window-title-height)
      (* 2 (+ config/scroll-bar-button-top-margin
              config/scroll-bar-button-h
              config/thumb-margin))
      config/thumb-h))
 
 (defn- thumb-origin [frame]
-  (+ (:y frame)
+  (+ (:y frame) (- config/window-title-height)
      config/scroll-bar-button-top-margin
      config/scroll-bar-button-h
      config/thumb-margin))
