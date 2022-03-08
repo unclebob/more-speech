@@ -23,6 +23,7 @@
             [more-speech.ui.header-window :refer [->header-window-controls]]
             [more-speech.ui.article-window :refer [->article-window-controls]]
             [more-speech.ui.author-window :refer [->author-window-controls]]
+            [more-speech.ui.edit-window :refer [->edit-window-controls]]
             [more-speech.ui.graphics :as g]
             [more-speech.nostr.events :as events]
             [more-speech.ui.config :as config]))
@@ -76,10 +77,18 @@
         article-window-height (- screen-height
                                  article-window-top
                                  config/article-window-bottom-margin)
-        author-window-top-margin (:top-margin config/author-window-dimensions)
+        author-window-top (:top-margin config/author-window-dimensions)
         author-window-left-margin (:left-margin config/author-window-dimensions)
         author-window-width (:width config/author-window-dimensions)
-        author-window-height (* screen-height (:height-fraction config/author-window-dimensions))]
+        author-window-height (* screen-height (:height-fraction config/author-window-dimensions))
+        author-window-left (+ header-window-left author-window-left-margin header-window-width)
+        author-window-width (g/pos-width graphics author-window-width)
+
+        edit-window-top (+ author-window-top author-window-height (:top-margin config/edit-window-dimensions))
+        edit-window-left author-window-left
+        edit-window-width (g/pos-width graphics (:width config/edit-window-dimensions))
+        edit-window-height (- screen-height edit-window-top (:bottom-margin config/edit-window-dimensions))
+        ]
 
     (assoc application
       :this-update #{}
@@ -91,13 +100,13 @@
       :text-event-map {}
       :open-thread #{}
       :header-window (map->text-window
-                        {:title "Article Headers"
-                         :x header-window-left
-                         :y header-window-top
-                         :w header-window-width
-                         :h header-window-height
-                         :controls (->header-window-controls)
-                         })
+                       {:title "Article Headers"
+                        :x header-window-left
+                        :y header-window-top
+                        :w header-window-width
+                        :h header-window-height
+                        :controls (->header-window-controls)
+                        })
 
       :article-window (map->text-window
                         {:title "Selected Article"
@@ -109,11 +118,19 @@
 
       :author-window (map->text-window
                        {:title "Authors"
-                        :x (+ header-window-left author-window-left-margin header-window-width)
-                        :y author-window-top-margin
-                        :w (g/pos-width graphics author-window-width)
+                        :x author-window-left
+                        :y author-window-top
+                        :w author-window-width
                         :h author-window-height
                         :controls (->author-window-controls)})
+
+      :edit-window (map->text-window
+                     {:title "Compose an article."
+                      :x edit-window-left
+                      :y edit-window-top
+                      :w edit-window-width
+                      :h edit-window-height
+                      :controls (->edit-window-controls)})
       )
     ))
 

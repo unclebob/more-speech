@@ -1,0 +1,5 @@
+* Something is wrong with threading, articles appear more than once.
+  This  makes the up and down arrow selection malfunction.
+
+* Layout Manager.  A better way of computing window positions and sizes.
+

@@ -22,18 +22,22 @@
 
 (def header-window-dimensions
   {:x 20 :y 10
-   :width 105                                               ;window width in chars
-   :text-width 95                                           ;header text width in chars
+   :width 100                                               ;window width in chars
+   :text-width 90                                           ;header text width in chars
    :left-margin 20                                          ;px
    :height-fraction 5/8                                     ;of screen
    })
+
+(def header-lines 2)
+(def header-top-margin 2)
+(def header-bottom-margin 2)
 
 (def article-window-top-margin 10)
 (def article-window-bottom-margin 10)
 
 (def article-window-dimensions
   {
-   :text-width 98
+   :text-width 90
    })
 
 (def author-window-dimensions
@@ -45,6 +49,13 @@
    :height-fraction 1/4
    })
 
-(def header-lines 2)
-(def header-top-margin 2)
-(def header-bottom-margin 2)
+(def edit-window-dimensions
+  {
+   :left-margin 10
+   :top-margin 10
+   :width 100
+   :text-width 90
+   :bottom-margin 10
+   })
+
+
