@@ -26,6 +26,7 @@
   (get-mouse [graphics]
     "Returns [x y which].  x & y are absolute locations.
     which is :left | :right | :center | nil")
+  (cursor [graphics mode] "sets the cursor")
   (get-time [graphics]
     "returns current time in milliseconds.")
   )
@@ -78,6 +79,8 @@
           y (q/mouse-y)
           which (if (q/mouse-pressed?) (q/mouse-button) nil)]
       [x y which]))
+  (cursor [_graphics mode]
+    (q/cursor mode))
   (get-time [_graphics]
     (System/currentTimeMillis))
   )

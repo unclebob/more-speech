@@ -130,6 +130,7 @@
                       :y edit-window-top
                       :w edit-window-width
                       :h edit-window-height
+                      :frame-tags {:cursor :text}
                       :controls (->edit-window-controls)})
       )
     ))

@@ -20,6 +20,8 @@
 ;; text-window-control protocol, probably using some field in the text-frame
 ;; or text-window such as :displayed-elements.
 ;;
+;; :frame-tags on the window will be merged with the text-frame.
+;;
 (ns more-speech.ui.text-window
   (:require
     [more-speech.ui.widget :refer [widget]]
@@ -87,6 +89,7 @@
         frame-path (concat (:path window) [:text-frame])
         scroll-up (partial scroll-up frame-path)
         scroll-down (partial scroll-down frame-path)
+        frame-tags (:frame-tags window)
         frame (map->text-frame {:x x
                                 :y (+ y config/window-title-height)
                                 :w (- w config/scroll-bar-w)
@@ -94,6 +97,7 @@
                                 :controls controls
                                 :display-position 0
                                 :total-elements 0})
+        frame (merge frame frame-tags)
         sb-button-offset (+ (/ config/scroll-bar-w 2)
                             (/ config/scroll-bar-button-w 2))
         sb-button-x (+ x w (- sb-button-offset) 0.5)

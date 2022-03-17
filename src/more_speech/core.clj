@@ -51,6 +51,7 @@
 
 (defn draw-state [{:keys [application] :as state}]
   (q/background 240 240 240)
+  (w/set-cursor application)
   (draw-widget application state)
   )
 

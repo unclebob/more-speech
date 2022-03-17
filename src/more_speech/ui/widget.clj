@@ -226,6 +226,14 @@
                    args))
           (recur (drop-last path)))))))
 
+(defn set-cursor [application]
+  (let [graphics (:graphics application)
+        [mx my _] (g/get-mouse graphics)
+        widget (find-deepest-mouse-target application mx my)
+        cursor (:cursor widget)
+        cursor (if (nil? cursor) :arrow cursor)]
+    (g/cursor graphics cursor)))
+
 (defn mouse-wheel [state delta]
   (let [responder (find-mouse-responder state :mouse-wheel)]
     (if (nil? responder)
