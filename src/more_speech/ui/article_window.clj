@@ -7,7 +7,8 @@
             [more-speech.ui.graphics :as g]
             [more-speech.ui.formatters :as f]
             [more-speech.ui.cursor :as cursor]
-            [more-speech.ui.config :as config]))
+            [more-speech.ui.config :as config]
+            [more-speech.ui.app-util :as app-util]))
 
 (declare get-article-line-height
          draw-article
@@ -58,7 +59,7 @@
     article))
 
 (defn get-article-line-height [state]
-  (let [graphics (get-in state [:application :graphics])
+  (let [graphics (app-util/get-graphics state)
         line-height (g/line-height graphics)]
     line-height))
 

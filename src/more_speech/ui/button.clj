@@ -2,7 +2,8 @@
   (:require [more-speech.ui.widget :as w]
             [more-speech.ui.graphics :as g]
             [more-speech.util.geometry :as util]
-            [more-speech.ui.config :as config]))
+            [more-speech.ui.config :as config]
+            [more-speech.ui.app-util :as app-util]))
 
 (declare update-button)
 
@@ -14,7 +15,7 @@
     (update-button widget state))
   (draw-widget [widget state]
     (let [draw (:draw widget)
-          g (get-in state [:application :graphics])]
+          g (app-util/get-graphics state)]
       (draw g widget)))
   )
 
@@ -32,7 +33,7 @@
       state)))
 
 (defn update-button [button state]
-  (let [g (get-in state [:application :graphics])
+  (let [g (app-util/get-graphics state)
         [mx my which] (g/get-mouse g)
         button (get-in state (:path button))
         {:keys [x y w h]} button

@@ -20,3 +20,6 @@
         state (w/redraw-widget state [:application :article-window])
         state (w/redraw-widget state [:application :header-window])]
     state))
+
+(defn get-graphics [state]
+  (get-in state [:application :graphics]))

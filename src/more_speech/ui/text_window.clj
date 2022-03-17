@@ -32,7 +32,8 @@
     [more-speech.ui.graphics :as g]
     [more-speech.nostr.util :refer [num->hex-string]]
     [more-speech.ui.config :as config]
-    [more-speech.ui.widget :as w]))
+    [more-speech.ui.widget :as w]
+    [more-speech.ui.app-util :as app-util]))
 
 (declare setup-text-window
          update-text-window
@@ -206,7 +207,7 @@
          (* height (/ display-position total-elements))))))
 
 (defn- drag-thumb [button state]
-  (let [graphics (get-in state [:application :graphics])
+  (let [graphics (app-util/get-graphics state)
         thumb-path (:path button)
         parent-path (drop-last thumb-path)
         text-window-path (drop-last thumb-path)

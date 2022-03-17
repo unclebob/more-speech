@@ -54,7 +54,9 @@
 
 (defn process-references [state {:keys [id tags] :as _event}]
   (let [e-tags (filter #(= :e (first %)) tags)
-        refs (map second e-tags)]
+        refs (map second e-tags)
+        refs (take 1 refs) ;; Hack.  Only the first reference is counted.
+        ]
     (loop [refs refs
            state state]
       (if (empty? refs)

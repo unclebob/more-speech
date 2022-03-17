@@ -8,7 +8,8 @@
     [more-speech.ui.graphics :as g]
     [more-speech.ui.formatters :as f]
     [clojure.spec.alpha :as s]
-    [more-speech.ui.config :as config]))
+    [more-speech.ui.config :as config]
+    [more-speech.ui.app-util :as app-util]))
 
 (declare get-author-height
          draw-authors
@@ -27,7 +28,7 @@
   )
 
 (defn get-author-height [state]
-  (let [graphics (get-in state [:application :graphics])
+  (let [graphics (app-util/get-graphics state)
         line-height (g/line-height graphics)]
     line-height))
 

@@ -42,7 +42,7 @@
     state))
 
 (defn get-header-height [state]
-  (let [graphics (get-in state [:application :graphics])
+  (let [graphics (app-util/get-graphics state)
         line-height (g/line-height graphics)
         header-height (+ config/header-bottom-margin
                          config/header-top-margin
@@ -111,7 +111,7 @@
   (map->button-creator
     {:state state
      :frame frame
-     :graphics (get-in state [:application :graphics])
+     :graphics (app-util/get-graphics state)
      }))
 
 (defn- make-thread-button [button-creator id index draw]
@@ -255,6 +255,7 @@
    (loop [events events
           threaded-events []
           processed-events #{}]
+
      (cond
        (empty? events)
        threaded-events
@@ -276,10 +277,12 @@
            (let [thread (thread-events references event-map open-events (inc indent))
                  threaded-events (conj threaded-events (assoc event :indent indent))
                  threaded-events (vec (concat threaded-events thread))
-                 processed-events (set/union processed-events (set (map :id thread)))]
+                 events-in-thread (set (map :id thread))
+                 processed-events (set/union processed-events events-in-thread)]
              (recur (rest events)
                     threaded-events
                     (conj processed-events event-id)))))))))
+
 
 (defn get-threaded-events [application]
   (let [event-map (:text-event-map application)
