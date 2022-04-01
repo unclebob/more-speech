@@ -1,6 +1,7 @@
 (ns more-speech.ui.cursor
   (:require [clojure.string :as string]
-            [more-speech.ui.graphics :as g])
+            [more-speech.ui.graphics :as g]
+            [more-speech.ui.config :as config])
   )
 
 (defprotocol Cursor
@@ -9,6 +10,7 @@
   (set-xy [cursor x y] "set pixel x and y positions.")
   (set-pos [cursor pos] "set horizontal character position.")
   (new-lines [cursor lines] "move cursor down by lines.")
+  (draw [cursor] "draw the flashing text cursor")
   )
 
 (defn nil->blank [s]
@@ -34,6 +36,15 @@
   (new-lines [c lines]
     (let [dy (* lines (g/line-height graphics))]
       (update c :y + dy)))
+
+  (draw [c]
+    (let [cx (+ x l-margin)
+          line-height (* (g/line-height graphics) 0.6)]
+      (when (< (mod (g/get-time graphics) 1000) 500)
+        (g/stroke graphics config/black)
+        (g/stroke-weight graphics 1)
+        (g/line graphics [cx (- y line-height) cx y])))
+    c)
   )
 
 (defn draw-text [{:keys [graphics x y l-margin] :as cursor} text]

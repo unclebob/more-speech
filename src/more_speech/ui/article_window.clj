@@ -70,7 +70,7 @@
       (let [g (:graphics application)
             cursor (cursor/->cursor g 0 (g/line-height g) 20)]
         (g/text-align g [:left])
-        (g/text-color g [0 0 0])
+        (g/text-color g config/black)
         (cursor/render cursor frame displayed-article)))))
 
 (defn update-article [state frame]
