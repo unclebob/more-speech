@@ -11,6 +11,7 @@
   (set-pos [cursor pos] "set horizontal character position.")
   (new-lines [cursor lines] "move cursor down by lines.")
   (draw [cursor] "draw the flashing text cursor")
+  (draw-text [cursor text] "draw text and update cursor")
   )
 
 (defn nil->blank [s]
@@ -45,11 +46,11 @@
         (g/stroke-weight graphics 1)
         (g/line graphics [cx (- y line-height) cx y])))
     c)
-  )
 
-(defn draw-text [{:keys [graphics x y l-margin] :as cursor} text]
-  (g/text graphics [text (+ x l-margin) y])
-  (update cursor :x + (g/text-width graphics text))
+  (draw-text [{:keys [graphics x y l-margin] :as cursor} text]
+    (g/text graphics [text (+ x l-margin) y])
+    (update cursor :x + (g/text-width graphics text))
+    )
   )
 
 (defn draw-line [cursor line]
