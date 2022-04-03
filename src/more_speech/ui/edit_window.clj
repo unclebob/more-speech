@@ -42,9 +42,8 @@
   state
   )
 
-(declare add-char move-insertion)
-(defn edit-window-key-pressed [state frame {:keys [key raw-key] :as key-struct}]
-  (prn key-struct)
+(declare add-char delete-char move-insertion)
+(defn edit-window-key-pressed [state frame {:keys [key raw-key]}]
   (condp = key
     :shift state
     :alt state
@@ -57,7 +56,9 @@
     :up (move-insertion state frame [0 -1])
     :down (move-insertion state frame [0 1])
 
-    (let [frame (add-char frame raw-key)
+    (let [frame (if (= \backspace raw-key)
+                  (delete-char frame)
+                  (add-char frame raw-key))
           frame-path (:path frame)]
       (assoc-in state frame-path frame)))
   )
@@ -80,7 +81,7 @@
     (assoc-in state frame-path frame)))
 
 (defn add-char [frame char]
-  (let [text (get frame :text [""])
+  (let [text (vec (get frame :text [""]))
         [x y] (get frame :insertion-point [0 0])
         line (nth text y)]
     (cond
@@ -100,3 +101,27 @@
             frame (assoc frame :text (vec text)
                                :insertion-point [(inc x) y])]
         frame))))
+
+(defn delete-char [frame]
+  (let [text (vec (get frame :text [""]))
+        [x y] (get frame :insertion-point [0 0])
+        line (nth text y)]
+    (if (zero? x)
+      (if (zero? y)
+        frame
+        (let [prev-line (nth text (dec y))
+              new-line (str prev-line line)
+              text (assoc text (dec y) new-line)
+              text (assoc text y nil)
+              text (remove nil? text)
+              frame (assoc frame :text text
+                                 :insertion-point [(count prev-line) (dec y)])]
+          frame))
+      (let [line-head (subs line 0 (dec x))
+            line-tail (subs line x)
+            text (assoc text y (str line-head line-tail))
+            frame (assoc frame :text text
+                               :insertion-point [(dec x) y])]
+        frame))
+    )
+  )
