@@ -10,7 +10,8 @@
             [more-speech.ui.application :refer [map->application]]
             [more-speech.ui.graphics :as g]
             [more-speech.ui.widget :as w]
-            [more-speech.ui.config :as config]))
+            [more-speech.ui.config :as config]
+            [more-speech.nostr.protocol :as protocol]))
 
 (def events (atom []))
 
@@ -38,7 +39,7 @@
     (if (empty? @events)
       state
       (let [n-events (count @events)
-            batch-size (min n-events 100)
+            batch-size (min n-events 20)
             batch (take batch-size @events)]
         (swap! events #(drop batch-size %))
         (loop [state state
@@ -70,7 +71,8 @@
                :mouse-dragged w/mouse-dragged
                :key-pressed w/key-pressed
                :middleware [m/fun-mode])
-  (reset! events (read-string (slurp "nostr-messages")))
+  ;(reset! events (read-string (slurp "nostr-messages")))
+  (protocol/get-events events)
   args
   )
 

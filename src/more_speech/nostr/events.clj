@@ -29,10 +29,14 @@
         {:strs [_id pubkey created_at kind _tags content _sig]} inner-event]
     (condp = kind
       0 (process-name-event state inner-event)
-      3 (do (printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
+      3 (do
+          ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             state)
-      1 (process-text-event state inner-event)
-      4 (do (printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
+      1 (do
+          ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) (subs content 0 (min 50 (count content))))
+          (process-text-event state inner-event))
+      4 (do
+          ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             state)
       (do (prn "unknown event: " event)
           state))))
