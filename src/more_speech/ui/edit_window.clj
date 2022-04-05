@@ -2,8 +2,13 @@
   (:require [more-speech.ui.text-window :refer [text-window-controls]]
             [more-speech.ui.cursor :as cursor]
             [more-speech.ui.graphics :as g]
-            [more-speech.ui.config :as config]))
+            [more-speech.ui.config :as config]
+            [clojure.spec.alpha :as s]))
 
+(s/def ::text (and vector? (s/coll-of string?)))
+(s/def ::insertion-point (s/tuple [int? int?]))
+(s/def ::edit-frame (s/keys :opt-un [::text
+                                     ::insertion-point]) )
 
 (declare draw-edit-frame
          edit-window-key-pressed)

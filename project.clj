@@ -6,6 +6,8 @@
   :dependencies [[org.clojure/clojure "1.10.3"]
                  [quil "3.1.0-SNAPSHOT"]
                  [org.clojure/data.json "2.4.0"]
+                 [aleph "0.4.7-alpha10"]
+                 [org.clojure/core.async "1.5.648"]
                  ]
   :profiles {:dev {:dependencies [[speclj "3.3.2"]]}}
   :plugins [[speclj "3.3.2"]]
