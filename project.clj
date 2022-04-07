@@ -4,12 +4,13 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.10.3"]
-                 [quil "3.1.0-SNAPSHOT"]
+                 ;[quil "3.1.0-SNAPSHOT"]
+                 [quil "4.0.0-SNAPSHOT"]
                  [org.clojure/data.json "2.4.0"]
-                 [aleph "0.4.7-alpha10"]
                  [org.clojure/core.async "1.5.648"]
                  ]
-  :profiles {:dev {:dependencies [[speclj "3.3.2"]]}}
-  :plugins [[speclj "3.3.2"]]
+  :profiles {:dev {:dependencies [[speclj "3.4.1"]]}}
+  :plugins [[speclj "3.4.1"]]
   :test-paths ["spec"]
-  :main more-speech.core)
+  :main more-speech.core
+  :java-cmd "/Users/unclebob/Library/Java/JavaVirtualMachines/openjdk-17.0.2/Contents/Home/bin/java")

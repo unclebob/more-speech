@@ -29,9 +29,10 @@
   "returns a byte-array containing the bytes described
   by the hex-string.  This is the inverse of bytes->hex-string."
   [hex-string]
-  (let [byte-strings (map #(apply str %) (partition 2 hex-string))
-        byte-vector (map #(Integer/parseInt % 16) byte-strings)]
-    (byte-array byte-vector)))
+    (let [byte-strings (map #(apply str %) (partition 2 hex-string))
+          byte-vector (map #(Integer/parseInt % 16) byte-strings)]
+      (byte-array byte-vector))
+    )
 
 (defn hex-string->num
   "Converts a hex string to a BigInteger"

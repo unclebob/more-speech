@@ -1,38 +1,41 @@
 (ns more-speech.nostr.protocol
   (:require [clojure.data.json :as json]
-            [aleph.http :as a]
-            [manifold.stream :as s]
-            [clojure.core.async :as async]
             [more-speech.nostr.elliptic-signature :as ecc]
             )
   (:import (java.util Date)
            (java.text SimpleDateFormat)
-           (java.nio.charset StandardCharsets)))
+           (java.nio.charset StandardCharsets)
+           (java.net.http WebSocket HttpClient WebSocket$Listener)
+           (java.net URI)))
 
-(def relays ["wss://nostr-pub.wellorder.net" ;*
+(def relays ["wss://nostr-pub.wellorder.net"                ;*
              "wss://expensive-relay.fiatjaf.com"
              "wss://wlvs.space"
              "wss://nostr.rocks"
              "wss://nostr-relay.herokuapp.com"
-             "wss://freedom-relay.herokuapp.com/ws" ;*
+             "wss://freedom-relay.herokuapp.com/ws"         ;*
              "wss://nodestr-relay.dolu.dev/ws"
              "wss://nostrrr.bublina.eu.org"
              "wss://nostr-relay.freeberty.ne"
-             "ws://nostr.rocks:7448" ;*
+             "ws://nostr.rocks:7448"                        ;*
              "ws://nostr-pub.wellorder.net:7000"
              ])
 
 
-(defn send-to [socket msg]
+(defn send-to [^WebSocket conn msg]
   (let [msg (json/write-str msg)]
     (println "sending:" msg)
-    (s/put! socket msg)))
+    (.sendText conn msg true)))
 
 (defn format-time [time]
   (let [time (* time 1000)
         date (Date. (long time))]
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date))
   )
+
+(defn make-date [date-string]
+  (let [date (.parse (SimpleDateFormat. "MM/dd/yyyy") date-string)]
+    (quot (.getTime date) 1000)))
 
 (def name-list (atom {}))
 (def messages (atom []))
@@ -44,37 +47,52 @@
   (doseq [entry @name-list]
     (prn entry)))
 
-(defn wait-for-events
-  ([conn]
-   (wait-for-events conn messages))
-  ([conn events]
-   (let [terminator (async/chan)]
-     (async/go
-       (let [running? (atom true)]
-         (while @running?
-           (let [msg @(s/try-take! conn :drained 100 :timeout)]
-             (Thread/sleep 1)
-             (cond
-               (some? (async/poll! terminator)) (reset! running? false)
-               (= :drained msg) (reset! running? false)
-               (= :timeout msg) nil
-               :else (swap! events conj (json/read-str msg)))))
-         (prn 'terminated)))
-     terminator)))
-
 (defn subscribe
   ([conn id]
    (subscribe conn id (int (- (/ (System/currentTimeMillis) 1000) 86400))))
-  ([conn id since]
-   (send-to conn ["REQ" id {"since" since}])))
+  ([^WebSocket conn id since]
+   (send-to conn ["REQ" id {"since" since}])
+   (.request conn 1)))
 
-(defn unsubscribe [conn id]
+(defn unsubscribe [^WebSocket conn id]
   (send-to conn ["CLOSE" id]))
 
-(defn connect-to-relay [url]
-  @(a/websocket-client
-     url
-     {:insecure? true}))
+(defrecord listener [buffer events]
+  WebSocket$Listener
+  (onOpen [_this _webSocket]
+    (prn 'open))
+  (onText [_this webSocket data last]
+    (.append buffer (.toString data))
+    (when last
+      (swap! events conj (json/read-str (.toString buffer)))
+      (.delete buffer 0 (.length buffer)))
+    (.request webSocket 1)
+    )
+  (onBinary [_this _webSocket _data _last]
+    (prn 'binary)
+    )
+  (onPing [_this _webSocket _message]
+    (prn 'ping)
+    )
+  (onPong [_this _webSocket _message]
+    (prn 'pong)
+    )
+  (onClose [_this _webSocket statusCode reason]
+    (prn 'close statusCode reason)
+    )
+  (onError [_this _webSocket error]
+    (prn 'error)
+    )
+  )
+
+(defn connect-to-relay ^WebSocket [url events]
+  (let [client (HttpClient/newHttpClient)
+        cl (.newWebSocketBuilder client)
+        cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) events))
+        ws (.get cws)
+        ]
+    ws)
+  )
 
 (defn make-text [msg private-key]
   (let [pub-key (ecc/pub-key private-key)
@@ -96,34 +114,16 @@
 (def private-key (ecc/sha-256 (.getBytes "I am Bob.")))
 
 (defn get-events [events]
-  (let [conn (connect-to-relay (get relays 0))
+  (let [conn (connect-to-relay (get relays 0) events)
         id "more-speech"
+        date (make-date "04/01/2022")
         ]
-    (subscribe conn id 1648848602)
-    (let [terminator (wait-for-events conn events)]
-      (Thread/sleep 10000)
-      (async/put! terminator "bang!")
-      )
-    (Thread/sleep 100)
-    (prn 'done)
-    )
+    (prn date (format-time date))
+    (unsubscribe conn id)
+    (subscribe conn id date)
+    (Thread/sleep 60000)
+    (unsubscribe conn id)
+    (.get (.sendClose conn WebSocket/NORMAL_CLOSURE "done"))
+    (Thread/sleep 1000))
+  (prn 'done)
   )
-
-;(defn -main
-;  [& _args]
-;  (let [conn (connect-to-relay "wss://nostr-pub.wellorder.net")
-;        id "aleph-trial"
-;        ]
-;    (subscribe conn id 0)
-;    (let [terminator (wait-for-events conn)]
-;      (Thread/sleep 5000)
-;      ;(s/put! conn "[\"EVENT\",{\"id\":\"c60fb1c88baceb9d7cfd84de8c7f92e1d4d6690e6cb65b97405e72a74acc5214\",\"pubkey\":\"2ef93f01cd2493e04235a6b87b10d3c4a74e2a7eb7c3caf168268f6af73314b5\",\"created_at\":1641914007,\"kind\":1,\"tags\":[],\"content\":\"test\",\"sig\":\"e5c4dfda7046f99469594f7bfd236f6e285be187aa7f604bff533636871d523f58ccb85169310a49b06a9499fd30d5a5806e4044e650cfd8eaef5b95597d1427\"}]")
-;      (Thread/sleep 1000)
-;      (async/put! terminator "bang!")
-;      )
-;    (Thread/sleep 100)
-;    (prn 'done)
-;    (spit "nostr-messages" @messages)
-;    )
-;  )
-

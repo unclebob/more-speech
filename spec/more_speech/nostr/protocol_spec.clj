@@ -3,18 +3,6 @@
             [more-speech.nostr.protocol :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]))
 
-(def relays ["wss://nostr-pub.wellorder.net"
-             "wss://relayer.fiatjaf.com"
-             "wss://nostr.rocks"
-             "wss://nostr-relay.herokuapp.com"
-             "wss://freedom-relay.herokuapp.com/ws"
-             "wss://nodestr-relay.dolu.dev/ws"
-             "wss://nostrrr.bublina.eu.org"
-             "wss://nostr-relay.freeberty.ne"
-             "ws://nostr.rocks:7448"
-             "ws://nostr-pub.wellorder.net:7000"
-             ])
-
 (describe "aleph-trial"
   (it "builds and signs a text message"
     (let [text (make-text "hello" (ecc/sha-256 (.getBytes "My Private ID.")))

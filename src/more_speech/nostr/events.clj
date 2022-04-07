@@ -3,7 +3,8 @@
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]
             [more-speech.ui.widget :as w]
-            [more-speech.ui.formatters :as f]))
+            [more-speech.ui.formatters :as f]
+            ))
 (s/def ::id number?)
 (s/def ::pubkey number?)
 (s/def ::created-at number?)
@@ -48,10 +49,8 @@
     (update-in
       state [:application :nicknames] assoc pubkey name)))
 
-(defn process-tag [[type hex arg]]
-  [(keyword type)
-   (hex-string->num hex)
-   arg])
+(defn process-tag [[type arg1 arg2]]
+  [(keyword type) arg1 arg2])
 
 (defn process-tags [tags]
   (map process-tag tags))
@@ -59,7 +58,7 @@
 (defn process-references [state {:keys [id tags] :as _event}]
   (let [e-tags (filter #(= :e (first %)) tags)
         refs (map second e-tags)
-        refs (take 1 refs) ;; Hack.  Only the first reference is counted.
+        refs (map hex-string->num (take 1 refs)) ;; Hack.  Only the first reference is counted.
         ]
     (loop [refs refs
            state state]

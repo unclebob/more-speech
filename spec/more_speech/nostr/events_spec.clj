@@ -31,8 +31,8 @@
       (should= @now (:created-at event))
       (should= "the content" (:content event))
       (should= 0xdddddd (:sig event))
-      (should= [[:p 1 "someurl"]
-                [:e 2 "anotherurl"]] (:tags event))
+      (should= [[:p "0001" "someurl"]
+                [:e "0002" "anotherurl"]] (:tags event))
       ))
 
   (it "adds references to tagged articles."
