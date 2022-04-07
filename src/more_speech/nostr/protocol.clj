@@ -10,7 +10,8 @@
            (java.nio.charset StandardCharsets)))
 
 (def relays ["wss://nostr-pub.wellorder.net" ;*
-             "wss://relayer.fiatjaf.com"
+             "wss://expensive-relay.fiatjaf.com"
+             "wss://wlvs.space"
              "wss://nostr.rocks"
              "wss://nostr-relay.herokuapp.com"
              "wss://freedom-relay.herokuapp.com/ws" ;*
