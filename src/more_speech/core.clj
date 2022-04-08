@@ -1,3 +1,13 @@
+;;Stories
+;; - Send an article.
+;; - Close web socket(s) on close.
+;; - Reply
+;; - Mark read and highlight properly.
+;; - Save names and headers.  Request after latest save.
+;; - Click, double-click, drag in edit window.
+;; - Consider subject/topic in the tags
+
+
 (ns more-speech.core
   (:require [quil.core :as q]
             [quil.middleware :as m]
