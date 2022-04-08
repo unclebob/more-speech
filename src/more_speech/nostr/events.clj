@@ -84,11 +84,22 @@
      :sig sig
      :tags (process-tags (get event "tags"))}))
 
+(defn by-event-time [event-map id1 id2]
+  (let [event1 (get event-map id1)
+        event2 (get event-map id2)]
+    (< (get event1 :created-at)
+       (get event2 :created-at))))
+
 (defn process-text-event [state event]
   (let [event (translate-text-event event)
         id (:id event)
         state (assoc-in state [:application :text-event-map id] event)
-        state (update-in state [:application :chronological-text-events] conj id)
+        event-map (get-in state [:application :text-event-map] {})
+        events (get-in state [:application :chronological-text-events] [])
+        events (conj events id)
+        events (sort (partial by-event-time event-map) events)
+        state (assoc-in state [:application :chronological-text-events] events)
+        ;state (update-in state [:application :chronological-text-events] conj id)
         state (w/redraw-widget state [:application :header-window])
         ]
     (process-references state event)))

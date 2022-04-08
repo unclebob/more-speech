@@ -116,7 +116,7 @@
 (defn get-events [events]
   (let [conn (connect-to-relay (get relays 0) events)
         id "more-speech"
-        date (make-date "04/01/2022")
+        date (make-date "01/01/2022")
         ]
     (prn date (format-time date))
     (unsubscribe conn id)
