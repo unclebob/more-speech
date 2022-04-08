@@ -286,7 +286,7 @@
 
 (defn get-threaded-events [application]
   (let [event-map (:text-event-map application)
-        events (:chronological-text-events application)
+        events (map first (:chronological-text-events application))
         open-thread (:open-thread application)
         threaded-events (thread-events events event-map open-thread)]
     threaded-events

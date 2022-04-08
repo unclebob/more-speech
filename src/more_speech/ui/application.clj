@@ -33,7 +33,7 @@
 (s/def ::mouse-locked-to #(or (nil? %) (s/coll-of keyword?)))
 (s/def ::keyboard-focus #(or (nil? %) (s/coll-of keyword?)))
 (s/def ::nicknames (s/map-of number? string?))
-(s/def ::chronological-text-events (s/coll-of number?))
+(s/def ::chronological-text-events (s/coll-of (s/tuple [number? number?]) :kind set?))
 (s/def ::text-event-map (s/map-of number? ::events/event))
 (s/def ::open-thread (s/coll-of number? :kind set?))
 (s/def ::this-update (s/coll-of ::path :kind set?))
@@ -96,7 +96,7 @@
       :mouse-locked-to nil
       :keyboard-focus nil
       :nicknames {}
-      :chronological-text-events []
+      :chronological-text-events (events/make-chronological-text-events)
       :text-event-map {}
       :open-thread #{}
       :header-window (map->text-window
@@ -134,5 +134,3 @@
                       :controls (->edit-window-controls)})
       )
     ))
-
-
