@@ -1,7 +1,7 @@
 (ns more-speech.nostr.protocol
   (:require [clojure.data.json :as json]
             [more-speech.nostr.elliptic-signature :as ecc]
-            )
+            [clojure.core.async :as async])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.nio.charset StandardCharsets)
@@ -113,6 +113,8 @@
 
 (def private-key (ecc/sha-256 (.getBytes "I am Bob.")))
 
+(def terminator (async/chan))
+
 (defn get-events [events]
   (let [conn (connect-to-relay (get relays 0) events)
         id "more-speech"
@@ -121,9 +123,14 @@
     (prn date (format-time date))
     (unsubscribe conn id)
     (subscribe conn id date)
-    (Thread/sleep 60000)
+    (async/<!! terminator)
     (unsubscribe conn id)
     (.get (.sendClose conn WebSocket/NORMAL_CLOSURE "done"))
     (Thread/sleep 1000))
   (prn 'done)
+  )
+
+(defn close-connection [_state]
+  (prn 'close-connection)
+  (async/>!! terminator "bye")
   )

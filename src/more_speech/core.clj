@@ -80,7 +80,8 @@
                :mouse-moved w/mouse-moved
                :mouse-dragged w/mouse-dragged
                :key-pressed w/key-pressed
-               :middleware [m/fun-mode])
+               :middleware [m/fun-mode]
+               :on-close protocol/close-connection)
   ;(reset! events (read-string (slurp "nostr-messages")))
   (protocol/get-events events)
   args
