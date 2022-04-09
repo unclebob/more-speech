@@ -1,6 +1,6 @@
 ;;Stories
 ;; - Send an article.
-;; - Close web socket(s) on close.
+;; - Threading does not work quite right.  Do some diagnosis.
 ;; - Reply
 ;; - Mark read and highlight properly.
 ;; - Save names and headers.  Request after latest save.
