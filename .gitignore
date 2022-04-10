@@ -9,6 +9,6 @@ pom.xml.asc
 /.nrepl-port
 .idea
 *.iml
-private/*
+private/keys
 
 
