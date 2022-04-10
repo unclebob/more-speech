@@ -3,7 +3,8 @@
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]
             [more-speech.ui.widget :as w]
-            ))
+            [more-speech.nostr.elliptic-signature :as ecc])
+  (:import (java.nio.charset StandardCharsets)))
 (s/def ::id number?)
 (s/def ::pubkey number?)
 (s/def ::created-at number?)
@@ -103,3 +104,30 @@
 
 (defn make-chronological-text-events []
   (sorted-set-by chronological-event-comparator))
+
+(defn make-id
+  "returns byte array of id given the clojure form of the body"
+  [{:keys [pubkey created_at kind tags content]}]
+  (let [id-event (json/write-str [0 pubkey created_at kind tags content])
+        _ (println "id string:" id-event)
+        id (ecc/sha-256 (.getBytes id-event StandardCharsets/UTF_8))]
+    id)
+  )
+
+(defn compose-text-event [private-key text]
+  (let [private-key (ecc/hex-string->bytes private-key)
+        pubkey (ecc/pub-key private-key)
+        tags []
+        content text
+        now (quot (System/currentTimeMillis) 1000)
+        body {:pubkey (ecc/bytes->hex-string pubkey)
+              :created_at now
+              :kind 1
+              :tags tags
+              :content content}
+        id (make-id body)
+        signature (ecc/sign private-key id)
+        event (assoc body :id (ecc/bytes->hex-string id)
+                          :sig (ecc/bytes->hex-string signature))
+        ]
+    ["EVENT" event]))

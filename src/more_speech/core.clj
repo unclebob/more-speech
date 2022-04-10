@@ -7,6 +7,9 @@
 ;; - Click, double-click, drag in edit window.
 ;; - Consider subject/topic in the tags
 
+;;Notes:
+;; Nice debug site: https://nostr-army-knife.netlify.app
+
 
 (ns more-speech.core
   (:require [quil.core :as q]
@@ -25,6 +28,11 @@
 
 (def events (atom []))
 
+(defn get-keys [state]
+  (let [keys (read-string (slurp "private/keys"))
+        state (assoc state :keys keys)]
+    state))
+
 (defn setup []
   (q/frame-rate 30)
   (q/color-mode :rgb)
@@ -35,7 +43,8 @@
         graphics (g/->quil-graphics fonts)
         application (map->application {:path [:application] :graphics graphics})
         application (setup-widget application {})
-        state {:application application}]
+        state {:application application}
+        state (get-keys state)]
     (q/text-font bold)
     (setup-child-widgets application state)
     ))

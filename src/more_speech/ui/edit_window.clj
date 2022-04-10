@@ -3,12 +3,14 @@
             [more-speech.ui.cursor :as cursor]
             [more-speech.ui.graphics :as g]
             [more-speech.ui.config :as config]
-            [clojure.spec.alpha :as s]))
+            [clojure.spec.alpha :as s]
+            [more-speech.nostr.events :as events]
+            [clojure.string :as string]))
 
 (s/def ::text (and vector? (s/coll-of string?)))
 (s/def ::insertion-point (s/tuple [int? int?]))
 (s/def ::edit-frame (s/keys :opt-un [::text
-                                     ::insertion-point]) )
+                                     ::insertion-point]))
 
 (declare draw-edit-frame
          edit-window-key-pressed)
@@ -47,7 +49,8 @@
   state
   )
 
-(declare add-char delete-char move-insertion)
+(declare add-char delete-char move-insertion send-msg)
+
 (defn edit-window-key-pressed [state frame {:keys [key raw-key]}]
   (condp = key
     :shift state
@@ -61,11 +64,14 @@
     :up (move-insertion state frame [0 -1])
     :down (move-insertion state frame [0 1])
 
-    (let [frame (if (= \backspace raw-key)
-                  (delete-char frame)
-                  (add-char frame raw-key))
-          frame-path (:path frame)]
-      (assoc-in state frame-path frame)))
+    (condp = (int raw-key)
+      19 (send-msg state frame)
+
+      (let [frame (if (= \backspace raw-key)
+                    (delete-char frame)
+                    (add-char frame raw-key))
+            frame-path (:path frame)]
+        (assoc-in state frame-path frame))))
   )
 
 (defn move-insertion [state frame [x y]]
@@ -130,3 +136,11 @@
         frame))
     )
   )
+
+(defn send-msg [state frame]
+  (prn 'send-message)
+  (let [private-key (get-in state [:keys :private-key])
+        text (string/join \newline (:text frame))
+        event (events/compose-text-event private-key text)]
+    (prn 'event event)
+  state))

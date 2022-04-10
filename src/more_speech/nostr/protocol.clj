@@ -118,11 +118,12 @@
 (defn get-events [events]
   (let [conn (connect-to-relay (get relays 0) events)
         id "more-speech"
-        date (make-date "01/01/2022")
+        date (make-date "04/01/2022")
         ]
     (prn date (format-time date))
     (unsubscribe conn id)
     (subscribe conn id date)
+    ;(send-to conn )
     (async/<!! terminator)
     (unsubscribe conn id)
     (.get (.sendClose conn WebSocket/NORMAL_CLOSURE "done"))
