@@ -12,4 +12,5 @@
   :plugins [[speclj "3.4.1"]]
   :test-paths ["spec"]
   :main more-speech.core
-  :java-cmd "/Users/unclebob/Library/Java/JavaVirtualMachines/openjdk-17.0.2/Contents/Home/bin/java")
+  :java-cmd "/Users/unclebob/Library/Java/JavaVirtualMachines/openjdk-17.0.2/Contents/Home/bin/java"
+  :java-source-paths ["src"])

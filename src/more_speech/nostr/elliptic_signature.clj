@@ -2,7 +2,7 @@
   (:import (java.util Arrays)
            (java.security MessageDigest)
            (java.nio.charset StandardCharsets)
-           ))
+           (schnorr Schnorr)))
 
 (defrecord Point [^BigInteger x ^BigInteger y])
 
@@ -139,6 +139,17 @@
   (= 0 (mod (:y point) 2))
   )
 
+(defn bytes= [^bytes b1 ^bytes b2]
+  (assert (= (alength b1) (alength b2)) "bytes= args not same size.")
+  (loop [index 0]
+    (if (= index (alength b1))
+      true
+      (if (= (aget b1 index) (aget b2 index))
+        (recur (inc index))
+        false)))
+  )
+
+
 (defn xor-bytes [^bytes a ^bytes b]
   (assert (= (alength a) (alength b)) "byte-wise-xor: arguments not same size.")
   (let [result (byte-array (alength a))]
@@ -175,26 +186,31 @@
   "Returns the 64 byte signature of the message
   and the private key.  The message and the
   private key are byte-arrays of length 32."
-  [^bytes private-key ^bytes message]
-  (let [d- (bytes->num private-key)]
-    (if (or (= zero d-)
-            (>= d- n))
-      nil
-      (let [P (mul G d-)
-            d (if (has-even-y P) d- (- n d-))
-            t (xor-bytes (num->bytes 32 d) aux-tag-hash)
-            rnd (make-rnd t P message)
-            k- (.mod (bytes->num rnd) n)]
-        (if (= zero k-)
-          nil
-          (let [R (mul G k-)
-                k (if (has-even-y R) k- (- n k-))
-                e (make-e R P message)
-                sig (|| (num->bytes 32 (:x R))
-                        (num->bytes 32 (mod (+ k (* e d)) n)))]
-            (if (verify (num->bytes 32 (pub-key private-key)) message sig)
-              sig
-              nil)))))))
+  ([^bytes private-key ^bytes message]
+   (sign private-key nil message))
+
+  ([^bytes private-key ^bytes aux-rand ^bytes message]
+   (let [d- (bytes->num private-key)]
+     (if (or (= zero d-)
+             (>= d- n))
+       nil
+       (let [P (mul G d-)
+             d (if (has-even-y P) d- (- n d-))
+             t (xor-bytes (num->bytes 32 d) aux-tag-hash)
+             rnd (if (nil? aux-rand)
+                   (make-rnd t P message)
+                   aux-rand)
+             k- (.mod (bytes->num rnd) n)]
+         (if (= zero k-)
+           nil
+           (let [R (mul G k-)
+                 k (if (has-even-y R) k- (- n k-))
+                 e (make-e R P message)
+                 sig (|| (num->bytes 32 (:x R))
+                         (num->bytes 32 (mod (+ k (* e d)) n)))]
+             (if (verify (num->bytes 32 (pub-key private-key)) message sig)
+               sig
+               nil))))))))
 
 (defn verify
   "Returns true if the public-key proves that the message was
@@ -223,6 +239,12 @@
                 (zero? (.compareTo (.mod ^BigInteger (:y P) two) zero))
                 (zero? (.compareTo ^BigInteger (:x R) r)))
               true)))))))
+
+(defn do-sign [message private-key aux-rand]
+  (Schnorr/sign message private-key aux-rand))
+
+(defn do-verify [message public-key signature]
+  (Schnorr/verify message public-key signature))
 
 
 

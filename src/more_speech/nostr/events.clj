@@ -126,7 +126,8 @@
               :tags tags
               :content content}
         id (make-id body)
-        signature (ecc/sign private-key id)
+        aux-rand (ecc/num->bytes 32 (biginteger (System/currentTimeMillis)))
+        signature (ecc/do-sign id private-key aux-rand)
         event (assoc body :id (ecc/bytes->hex-string id)
                           :sig (ecc/bytes->hex-string signature))
         ]
