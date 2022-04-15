@@ -113,9 +113,7 @@
 
 (def private-key (ecc/sha-256 (.getBytes "I am Bob.")))
 
-(def terminator (async/chan))
-
-(defn get-events [events]
+(defn get-events [events send-chan]
   (let [conn (connect-to-relay (get relays 0) events)
         id "more-speech"
         date (make-date "04/01/2022")
@@ -124,14 +122,20 @@
     (unsubscribe conn id)
     (subscribe conn id date)
     ;(send-to conn ["EVENT" {:pubkey "2ef93f01cd2493e04235a6b87b10d3c4a74e2a7eb7c3caf168268f6af73314b5", :created_at 1649969311, :kind 1, :tags [], :content "Hello from more-speech.", :id "b05141aecb7d975ae7df861a13082d98ad76e9f46accc046ba221533877b69c6", :sig "e80411eee168aa620b035ce16622eda24d059859562276305a1c8900559b3bc5ae0505754e5d0f352891717eb34f4495771bcf11c80d01cdd19025a51e99979d"}])
-    (async/<!! terminator)
+    (loop [msg (async/<!! send-chan)]
+      (condp = (first msg)
+        :closed nil
+        :event
+        (do
+          (send-to conn (second msg))
+          (recur (async/<!! send-chan)))))
     (unsubscribe conn id)
     (.get (.sendClose conn WebSocket/NORMAL_CLOSURE "done"))
     (Thread/sleep 1000))
   (prn 'done)
   )
 
-(defn close-connection [_state]
+(defn close-connection [state]
   (prn 'close-connection)
-  (async/>!! terminator "bye")
+  (async/>!! (:send-chan state) [:closed])
   )

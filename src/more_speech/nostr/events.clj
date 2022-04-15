@@ -109,7 +109,6 @@
   "returns byte array of id given the clojure form of the body"
   [{:keys [pubkey created_at kind tags content]}]
   (let [id-event (json/write-str [0 pubkey created_at kind tags content])
-        _ (println "id string:" id-event)
         id (ecc/sha-256 (.getBytes id-event StandardCharsets/UTF_8))]
     id)
   )

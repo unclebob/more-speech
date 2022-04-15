@@ -14,6 +14,7 @@
 (ns more-speech.core
   (:require [quil.core :as q]
             [quil.middleware :as m]
+            [clojure.core.async :as async]
             [more-speech.nostr.events :as nostr]
             [more-speech.ui.widget :refer [draw-widget
                                            setup-widget
@@ -27,6 +28,7 @@
             [more-speech.nostr.protocol :as protocol]))
 
 (def events (atom []))
+(def send-chan (async/chan))
 
 (defn get-keys [state]
   (let [keys (read-string (slurp "private/keys"))
@@ -44,7 +46,8 @@
         application (map->application {:path [:application] :graphics graphics})
         application (setup-widget application {})
         state {:application application}
-        state (get-keys state)]
+        state (get-keys state)
+        state (assoc state :send-chan send-chan)]
     (q/text-font bold)
     (setup-child-widgets application state)
     ))
@@ -92,7 +95,7 @@
                :middleware [m/fun-mode]
                :on-close protocol/close-connection)
   ;(reset! events (read-string (slurp "nostr-messages")))
-  (protocol/get-events events)
+  (protocol/get-events events send-chan)
   args
   )
 

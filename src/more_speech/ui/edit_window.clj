@@ -5,7 +5,8 @@
             [more-speech.ui.config :as config]
             [clojure.spec.alpha :as s]
             [more-speech.nostr.events :as events]
-            [clojure.string :as string]))
+            [clojure.string :as string]
+            [clojure.core.async :as async]))
 
 (s/def ::text (and vector? (s/coll-of string?)))
 (s/def ::insertion-point (s/tuple [int? int?]))
@@ -141,6 +142,7 @@
   (prn 'send-message)
   (let [private-key (get-in state [:keys :private-key])
         text (string/join \newline (:text frame))
-        event (events/compose-text-event private-key text)]
-    (prn 'event event)
-  state))
+        event (events/compose-text-event private-key text)
+        send-chan (:send-chan state)]
+    (async/>!! send-chan [:event event])
+    state))
