@@ -143,6 +143,8 @@
   (let [private-key (get-in state [:keys :private-key])
         text (string/join \newline (:text frame))
         event (events/compose-text-event private-key text)
-        send-chan (:send-chan state)]
+        send-chan (:send-chan state)
+        frame (assoc frame :text [""] :insertion-point [0 0])
+        state (assoc-in state (:path frame) frame)]
     (async/>!! send-chan [:event event])
     state))
