@@ -148,3 +148,9 @@
         state (assoc-in state (:path frame) frame)]
     (async/>!! send-chan [:event event])
     state))
+
+(defn clear-edit-window [state]
+  (let [edit-frame (get-in state [:application :edit-window :text-frame])
+        edit-frame (assoc edit-frame :text [""] :insertion-point [0 0])]
+    (assoc-in state (:path edit-frame) edit-frame)))
+

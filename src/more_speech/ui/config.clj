@@ -1,6 +1,7 @@
 (ns more-speech.ui.config)
 
 (def ctrl-s 19)
+(def ctrl-r 18)
 
 (def no-fill [nil])
 (def black [0 0 0])

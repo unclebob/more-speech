@@ -8,11 +8,13 @@
             [more-speech.ui.formatters :as f]
             [more-speech.ui.cursor :as cursor]
             [more-speech.ui.config :as config]
-            [more-speech.ui.app-util :as app-util]))
+            [more-speech.ui.app-util :as app-util]
+            [more-speech.ui.edit-window :as edit]))
 
 (declare get-article-line-height
          draw-article
-         update-article)
+         update-article
+         process-key)
 
 (defrecord article-window-controls []
   text-window-controls
@@ -22,8 +24,8 @@
     (draw-article state frame))
   (update-elements [_c state frame]
     (update-article state frame))
-  (key-pressed [_c state _frame _key]
-    state)
+  (key-pressed [_c state frame key]
+    (process-key state frame key))
   )
 
 (defn make-article [id name time body]
@@ -86,3 +88,17 @@
                   (assoc frame :displayed-article marked-up-article
                                :total-elements 2)))]
     (assoc-in state (:path frame) frame)))
+
+(declare reply-to-article)
+
+(defn process-key [state frame {:keys [_key raw-key]}]
+  (condp = (int raw-key)
+    config/ctrl-r (reply-to-article state frame)
+    state)
+  )
+
+(defn reply-to-article [state frame]
+  (if (nil? (:displayed-article frame))
+    (edit/clear-edit-window state)
+    state))
+
