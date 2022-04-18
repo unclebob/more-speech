@@ -1,58 +1,56 @@
 (ns more-speech.ui.object-mother
   (:require
-    [more-speech.ui.graphics :refer [graphics]]
+    [more-speech.ui.graphics :as g]
     [more-speech.ui.widget :as w]
     [more-speech.ui.application :as app])
   )
 
 (defrecord graphics-dummy []
-  graphics
-  (screen_height [this]
+  g/graphics
+  (screen-height [_graphics]
     1)
-  (screen_width [this]
+  (screen-width [_graphics]
     )
-  (text_align [this alignment]
+  (text-align [_graphics _alignment]
     )
-  (text_color [this color]
+  (text-color [_graphics _color]
     )
-  (stroke [this color]
+  (stroke [_graphics _color]
     )
-  (no_stroke [this]
+  (no-stroke [_graphics]
     )
-  (stroke_weight [this weight]
+  (stroke-weight [_graphics _weight]
     )
-  (fill [this color]
+  (fill [_graphics _color]
     )
-  (no_fill [this]
+  (no-fill [_graphics]
     )
-  (rect_mode [this mode]
+  (rect-mode [_graphics _mode]
     )
-  (rect [this rect]
+  (rect [_graphics _rect]
     )
-  (line [this line]
+  (line [_graphics _line]
     )
-  (polygon [this points]
+  (polygon [_graphics _points]
     )
-  (with_translation [this translation f]
+  (with-translation [_graphics _translation _f]
     )
-  (text_font [this font]
+  (text-font [_graphics _font]
     )
-  (line_height [this]
+  (line-height [_graphics]
     1)
-  (pos_width [this pos]
+  (pos-width [_graphics _pos]
     1)
-  (text_width [this s]
+  (text-width [_graphics _s]
     )
-  (text [this text-spec]
+  (text [_graphics _text-spec]
     )
-  (get_mouse [this]
+  (get-mouse [_graphics]
     )
-  (cursor [this mode]
+  (cursor [_graphics _mode]
     )
-  (get_time [this]
+  (get-time [_graphics]
     ))
-
-
 
 (defn make-test-state []
   (let [graphics (->graphics-dummy)
