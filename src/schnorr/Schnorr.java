@@ -88,4 +88,13 @@ public class Schnorr    {
         }
     }
 
+    public static byte[] genPubKey(byte[] secKey) throws Exception {
+        BigInteger x = Util.bigIntFromBytes(secKey);
+        if(!(BigInteger.ONE.compareTo(x) <= 0 && x.compareTo(Point.getn().subtract(BigInteger.ONE)) <= 0)) {
+            throw new Exception("The secret key must be an integer in the range 1..n-1.");
+        }
+        Point ret = Point.mul(Point.G, x);
+        return Point.bytesFromPoint(ret);
+    }
+
 }

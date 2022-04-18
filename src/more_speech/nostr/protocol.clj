@@ -4,7 +4,6 @@
             [clojure.core.async :as async])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
-           (java.nio.charset StandardCharsets)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
            (java.net URI)))
 
@@ -94,22 +93,22 @@
     ws)
   )
 
-(defn make-text [msg private-key]
-  (let [pub-key (ecc/pub-key private-key)
-        created-at (quot (System/currentTimeMillis) 1000)
-        id-event (json/write-str [0 (ecc/bytes->hex-string pub-key) created-at 1 [] msg])
-        message-bytes (.getBytes id-event StandardCharsets/UTF_8)
-        id (ecc/sha-256 message-bytes)
-        event ["EVENT" {"id" (ecc/bytes->hex-string id)
-                        "pubkey" (ecc/bytes->hex-string pub-key)
-                        "created_at" created-at
-                        "kind" 1
-                        "tags" []
-                        "content" msg
-                        "sig" (ecc/bytes->hex-string (ecc/sign private-key id))
-                        }]
-        ]
-    event))
+;(defn make-text [msg private-key]
+;  (let [pub-key (ecc/pub-key private-key)
+;        created-at (quot (System/currentTimeMillis) 1000)
+;        id-event (json/write-str [0 (ecc/bytes->hex-string pub-key) created-at 1 [] msg])
+;        message-bytes (.getBytes id-event StandardCharsets/UTF_8)
+;        id (ecc/sha-256 message-bytes)
+;        event ["EVENT" {"id" (ecc/bytes->hex-string id)
+;                        "pubkey" (ecc/bytes->hex-string pub-key)
+;                        "created_at" created-at
+;                        "kind" 1
+;                        "tags" []
+;                        "content" msg
+;                        "sig" (ecc/bytes->hex-string (ecc/sign private-key id))
+;                        }]
+;        ]
+;    event))
 
 (def private-key (ecc/sha-256 (.getBytes "I am Bob.")))
 

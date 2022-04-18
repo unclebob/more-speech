@@ -115,7 +115,7 @@
 
 (defn compose-text-event [private-key text]
   (let [private-key (ecc/hex-string->bytes private-key)
-        pubkey (ecc/pub-key private-key)
+        pubkey (ecc/get-pub-key private-key)
         tags []
         content text
         now (quot (System/currentTimeMillis) 1000)

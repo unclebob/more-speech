@@ -1,5 +1,4 @@
 ;;Stories
-;; - Send an article.
 ;; - Threading does not work quite right.  Do some diagnosis.
 ;; - Reply
 ;; - Mark read and highlight properly.

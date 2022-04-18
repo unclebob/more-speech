@@ -1,5 +1,7 @@
 (ns more-speech.ui.config)
 
+(def ctrl-s 19)
+
 (def no-fill [nil])
 (def black [0 0 0])
 (def white [255 255 255])

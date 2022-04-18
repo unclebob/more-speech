@@ -1,7 +1,7 @@
 (ns more-speech.nostr.ellliptic-signature-spec
   (:require [speclj.core :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all])
-  (:import (java.nio.charset StandardCharsets)))
+  )
 
 (describe "verification"
   (it "decodes chars"
@@ -43,22 +43,22 @@
                              (hex-string->bytes "ffcde563")))))
     )
 
-  (it "signs"
-    (let [private-key-1 (sha-256 (.getBytes "my private key 1" StandardCharsets/UTF_8))
-          private-key-2 (sha-256 (.getBytes "my private key 2" StandardCharsets/UTF_8))
-          public-key-1 (pub-key private-key-1)
-          public-key-2 (pub-key private-key-2)
-          message-1 (sha-256 (.getBytes "my message 1" StandardCharsets/UTF_8))
-          message-2 (sha-256 (.getBytes "my message 2" StandardCharsets/UTF_8))
-          sig-1 (sign private-key-1 message-1)
-          sig-2 (sign private-key-2 message-2)
-          ]
-      (should= true (verify public-key-1 message-1 sig-1))
-      (should= true (verify public-key-2 message-2 sig-2))
-      (should-not (verify public-key-1 message-1 sig-2))
-      (should-not (verify public-key-2 message-2 sig-1))
-      (should-not (verify public-key-1 message-2 sig-1))
-      (should-not (verify public-key-2 message-1 sig-2))))
+  ;(it "signs"
+  ;  (let [private-key-1 (sha-256 (.getBytes "my private key 1" StandardCharsets/UTF_8))
+  ;        private-key-2 (sha-256 (.getBytes "my private key 2" StandardCharsets/UTF_8))
+  ;        public-key-1 (pub-key private-key-1)
+  ;        public-key-2 (pub-key private-key-2)
+  ;        message-1 (sha-256 (.getBytes "my message 1" StandardCharsets/UTF_8))
+  ;        message-2 (sha-256 (.getBytes "my message 2" StandardCharsets/UTF_8))
+  ;        sig-1 (sign private-key-1 message-1)
+  ;        sig-2 (sign private-key-2 message-2)
+  ;        ]
+  ;    (should= true (verify public-key-1 message-1 sig-1))
+  ;    (should= true (verify public-key-2 message-2 sig-2))
+  ;    (should-not (verify public-key-1 message-1 sig-2))
+  ;    (should-not (verify public-key-2 message-2 sig-1))
+  ;    (should-not (verify public-key-1 message-2 sig-1))
+  ;    (should-not (verify public-key-2 message-1 sig-2))))
 
   (it "verifies Aaron Dixon's example."
     (should= true
@@ -80,7 +80,7 @@
             aux-rand (hex-string->bytes "0000000000000000000000000000000000000000000000000000000000000000")
             message (hex-string->bytes "0000000000000000000000000000000000000000000000000000000000000000")
             signature (hex-string->bytes "E907831F80848D1069A5371B402410364BDF1C5F8307B0084C55F1CE2DCA821525F66A4A85EA8B71E482A74F382D2CE5EBEEE8FDB2172F477DF4900D310536C0")]
-        (should (bytes= public-key (pub-key private-key)))
+        (should (bytes= public-key (get-pub-key private-key)))
         (should (bytes= signature (do-sign message private-key aux-rand)))
         (should (do-verify message public-key signature))
         ))
@@ -90,7 +90,7 @@
             aux-rand (hex-string->bytes "0000000000000000000000000000000000000000000000000000000000000001")
             message (hex-string->bytes "243F6A8885A308D313198A2E03707344A4093822299F31D0082EFA98EC4E6C89")
             signature (hex-string->bytes "6896BD60EEAE296DB48A229FF71DFE071BDE413E6D43F917DC8DCF8C78DE33418906D11AC976ABCCB20B091292BFF4EA897EFCB639EA871CFA95F6DE339E4B0A")]
-        (should (bytes= public-key (pub-key private-key)))
+        (should (bytes= public-key (get-pub-key private-key)))
         (should (bytes= signature (do-sign message private-key aux-rand)))
         (should (do-verify message public-key signature))
         ))
@@ -100,7 +100,7 @@
             aux-rand (hex-string->bytes "C87AA53824B4D7AE2EB035A2B5BBBCCC080E76CDC6D1692C4B0B62D798E6D906")
             message (hex-string->bytes "7E2D58D8B3BCDF1ABADEC7829054F90DDA9805AAB56C77333024B9D0A508B75C")
             signature (hex-string->bytes "5831AAEED7B44BB74E5EAB94BA9D4294C49BCF2A60728D8B4C200F50DD313C1BAB745879A5AD954A72C45A91C3A51D3C7ADEA98D82F8481E0E1E03674A6F3FB7")]
-        (should (bytes= public-key (pub-key private-key)))
+        (should (bytes= public-key (get-pub-key private-key)))
         (should (bytes= signature (do-sign message private-key aux-rand)))
         (should (do-verify message public-key signature))
         ))

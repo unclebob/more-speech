@@ -66,7 +66,7 @@
     :down (move-insertion state frame [0 1])
 
     (condp = (int raw-key)
-      19 (send-msg state frame)
+      config/ctrl-s (send-msg state frame)
 
       (let [frame (if (= \backspace raw-key)
                     (delete-char frame)
