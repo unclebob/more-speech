@@ -91,14 +91,17 @@
 
 (declare reply-to-article)
 
-(defn process-key [state frame {:keys [_key raw-key]}]
+(defn process-key [state _frame {:keys [_key raw-key]}]
   (condp = (int raw-key)
-    config/ctrl-r (reply-to-article state frame)
+    config/ctrl-r (reply-to-article state)
     state)
   )
 
-(defn reply-to-article [state frame]
-  (if (nil? (:displayed-article frame))
-    (edit/clear-edit-window state)
-    state))
+(defn reply-to-article [state]
+  (let [selected-header (get-in state [:application :selected-header])
+        event-map (get-in state [:application :text-event-map])
+        event (get event-map selected-header nil)]
+    (if (nil? event)
+      (edit/clear-edit-window state)
+      (edit/load-edit-window state event))))
 

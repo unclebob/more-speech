@@ -6,7 +6,8 @@
             [clojure.spec.alpha :as s]
             [more-speech.nostr.events :as events]
             [clojure.string :as string]
-            [clojure.core.async :as async]))
+            [clojure.core.async :as async]
+            [more-speech.ui.formatters :as formatters]))
 
 (s/def ::text (and vector? (s/coll-of string?)))
 (s/def ::insertion-point (s/tuple [int? int?]))
@@ -139,7 +140,6 @@
   )
 
 (defn send-msg [state frame]
-  (prn 'send-message)
   (let [private-key (get-in state [:keys :private-key])
         text (string/join \newline (:text frame))
         event (events/compose-text-event private-key text)
@@ -153,4 +153,17 @@
   (let [edit-frame (get-in state [:application :edit-window :text-frame])
         edit-frame (assoc edit-frame :text [""] :insertion-point [0 0])]
     (assoc-in state (:path edit-frame) edit-frame)))
+
+(declare text->edit-text)
+(defn load-edit-window [state event]
+  (let [edit-frame (get-in state [:application :edit-window :text-frame])
+        content (formatters/reformat-article (:content event)
+                                             (- (:width config/edit-window-dimensions) 10))
+        edit-frame (assoc edit-frame :text (text->edit-text content) :insertion-point [0 0])]
+    (assoc-in state (:path edit-frame) edit-frame)))
+
+(defn text->edit-text [text]
+  (let [lines (string/split-lines text)
+        lines (map #(str ">" %) lines)]
+    lines))
 
