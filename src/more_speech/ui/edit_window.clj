@@ -9,6 +9,7 @@
             [clojure.core.async :as async]
             [more-speech.ui.formatters :as formatters]
             [more-speech.nostr.elliptic-signature :as ecc]))
+
 ;; edit-frame
 ;;  - :text A vector containing the lines of the composed message
 ;;  - :reply-id nil, or the numeric id of the article being replied to.

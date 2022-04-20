@@ -115,6 +115,33 @@
         (should (ecc/do-verify (ecc/hex-string->bytes id)
                             public-key
                             (ecc/hex-string->bytes sig)))))
+
+  (it "composes a message with a slash."
+      (let [private-key (ecc/num->bytes 64 42)
+            public-key (ecc/get-pub-key private-key)
+            reply-to nil
+            text "message/text"
+            event (compose-text-event private-key text reply-to)
+            {:keys [pubkey created_at kind tags content id sig]} (second event)
+            now (quot (System/currentTimeMillis) 1000)]
+        (should= "EVENT" (first event))
+        (should= (ecc/bytes->hex-string public-key) pubkey)
+        (should (<= 0 (- now created_at) 1)) ;within one second.
+        (should= 1 kind)
+        (should= [] tags)
+          (should= text content)
+          (should (ecc/do-verify (ecc/hex-string->bytes id)
+                              public-key
+                              (ecc/hex-string->bytes sig)))))
+  )
+
+(describe "json"
+  (it "does not escape slashes"
+    (should= "\"/\"" (to-json "/")))
+
+  (it "does not escape unicode"
+    (should= "\"Ω\"" (to-json "\u03a9")))
+
   )
 
 

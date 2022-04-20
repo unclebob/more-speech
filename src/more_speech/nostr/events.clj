@@ -23,6 +23,9 @@
 (declare process-text-event
          process-name-event)
 
+(defn to-json [o]
+  (json/write-str o :escape-slash false :escape-unicode false))
+
 (defn process-event [{:keys [application] :as state} event]
   (let [{:keys [_articles nicknames]} application
         _name-of (fn [pubkey] (get nicknames pubkey pubkey))
@@ -108,7 +111,7 @@
 (defn make-id
   "returns byte array of id given the clojure form of the body"
   [{:keys [pubkey created_at kind tags content]}]
-  (let [id-event (json/write-str [0 pubkey created_at kind tags content])
+  (let [id-event (to-json [0 pubkey created_at kind tags content])
         id (ecc/sha-256 (.getBytes id-event StandardCharsets/UTF_8))]
     id)
   )

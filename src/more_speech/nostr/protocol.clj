@@ -1,7 +1,8 @@
 (ns more-speech.nostr.protocol
   (:require [clojure.data.json :as json]
             [more-speech.nostr.elliptic-signature :as ecc]
-            [clojure.core.async :as async])
+            [clojure.core.async :as async]
+            [more-speech.nostr.events :as events])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
@@ -22,7 +23,7 @@
 
 
 (defn send-to [^WebSocket conn msg]
-  (let [msg (json/write-str msg)]
+  (let [msg (events/to-json msg)]
     (println "sending:" msg)
     (.sendText conn msg true)))
 
@@ -92,23 +93,6 @@
         ]
     ws)
   )
-
-;(defn make-text [msg private-key]
-;  (let [pub-key (ecc/pub-key private-key)
-;        created-at (quot (System/currentTimeMillis) 1000)
-;        id-event (json/write-str [0 (ecc/bytes->hex-string pub-key) created-at 1 [] msg])
-;        message-bytes (.getBytes id-event StandardCharsets/UTF_8)
-;        id (ecc/sha-256 message-bytes)
-;        event ["EVENT" {"id" (ecc/bytes->hex-string id)
-;                        "pubkey" (ecc/bytes->hex-string pub-key)
-;                        "created_at" created-at
-;                        "kind" 1
-;                        "tags" []
-;                        "content" msg
-;                        "sig" (ecc/bytes->hex-string (ecc/sign private-key id))
-;                        }]
-;        ]
-;    event))
 
 (def private-key (ecc/sha-256 (.getBytes "I am Bob.")))
 
