@@ -7,12 +7,19 @@
             [more-speech.nostr.events :as events]
             [clojure.string :as string]
             [clojure.core.async :as async]
-            [more-speech.ui.formatters :as formatters]))
+            [more-speech.ui.formatters :as formatters]
+            [more-speech.nostr.elliptic-signature :as ecc]))
+;; edit-frame
+;;  - :text A vector containing the lines of the composed message
+;;  - :reply-id nil, or the numeric id of the article being replied to.
+;;  - :insertion-point the x,y coordinates of the insertion cursor.
 
 (s/def ::text (and vector? (s/coll-of string?)))
+(s/def ::reply-id (or nil? number?))
 (s/def ::insertion-point (s/tuple [int? int?]))
 (s/def ::edit-frame (s/keys :opt-un [::text
-                                     ::insertion-point]))
+                                     ::insertion-point
+                                     ::reply-id]))
 
 (declare draw-edit-frame
          edit-window-key-pressed)
@@ -141,8 +148,10 @@
 
 (defn send-msg [state frame]
   (let [private-key (get-in state [:keys :private-key])
+        private-key (ecc/hex-string->bytes private-key)
         text (string/join \newline (:text frame))
-        event (events/compose-text-event private-key text)
+        reply-to (:reply-id frame)
+        event (events/compose-text-event private-key text reply-to)
         send-chan (:send-chan state)
         frame (assoc frame :text [""] :insertion-point [0 0])
         state (assoc-in state (:path frame) frame)]
@@ -151,15 +160,20 @@
 
 (defn clear-edit-window [state]
   (let [edit-frame (get-in state [:application :edit-window :text-frame])
-        edit-frame (assoc edit-frame :text [""] :insertion-point [0 0])]
+        edit-frame (assoc edit-frame :text [""]
+                                     :reply-id nil
+                                     :insertion-point [0 0])]
     (assoc-in state (:path edit-frame) edit-frame)))
 
 (declare text->edit-text)
 (defn load-edit-window [state event]
   (let [edit-frame (get-in state [:application :edit-window :text-frame])
+        id (:id event)
         content (formatters/reformat-article (:content event)
                                              (- (:width config/edit-window-dimensions) 10))
-        edit-frame (assoc edit-frame :text (text->edit-text content) :insertion-point [0 0])]
+        edit-frame (assoc edit-frame :text (text->edit-text content)
+                                     :insertion-point [0 0]
+                                     :reply-id id)]
     (assoc-in state (:path edit-frame) edit-frame)))
 
 (defn text->edit-text [text]

@@ -65,7 +65,9 @@
 (defn do-verify [message public-key signature]
   (Schnorr/verify message public-key signature))
 
-(defn get-pub-key [private-key]
+(defn get-pub-key
+  "private-key is byte array.  Returns byte array."
+  [private-key]
   (Schnorr/genPubKey private-key))
 
 

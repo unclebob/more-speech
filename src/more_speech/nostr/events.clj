@@ -113,21 +113,34 @@
     id)
   )
 
-(defn compose-text-event [private-key text]
-  (let [private-key (ecc/hex-string->bytes private-key)
-        pubkey (ecc/get-pub-key private-key)
-        tags []
-        content text
-        now (quot (System/currentTimeMillis) 1000)
-        body {:pubkey (ecc/bytes->hex-string pubkey)
-              :created_at now
-              :kind 1
-              :tags tags
-              :content content}
-        id (make-id body)
-        aux-rand (ecc/num->bytes 32 (biginteger (System/currentTimeMillis)))
-        signature (ecc/do-sign id private-key aux-rand)
-        event (assoc body :id (ecc/bytes->hex-string id)
-                          :sig (ecc/bytes->hex-string signature))
-        ]
-    ["EVENT" event]))
+(declare make-reply-tag)
+
+(defn compose-text-event
+  ([private-key text]
+   (compose-text-event private-key text nil))
+
+  ([private-key text reply-to]
+   (let [pubkey (ecc/get-pub-key private-key)
+         tags (if (some? reply-to)
+                [(make-reply-tag reply-to)]
+                [])
+         content text
+         now (quot (System/currentTimeMillis) 1000)
+         body {:pubkey (ecc/bytes->hex-string pubkey)
+               :created_at now
+               :kind 1
+               :tags tags
+               :content content}
+         id (make-id body)
+         aux-rand (ecc/num->bytes 32 (biginteger (System/currentTimeMillis)))
+         signature (ecc/do-sign id private-key aux-rand)
+         event (assoc body :id (ecc/bytes->hex-string id)
+                           :sig (ecc/bytes->hex-string signature))
+         ]
+     ["EVENT" event])))
+
+(defn make-reply-tag [reply-to]
+  (let [reply-to (ecc/num->bytes 32 reply-to)
+        reply-to (ecc/bytes->hex-string reply-to)]
+    [:e reply-to])
+  )

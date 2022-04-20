@@ -13,12 +13,13 @@
           state (reply-to-article state)
           edit-frame (get-in state [:application :edit-window :text-frame])]
       (should= [""] (get edit-frame :text))
+      (should-be-nil (:reply-id edit-frame))
       (should= [0 0] (get edit-frame :insertion-point))))
 
   (it "will create a simple reply if a simple article is being displayed"
     (let [state (assoc-in @state [:application :selected-header] 1)
           event-map (get-in state [:application :text-event-map])
-          event-map (assoc event-map 1 {:id "1"
+          event-map (assoc event-map 1 {:id 0x1d
                                         :pubkey 0xf00d
                                         :created-at @now
                                         :kind 1
@@ -29,5 +30,8 @@
           state (reply-to-article state)
           edit-frame (get-in state [:application :edit-window :text-frame])]
       (should= [">simple"] (get edit-frame :text))
+      (should= 0x1d (:reply-id edit-frame))
       (should= [0 0] (get edit-frame :insertion-point))))
+
+
   )

@@ -1,5 +1,9 @@
 ;;Stories
+;; - Add author/date, etc. to replies.
+;; - Start checking sdefs in update.
 ;; - Clean up java schnorr library.
+;; - Messages with / don't work.  Signature is wrong somehow?
+;; - Messages with unicode (\u) don't work either.
 ;; - Threading does not work quite right.  Do some diagnosis.
 ;; - Reply
 ;; - Mark read and highlight properly.

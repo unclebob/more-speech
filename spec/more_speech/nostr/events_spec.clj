@@ -1,6 +1,7 @@
 (ns more-speech.nostr.events_spec
   (:require [speclj.core :refer :all]
-            [more-speech.nostr.events :refer :all]))
+            [more-speech.nostr.events :refer :all]
+            [more-speech.nostr.elliptic-signature :as ecc]))
 
 (declare now event state)
 (describe "Processing Text events (Kind 1)"
@@ -77,6 +78,43 @@
         )
       )
     )
+  )
+
+(describe "Composing outgoing events"
+  (it "composes an original message."
+    (let [private-key (ecc/num->bytes 64 42)
+          public-key (ecc/get-pub-key private-key)
+          text "message text"
+          event (compose-text-event private-key text)
+          {:keys [pubkey created_at kind tags content id sig]} (second event)
+          now (quot (System/currentTimeMillis) 1000)]
+      (should= "EVENT" (first event))
+      (should= (ecc/bytes->hex-string public-key) pubkey)
+      (should (<= 0 (- now created_at) 1 )) ;within one second.
+      (should= 1 kind)
+      (should= [] tags)
+      (should= text content)
+      (should (ecc/do-verify (ecc/hex-string->bytes id)
+                          public-key
+                          (ecc/hex-string->bytes sig)))))
+
+  (it "composes a reply."
+    (let [private-key (ecc/num->bytes 64 42)
+          public-key (ecc/get-pub-key private-key)
+          reply-to (ecc/num->bytes 32 7734)
+          text "message text"
+          event (compose-text-event private-key text reply-to)
+          {:keys [pubkey created_at kind tags content id sig]} (second event)
+          now (quot (System/currentTimeMillis) 1000)]
+      (should= "EVENT" (first event))
+      (should= (ecc/bytes->hex-string public-key) pubkey)
+      (should (<= 0 (- now created_at) 1)) ;within one second.
+      (should= 1 kind)
+      (should= [[:e (ecc/bytes->hex-string reply-to)]] tags)
+        (should= text content)
+        (should (ecc/do-verify (ecc/hex-string->bytes id)
+                            public-key
+                            (ecc/hex-string->bytes sig)))))
   )
 
 
