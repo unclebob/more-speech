@@ -2,51 +2,28 @@
   (:require [clojure.core.async :as async]
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatters :as formatters]
-            [more-speech.nostr.events :as events])
-  (:import (javax.swing JFrame SwingUtilities Timer JScrollPane JTextPane)
-           (java.awt BorderLayout Toolkit Font)
-           (java.awt.event ActionListener WindowListener)))
+            [more-speech.nostr.events :as events]
+            [clojure.string :as string])
+  (:use [seesaw core font])
+  (:import (javax.swing SwingUtilities Timer)))
 
 (declare display-jframe action-event draw-events)
 
 (defn setup-jframe [event-agent output-channel]
   (SwingUtilities/invokeLater #(display-jframe event-agent output-channel)))
 
-(defmacro with-action [component event & body]
-  `(.addActionListener ~component
-                       (proxy [ActionListener] []
-                         (actionPerformed [~event] ~@body))))
-
 (defn display-jframe [event-agent output-channel]
-  (let [frame (JFrame. "More Speech")
-        text-area (doto
-                    (JTextPane.)
-                    (.setContentType "text/html")
-                    (.setText "<br><br><br><br><br><br><br><br><br><br>"))
-        scroll-pane (JScrollPane. text-area)
-        content (.getContentPane frame)
-        timer (Timer. 100 nil)
-        screen-size (.getScreenSize (Toolkit/getDefaultToolkit))
-        font (Font. "Courier New" Font/PLAIN, 14)]
+  (let [frame (frame :title "More Speech" :size [1000 :by 1000])
+        text-area (text :multi-line? true :font "MONOSPACED-PLAIN-14")
+        timer (Timer. 100 nil)]
+    (listen frame :window-closing (fn [_]
+                                    (.stop timer)
+                                    (async/>!! output-channel [:closed])
+                                    (.dispose frame)))
 
-    (.addWindowListener frame (proxy [WindowListener] []
-                                (windowActivated [_e])
-                                (windowOpened [_e])
-                                (windowClosed [_e])
-                                (windowDeactivated [_e])
-                                (windowClosing [_e]
-                                  (.stop timer)
-                                  (async/>!! output-channel [:closed])
-                                  (.dispose frame))))
-
-    (with-action timer action-event
-                 (draw-events text-area event-agent)
-                 )
-    (.setSize frame (.getWidth screen-size) (.getHeight screen-size))
-    (.setSize text-area (.getWidth screen-size) (.getHeight screen-size))
-    (.setFont text-area font)
-    (.add content scroll-pane BorderLayout/NORTH)
-    (.setVisible frame true)
+    (listen timer :action (fn [_] (draw-events text-area event-agent)))
+    (config! frame :content (scrollable text-area))
+    (show! frame)
     (.start timer)))
 
 (declare format-events append-event format-event)
@@ -56,7 +33,7 @@
   (when (:update @event-agent)
     (let [event-state @event-agent
           formatted-events (format-events event-state)]
-      (.setText text-area formatted-events)
+      (text! text-area formatted-events)
       (send event-agent events/updated))))
 
 (defn format-events [{:keys [chronological-text-events nicknames text-event-map]}]
@@ -68,12 +45,9 @@
   (str formatted-events (format-event nicknames event)))
 
 (defn format-event [nicknames {:keys [pubkey created-at content]}]
-  (str "<p>"
-       (formatters/abbreviate
-         (get nicknames pubkey (util/num->hex-string pubkey))
-         20)
-       " "
-       (formatters/format-time created-at)
-       " "
-       (formatters/abbreviate content 50)
-       "</b><<hr>"))
+  (let [name (get nicknames pubkey (util/num->hex-string pubkey))
+        name (formatters/abbreviate name 20)
+        time (formatters/format-time created-at)
+        content (string/replace content \newline \~)
+        content (formatters/abbreviate content 50)]
+    (format "%20s %s %s\n" name time content)))

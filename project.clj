@@ -7,6 +7,7 @@
                  [quil "4.0.0-SNAPSHOT"]
                  [org.clojure/data.json "2.4.0"]
                  [org.clojure/core.async "1.5.648"]
+                 [seesaw "1.5.0"]
                  ]
   :profiles {:dev {:dependencies [[speclj "3.4.1"]]}}
   :plugins [[speclj "3.4.1"]]
