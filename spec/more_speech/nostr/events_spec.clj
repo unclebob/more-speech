@@ -14,15 +14,15 @@
                        ["e" "0002" "anotherurl"]]
                "content" "the content"
                "sig" "dddddd"})
-  (with state {:application
-               {:text-event-map {}
-                :chronological-text-events (make-chronological-text-events)
-                }
-               })
+  (with state
+        {:text-event-map {}
+         :chronological-text-events (make-chronological-text-events)
+         }
+        )
   (it "creates the map of text events by id"
     (let [state (process-text-event @state @event)
-          event-map (get-in state [:application :text-event-map])
-          text-events (get-in state [:application :chronological-text-events])
+          event-map (get-in state [:text-event-map])
+          text-events (get-in state [:chronological-text-events])
           event (get event-map 0xdeadbeef :not-in-map)]
       (should= 1 (count event-map))
       (should= 1 (count text-events))
@@ -38,10 +38,10 @@
 
   (it "adds references to tagged articles."
     (let [state (assoc-in @state
-                          [:application :text-event-map 2]
+                          [:text-event-map 2]
                           {:id 2})
           state (process-references state (translate-text-event @event))
-          text-event-map (get-in state [:application :text-event-map])
+          text-event-map (get-in state [:text-event-map])
           article (get text-event-map 2)]
       (should= [0xdeadbeef] (:references article)))
     )
@@ -49,31 +49,31 @@
   (context "sorted set for handling events"
     (it "adds one element"
       (let [state (add-event @state {:id 10 :created-at 0})]
-        (should= #{[10 0]} (get-in state [:application :chronological-text-events]))
-        (should= {10 {:id 10 :created-at 0}} (get-in state [:application :text-event-map]))))
+        (should= #{[10 0]} (get-in state [:chronological-text-events]))
+        (should= {10 {:id 10 :created-at 0}} (get-in state [:text-event-map]))))
 
     (it "adds two elements in chronological order, should be reversed"
       (let [state (add-event @state {:id 10 :created-at 0})
             state (add-event state {:id 20 :created-at 1})
             ]
-        (should= [[20 1] [10 0]] (seq (get-in state [:application :chronological-text-events])))
+        (should= [[20 1] [10 0]] (seq (get-in state [:chronological-text-events])))
         (should= {10 {:id 10 :created-at 0}
-                  20 {:id 20 :created-at 1}} (get-in state [:application :text-event-map])))
+                  20 {:id 20 :created-at 1}} (get-in state [:text-event-map])))
       )
     (it "adds two elements in reverse chronological order, should remain."
       (let [state (add-event @state {:id 10 :created-at 1})
             state (add-event state {:id 20 :created-at 0})
             ]
-        (should= [[10 1] [20 0]] (seq (get-in state [:application :chronological-text-events])))
+        (should= [[10 1] [20 0]] (seq (get-in state [:chronological-text-events])))
         (should= {10 {:id 10 :created-at 1}
-                  20 {:id 20 :created-at 0}} (get-in state [:application :text-event-map])))
+                  20 {:id 20 :created-at 0}} (get-in state [:text-event-map])))
       )
 
     (it "adds two elements with equal ids"
       (let [state (add-event @state {:id 10 :created-at 1})
             state (add-event state {:id 10 :created-at 0})
-            event-map (get-in state [:application :text-event-map])]
-        (should= [[10 1]] (seq (get-in state [:application :chronological-text-events])))
+            event-map (get-in state [:text-event-map])]
+        (should= [[10 1]] (seq (get-in state [:chronological-text-events])))
         (should= 1 (count event-map))
         )
       )
@@ -90,13 +90,13 @@
           now (quot (System/currentTimeMillis) 1000)]
       (should= "EVENT" (first event))
       (should= (ecc/bytes->hex-string public-key) pubkey)
-      (should (<= 0 (- now created_at) 1 )) ;within one second.
+      (should (<= 0 (- now created_at) 1))                  ;within one second.
       (should= 1 kind)
       (should= [] tags)
       (should= text content)
       (should (ecc/do-verify (ecc/hex-string->bytes id)
-                          public-key
-                          (ecc/hex-string->bytes sig)))))
+                             public-key
+                             (ecc/hex-string->bytes sig)))))
 
   (it "composes a reply."
     (let [private-key (ecc/num->bytes 64 42)
@@ -108,31 +108,31 @@
           now (quot (System/currentTimeMillis) 1000)]
       (should= "EVENT" (first event))
       (should= (ecc/bytes->hex-string public-key) pubkey)
-      (should (<= 0 (- now created_at) 1)) ;within one second.
+      (should (<= 0 (- now created_at) 1))                  ;within one second.
       (should= 1 kind)
       (should= [[:e (ecc/bytes->hex-string reply-to)]] tags)
-        (should= text content)
-        (should (ecc/do-verify (ecc/hex-string->bytes id)
-                            public-key
-                            (ecc/hex-string->bytes sig)))))
+      (should= text content)
+      (should (ecc/do-verify (ecc/hex-string->bytes id)
+                             public-key
+                             (ecc/hex-string->bytes sig)))))
 
   (it "composes a message with a slash."
-      (let [private-key (ecc/num->bytes 64 42)
-            public-key (ecc/get-pub-key private-key)
-            reply-to nil
-            text "message/text"
-            event (compose-text-event private-key text reply-to)
-            {:keys [pubkey created_at kind tags content id sig]} (second event)
-            now (quot (System/currentTimeMillis) 1000)]
-        (should= "EVENT" (first event))
-        (should= (ecc/bytes->hex-string public-key) pubkey)
-        (should (<= 0 (- now created_at) 1)) ;within one second.
-        (should= 1 kind)
-        (should= [] tags)
-          (should= text content)
-          (should (ecc/do-verify (ecc/hex-string->bytes id)
-                              public-key
-                              (ecc/hex-string->bytes sig)))))
+    (let [private-key (ecc/num->bytes 64 42)
+          public-key (ecc/get-pub-key private-key)
+          reply-to nil
+          text "message/text"
+          event (compose-text-event private-key text reply-to)
+          {:keys [pubkey created_at kind tags content id sig]} (second event)
+          now (quot (System/currentTimeMillis) 1000)]
+      (should= "EVENT" (first event))
+      (should= (ecc/bytes->hex-string public-key) pubkey)
+      (should (<= 0 (- now created_at) 1))                  ;within one second.
+      (should= 1 kind)
+      (should= [] tags)
+      (should= text content)
+      (should (ecc/do-verify (ecc/hex-string->bytes id)
+                             public-key
+                             (ecc/hex-string->bytes sig)))))
   )
 
 (describe "json"

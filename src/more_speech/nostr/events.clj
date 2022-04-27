@@ -2,7 +2,6 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]
-            [more-speech.ui.widget :as w]
             [more-speech.nostr.elliptic-signature :as ecc])
   (:import (java.nio.charset StandardCharsets)))
 (s/def ::id number?)
@@ -23,34 +22,42 @@
 (declare process-text-event
          process-name-event)
 
+(defn make-event-agent []
+  (agent {:chronological-text-events []
+          :nicknames {}
+          :text-event-map {}
+          :update false}))
+
+(defn updated [event-state]
+  (assoc event-state :update false))
+
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
-(defn process-event [{:keys [application] :as state} event]
-  (let [{:keys [_articles nicknames]} application
-        _name-of (fn [pubkey] (get nicknames pubkey pubkey))
+(defn process-event [{:keys [nicknames] :as event-state} event]
+  (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
         [_name _subscription-id inner-event :as _decoded-msg] event
         {:strs [_id _pubkey _created_at kind _tags _content _sig]} inner-event]
     (condp = kind
-      0 (process-name-event state inner-event)
+      0 (process-name-event event-state inner-event)
       3 (do
           ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
-          state)
+          event-state)
       1 (do
           ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) (subs content 0 (min 50 (count content))))
-          (process-text-event state inner-event))
+          (process-text-event event-state inner-event))
       4 (do
           ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
-          state)
+          event-state)
       (do (prn "unknown event: " event)
-          state))))
+          event-state))))
 
-(defn process-name-event [state {:strs [_id pubkey _created_at _kind _tags content _sig]}]
+(defn process-name-event [event-state {:strs [_id pubkey _created_at _kind _tags content _sig]}]
   (let [pubkey (hex-string->num pubkey)
-        name (get (json/read-str content) "name" "tilt")
-        state (w/redraw-widget state [:application :author-window])]
-    (update-in
-      state [:application :nicknames] assoc pubkey name)))
+        name (get (json/read-str content) "name" "tilt")]
+    (-> event-state
+        (update-in [:nicknames] assoc pubkey name)
+        (assoc :update true))))
 
 (defn process-tag [[type arg1 arg2]]
   [(keyword type) arg1 arg2])
@@ -67,7 +74,7 @@
            state state]
       (if (empty? refs)
         state
-        (let [referent-path [:application :text-event-map (first refs)]]
+        (let [referent-path [:text-event-map (first refs)]]
           (if (nil? (get-in state referent-path))
             (recur (rest refs) state)
             (recur (rest refs)
@@ -87,18 +94,20 @@
      :sig sig
      :tags (process-tags (get event "tags"))}))
 
-(defn add-event [state event]
+(defn add-event [event-state event]
   (let [id (:id event)
-        time (:created-at event)
-        state (assoc-in state [:application :text-event-map id] event)
-        state (update-in state [:application :chronological-text-events] conj [id time])]
-    state))
+        time (:created-at event)]
+    (-> event-state
+        (assoc-in [:text-event-map id] event)
+        (update-in [:chronological-text-events] conj [id time]))))
 
-(defn process-text-event [state event]
-  (let [event (translate-text-event event)
-        state (add-event state event)
-        state (w/redraw-widget state [:application :header-window])]
-    (process-references state event)))
+(defn process-text-event [event-state event]
+  (let [event (translate-text-event event)]
+    (-> event-state
+        (add-event event)
+        (process-references event)
+        (assoc :update true)
+        )))
 
 (defn chronological-event-comparator [[i1 t1] [i2 t2]]
   (if (= i1 i2)

@@ -15,7 +15,6 @@
 
 (ns more-speech.core
   (:require [quil.core :as q]
-            [quil.middleware :as m]
             [clojure.core.async :as async]
             [more-speech.nostr.events :as nostr]
             [more-speech.ui.widget :refer [draw-widget
@@ -26,8 +25,10 @@
             [more-speech.ui.application :refer [map->application]]
             [more-speech.ui.graphics :as g]
             [more-speech.ui.widget :as w]
-            [more-speech.ui.config :as config]
-            [more-speech.nostr.protocol :as protocol]))
+            [more-speech.nostr.protocol :as protocol]
+            [more-speech.ui.swing.main-window :as swing]
+            [more-speech.nostr.events :as events])
+  )
 
 (def events (atom []))
 (def send-chan (async/chan))
@@ -80,25 +81,29 @@
   (draw-widget application state)
   )
 
-(declare more-speech)
+(declare more-speech setup-jframe)
 (defn ^:export -main [& args]
-  (q/defsketch more-speech
-               :title "More Speech"
-               :size [(q/screen-width) (- (q/screen-height) config/window-margin)]
-               :setup setup
-               :update update-state
-               :draw draw-state
-               :mouse-wheel w/mouse-wheel
-               :mouse-pressed w/mouse-pressed
-               :mouse-released w/mouse-released
-               :mouse-moved w/mouse-moved
-               :mouse-dragged w/mouse-dragged
-               :key-pressed w/key-pressed
-               :middleware [m/fun-mode]
-               :on-close protocol/close-connection)
+  ;(q/defsketch more-speech
+  ;             :title "More Speech"
+  ;             :size [(q/screen-width) (- (q/screen-height) config/window-margin)]
+  ;             :setup setup
+  ;             :update update-state
+  ;             :draw draw-state
+  ;             :mouse-wheel w/mouse-wheel
+  ;             :mouse-pressed w/mouse-pressed
+  ;             :mouse-released w/mouse-released
+  ;             :mouse-moved w/mouse-moved
+  ;             :mouse-dragged w/mouse-dragged
+  ;             :key-pressed w/key-pressed
+  ;             :middleware [m/fun-mode]
+  ;             :on-close protocol/close-connection)
+
   ;(reset! events (read-string (slurp "nostr-messages")))
-  (protocol/get-events events send-chan)
+  (let [event-agent (events/make-event-agent)]
+    (swing/setup-jframe event-agent send-chan)
+    (protocol/get-events event-agent send-chan))
   args
   )
+
 
 
