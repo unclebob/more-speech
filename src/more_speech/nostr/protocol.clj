@@ -98,7 +98,7 @@
 (defn get-events [event-agent send-chan]
   (let [conn (connect-to-relay (get relays 0) event-agent)
         id "more-speech"
-        date (make-date "04/25/2022")
+        date (make-date "04/1/2022")
         ]
     (prn date (format-time date))
     (unsubscribe conn id)
