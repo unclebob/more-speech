@@ -95,10 +95,11 @@
 
 (def private-key (ecc/sha-256 (.getBytes "I am Bob.")))
 
-(defn get-events [event-agent send-chan]
+(defn get-events [event-agent]
   (let [conn (connect-to-relay (get relays 0) event-agent)
         id "more-speech"
         date (make-date "04/1/2022")
+        send-chan (:send-chan @event-agent)
         ]
     (prn date (format-time date))
     (unsubscribe conn id)

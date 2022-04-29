@@ -99,9 +99,10 @@
   ;             :on-close protocol/close-connection)
 
   ;(reset! events (read-string (slurp "nostr-messages")))
-  (let [event-agent (events/make-event-agent)]
-    (swing/setup-jframe event-agent send-chan)
-    (protocol/get-events event-agent send-chan))
+  (let [keys (read-string (slurp "private/keys"))
+        event-agent (events/make-event-agent keys send-chan)]
+    (swing/setup-jframe event-agent)
+    (protocol/get-events event-agent))
   args
   )
 

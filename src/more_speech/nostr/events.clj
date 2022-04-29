@@ -22,11 +22,13 @@
 (declare process-text-event
          process-name-event)
 
-(defn make-event-agent []
+(defn make-event-agent [keys send-chan]
   (agent {:chronological-text-events []
           :nicknames {}
           :text-event-map {}
-          :update false}))
+          :update false
+          :keys keys
+          :send-chan send-chan}))
 
 (defn updated [event-state]
   (assoc event-state :update false))

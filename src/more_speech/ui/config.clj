@@ -1,5 +1,8 @@
 (ns more-speech.ui.config)
 
+(def default-font "COURIER-PLAIN-14")
+
+
 (def ctrl-s 19)
 (def ctrl-r 18)
 

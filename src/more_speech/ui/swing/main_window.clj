@@ -3,32 +3,105 @@
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatters :as formatters]
             [more-speech.nostr.events :as events]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [more-speech.ui.config :as config]
+            [more-speech.nostr.elliptic-signature :as ecc])
   (:use [seesaw core font tree])
-  (:import (javax.swing SwingUtilities Timer)))
+  (:import (javax.swing Timer)))
 
-(declare display-jframe action-event draw-events load-header-tree render-event)
+(declare display-jframe
+         action-event
+         draw-events
+         load-header-tree render-event
+         format-article
+         prepend>
+         send-msg
+         make-edit-window)
 
-(defn setup-jframe [event-agent output-channel]
-  (SwingUtilities/invokeLater #(display-jframe event-agent output-channel)))
+(defn setup-jframe [event-agent]
+  (invoke-later (display-jframe event-agent)))
 
-(defn display-jframe [event-agent output-channel]
-  (let [frame (frame :title "More Speech" :size [1000 :by 1000])
+(defn display-jframe [event-agent]
+  (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
+        article-area (text :multi-line? true
+                           :font config/default-font
+                           :editable? false)
         header-tree (tree :renderer (partial render-event event-agent))
-        timer (Timer. 100 nil)]
-    (listen frame :window-closing (fn [_]
-                                    (.stop timer)
-                                    (async/>!! output-channel [:closed])
-                                    (.dispose frame)))
+        timer (Timer. 100 nil)
+        reply-button (button :text "Reply")
+        create-button (button :text "Create")]
+    (listen main-frame :window-closing (fn [_]
+                                         (.stop timer)
+                                         (async/>!! (:send-chan @event-agent)
+                                                    [:closed])
+                                         (.dispose main-frame)))
 
     (listen timer :action
             (fn [_] (when (:update @event-agent)
                       (config! header-tree
                                :model (load-header-tree @event-agent))
                       (send event-agent events/updated))))
-    (config! frame :content (scrollable header-tree))
-    (show! frame)
+
+    (listen header-tree :selection
+            (fn [e]
+              (when (last (selection e))
+                (let [selected-id (last (selection e))
+                      event-state @event-agent
+                      text-map (:text-event-map event-state)
+                      event (get text-map selected-id)]
+                  (text! article-area (format-article event-state event))))))
+
+    (listen reply-button :action
+            (fn [_]
+              (make-edit-window :reply event-agent header-tree)))
+
+    (listen create-button :action
+            (fn [_] (make-edit-window :send event-agent nil)))
+
+    (config! main-frame :content (border-panel
+                                   :north (scrollable header-tree)
+                                   :center (scrollable article-area)
+                                   :south (flow-panel :items [reply-button create-button])))
+    (show! main-frame)
     (.start timer)))
+
+(defn make-edit-window [kind event-agent header-tree]
+  (let [reply? (= kind :reply)
+        event-state @event-agent
+        edit-frame (frame :title (name kind)
+                           :size [1000 :by 500]
+                           :on-close :dispose)
+        edit-area (text :multi-line? true
+                         :font config/default-font)
+        send-button (button :text "Send")
+        event-map (:text-event-map event-state)
+        selected-id (if reply? (last (selection header-tree)) nil)
+        event (if reply? (get event-map selected-id) nil)
+        ]
+    (listen send-button :action
+            (fn [_]
+              (let [message (text edit-area)]
+                (send-msg event-state event message))
+              (dispose! edit-frame)))
+    (text! edit-area
+           (if reply?
+             (prepend> (formatters/reformat-article (:content event) 80))
+             ""))
+    (config! edit-frame :content
+             (border-panel
+               :center (scrollable edit-area)
+               :south (flow-panel :items [send-button])))
+    (show! edit-frame)))
+
+(defn format-article [event-state {:keys [id pubkey created-at content]}]
+  (let [nicknames (:nicknames event-state)
+        time (formatters/format-time created-at)
+        name (get nicknames pubkey (util/num->hex-string pubkey))
+        name (formatters/abbreviate name 20)
+        article (formatters/reformat-article content 80)
+        formatted-id (formatters/abbreviate (util/num->hex-string id) 10)]
+    (format "%s %20s %s\n%s" time name formatted-id article))
+  )
 
 (declare has-children? get-children)
 
@@ -69,7 +142,7 @@
       (format "%20s %s %s\n" name time content))))
 
 (defn render-event [event-agent widget info]
-  (config! widget :font "COURIER-PLAIN-14")
+  (config! widget :font config/default-font)
   (if (seqable? (:value info))
     (text! widget "Articles")
     (let [event-state @event-agent
@@ -79,3 +152,16 @@
           event (get event-map event-id)]
       (text! widget (format-event nicknames event)))
     ))
+
+(defn prepend> [text]
+  (let [lines (string/split-lines text)
+        lines (map #(str ">" %) lines)]
+    (string/join "\n" lines)))
+
+(defn send-msg [event-state event message]
+  (let [private-key (get-in event-state [:keys :private-key])
+        private-key (ecc/hex-string->bytes private-key)
+        reply-to (:id event)
+        event (events/compose-text-event private-key message reply-to)
+        send-chan (:send-chan event-state)]
+    (async/>!! send-chan [:event event])))
