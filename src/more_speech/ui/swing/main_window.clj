@@ -7,45 +7,55 @@
             [more-speech.ui.config :as config]
             [more-speech.nostr.elliptic-signature :as ecc])
   (:use [seesaw core font tree])
-  (:import (javax.swing Timer)))
+  (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)
+           (javax.swing JTree)))
 
 (declare display-jframe
          action-event
          draw-events
-         load-header-tree render-event
+         render-event
          format-article
          prepend>
          send-msg
-         make-edit-window)
+         make-edit-window
+         add-event
+         clear-tree
+         set-tree-model)
+
+(defrecord seesawHandler []
+  events/event-handler
+  (events/handle-text-event [_handler event]
+    (invoke-later (add-event event))
+    )
+  )
+
+(def ui-context (atom nil))
 
 (defn setup-jframe [event-agent]
-  (invoke-later (display-jframe event-agent)))
+  (invoke-now (display-jframe event-agent))
+  (->seesawHandler))
 
 (defn display-jframe [event-agent]
   (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
         article-area (text :multi-line? true
                            :font config/default-font
                            :editable? false)
-        header-tree (tree :renderer (partial render-event event-agent))
-        timer (Timer. 100 nil)
+        header-tree (tree :renderer (partial render-event event-agent)
+                          :root-visible? false
+                          :id :header-tree)
         reply-button (button :text "Reply")
         create-button (button :text "Create")]
+    ;(clear-tree header-tree)
+    (reset! ui-context {:frame main-frame :event-agent event-agent})
     (listen main-frame :window-closing (fn [_]
-                                         (.stop timer)
                                          (async/>!! (:send-chan @event-agent)
                                                     [:closed])
                                          (.dispose main-frame)))
 
-    (listen timer :action
-            (fn [_] (when (:update @event-agent)
-                      (config! header-tree
-                               :model (load-header-tree @event-agent))
-                      (send event-agent events/updated))))
-
     (listen header-tree :selection
             (fn [e]
               (when (last (selection e))
-                (let [selected-id (last (selection e))
+                (let [selected-id (.getUserObject (last (selection e)))
                       event-state @event-agent
                       text-map (:text-event-map event-state)
                       event (get text-map selected-id)]
@@ -62,17 +72,30 @@
                                    :north (scrollable header-tree)
                                    :center (scrollable article-area)
                                    :south (flow-panel :items [reply-button create-button])))
+    (.setModel header-tree (DefaultTreeModel. (DefaultMutableTreeNode. "hi")))
+
     (show! main-frame)
-    (.start timer)))
+    ))
+
+(defn clear-tree [tree]
+  (let [model (config tree :model)
+        root (.getRoot model)
+        count (.getChildCount root)]
+    (dotimes [_ (dec count)]
+      (let [child (.getChild model root 0)]
+        (prn 'child child)
+        (.removeNodeFromParent model child)))
+    )
+  )
 
 (defn make-edit-window [kind event-agent header-tree]
   (let [reply? (= kind :reply)
         event-state @event-agent
         edit-frame (frame :title (name kind)
-                           :size [1000 :by 500]
-                           :on-close :dispose)
+                          :size [1000 :by 500]
+                          :on-close :dispose)
         edit-area (text :multi-line? true
-                         :font config/default-font)
+                        :font config/default-font)
         send-button (button :text "Send")
         event-map (:text-event-map event-state)
         selected-id (if reply? (last (selection header-tree)) nil)
@@ -104,14 +127,6 @@
   )
 
 (declare has-children? get-children)
-
-(defn load-header-tree [event-state]
-  (simple-tree-model
-    (partial has-children? event-state)
-    (partial get-children event-state)
-    (map first (:chronological-text-events event-state))
-    )
-  )
 
 (defn has-children? [event-state node]
   (if (seqable? node)
@@ -148,7 +163,8 @@
     (let [event-state @event-agent
           nicknames (:nicknames event-state)
           event-map (:text-event-map event-state)
-          event-id (:value info)
+          node (:value info)
+          event-id (.getUserObject node)
           event (get event-map event-id)]
       (text! widget (format-event nicknames event)))
     ))
@@ -165,3 +181,16 @@
         event (events/compose-text-event private-key message reply-to)
         send-chan (:send-chan event-state)]
     (async/>!! send-chan [:event event])))
+
+(defn add-event [event]
+  (let [frame (:frame @ui-context)
+        tree (select frame [:#header-tree])
+        ;model (config tree :model)
+        model (.getModel tree)
+        root (.getRoot model)
+        child-count (.getChildCount ^DefaultMutableTreeNode root)
+        child (DefaultMutableTreeNode. (:id event))]
+    (.insertNodeInto ^DefaultTreeModel model child root child-count)
+    (.makeVisible tree (TreePath. (.getPath child))))
+
+  )

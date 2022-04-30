@@ -100,9 +100,9 @@
 
   ;(reset! events (read-string (slurp "nostr-messages")))
   (let [keys (read-string (slurp "private/keys"))
-        event-agent (events/make-event-agent keys send-chan)]
-    (swing/setup-jframe event-agent)
-    (protocol/get-events event-agent))
+        event-agent (events/make-event-agent keys send-chan)
+        handler (swing/setup-jframe event-agent)]
+    (protocol/get-events event-agent handler))
   args
   )
 

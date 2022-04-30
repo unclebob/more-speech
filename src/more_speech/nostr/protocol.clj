@@ -95,7 +95,8 @@
 
 (def private-key (ecc/sha-256 (.getBytes "I am Bob.")))
 
-(defn get-events [event-agent]
+(defn get-events [event-agent handler]
+  (reset! events/handler-atom handler)
   (let [conn (connect-to-relay (get relays 0) event-agent)
         id "more-speech"
         date (make-date "04/1/2022")

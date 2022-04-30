@@ -2,7 +2,8 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]
-            [more-speech.nostr.elliptic-signature :as ecc])
+            [more-speech.nostr.elliptic-signature :as ecc]
+            [seesaw.core :as seesaw])
   (:import (java.nio.charset StandardCharsets)))
 (s/def ::id number?)
 (s/def ::pubkey number?)
@@ -19,6 +20,13 @@
                                 ::sig
                                 ::tags
                                 ::references]))
+
+(def handler-atom (atom nil))
+
+(defprotocol event-handler
+  (handle-text-event [handler event])
+  )
+
 (declare process-text-event
          process-name-event)
 
@@ -104,12 +112,14 @@
         (update-in [:chronological-text-events] conj [id time]))))
 
 (defn process-text-event [event-state event]
-  (let [event (translate-text-event event)]
-    (-> event-state
-        (add-event event)
-        (process-references event)
-        (assoc :update true)
-        )))
+  (let [event (translate-text-event event)
+        event-state (-> event-state
+                        (add-event event)
+                        (process-references event)
+                        (assoc :update true))]
+    (handle-text-event @handler-atom event)
+    event-state)
+  )
 
 (defn chronological-event-comparator [[i1 t1] [i2 t2]]
   (if (= i1 i2)
