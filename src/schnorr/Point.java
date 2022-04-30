@@ -14,7 +14,7 @@ public class Point  {
             new BigInteger("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
     );
 
-    private Pair<BigInteger,BigInteger> pair;
+    private final Pair<BigInteger,BigInteger> pair;
 
     public Point(BigInteger x , BigInteger y) {
         pair = Pair.of(x, y);

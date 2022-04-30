@@ -1,6 +1,5 @@
 (ns more-speech.nostr.protocol
   (:require [clojure.data.json :as json]
-            [more-speech.nostr.elliptic-signature :as ecc]
             [clojure.core.async :as async]
             [more-speech.nostr.events :as events])
   (:import (java.util Date)
@@ -35,16 +34,6 @@
 (defn make-date [date-string]
   (let [date (.parse (SimpleDateFormat. "MM/dd/yyyy") date-string)]
     (quot (.getTime date) 1000)))
-
-(def name-list (atom {}))
-(def messages (atom []))
-
-(defn name-of [pubkey]
-  (get @name-list pubkey pubkey))
-
-(defn print-names []
-  (doseq [entry @name-list]
-    (prn entry)))
 
 (defn subscribe
   ([conn id]
@@ -93,10 +82,7 @@
     ws)
   )
 
-(def private-key (ecc/sha-256 (.getBytes "I am Bob.")))
-
-(defn get-events [event-agent handler]
-  (reset! events/handler-atom handler)
+(defn get-events [event-agent]
   (let [conn (connect-to-relay (get relays 0) event-agent)
         id "more-speech"
         date (make-date "04/1/2022")

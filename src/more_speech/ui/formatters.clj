@@ -1,4 +1,6 @@
 (ns more-speech.ui.formatters
+  (:require [clojure.string :as string]
+            [more-speech.nostr.util :as util])
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
@@ -13,6 +15,11 @@
     (if (<= (count s) n)
       s
       (str (subs s 0 (- n (count dots))) dots))))
+
+(defn prepend> [text]
+  (let [lines (string/split-lines text)
+        lines (map #(str ">" %) lines)]
+    (string/join "\n" lines)))
 
 (defn reformat-article [article width]
   (let [blank-line (.lastIndexOf article "\n\n" width)
@@ -31,3 +38,26 @@
       (if (empty? tail)
         head
         (str head break-string (reformat-article tail width))))))
+
+(defn format-header [nicknames {:keys [pubkey created-at content] :as event}]
+  (if (nil? event)
+    "nil"
+    (let [name (get nicknames pubkey (util/num->hex-string pubkey))
+          name (abbreviate name 20)
+          time (format-time created-at)
+          content (string/replace content \newline \~)
+          content (abbreviate content 50)]
+      (format "%20s %s %s\n" name time content))))
+
+(defn format-article [event-state {:keys [id pubkey created-at content]}]
+  (let [nicknames (:nicknames event-state)
+        time (format-time created-at)
+        name (get nicknames pubkey (util/num->hex-string pubkey))
+        name (abbreviate name 20)
+        article (reformat-article content 80)
+        formatted-id (abbreviate (util/num->hex-string id) 10)]
+    (format "%s %20s %s\n%s" time name formatted-id article))
+  )
+
+(defn format-reply [event]
+  (prepend> (reformat-article (:content event) 80)))

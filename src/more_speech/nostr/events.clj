@@ -3,8 +3,9 @@
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]
             [more-speech.nostr.elliptic-signature :as ecc]
-            [seesaw.core :as seesaw])
+            [clojure.core.async :as async])
   (:import (java.nio.charset StandardCharsets)))
+
 (s/def ::id number?)
 (s/def ::pubkey number?)
 (s/def ::created-at number?)
@@ -21,8 +22,6 @@
                                 ::tags
                                 ::references]))
 
-(def handler-atom (atom nil))
-
 (defprotocol event-handler
   (handle-text-event [handler event])
   )
@@ -37,9 +36,6 @@
           :update false
           :keys keys
           :send-chan send-chan}))
-
-(defn updated [event-state]
-  (assoc event-state :update false))
 
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
@@ -113,11 +109,12 @@
 
 (defn process-text-event [event-state event]
   (let [event (translate-text-event event)
+        handler (:event-handler event-state)
         event-state (-> event-state
                         (add-event event)
                         (process-references event)
                         (assoc :update true))]
-    (handle-text-event @handler-atom event)
+    (handle-text-event handler event)
     event-state)
   )
 
@@ -168,3 +165,11 @@
         reply-to (ecc/bytes->hex-string reply-to)]
     [:e reply-to])
   )
+
+(defn send-msg [event-state event message]
+  (let [private-key (get-in event-state [:keys :private-key])
+        private-key (ecc/hex-string->bytes private-key)
+        reply-to (:id event)
+        event (compose-text-event private-key message reply-to)
+        send-chan (:send-chan event-state)]
+    (async/>!! send-chan [:event event])))

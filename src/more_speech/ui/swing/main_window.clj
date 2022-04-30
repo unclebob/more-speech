@@ -1,40 +1,40 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
-            [more-speech.nostr.util :as util]
             [more-speech.ui.formatters :as formatters]
             [more-speech.nostr.events :as events]
-            [clojure.string :as string]
-            [more-speech.ui.config :as config]
-            [more-speech.nostr.elliptic-signature :as ecc])
+            [more-speech.ui.config :as config])
   (:use [seesaw core font tree])
-  (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)
-           (javax.swing JTree)))
+  (:import [javax.swing.tree
+             DefaultMutableTreeNode
+             DefaultTreeModel
+             TreePath]))
 
-(declare display-jframe
-         action-event
-         draw-events
-         render-event
-         format-article
-         prepend>
-         send-msg
-         make-edit-window
-         add-event
-         clear-tree
-         set-tree-model)
-
+(declare add-event)
 (defrecord seesawHandler []
   events/event-handler
   (events/handle-text-event [_handler event]
-    (invoke-later (add-event event))
-    )
-  )
+    (invoke-later (add-event event))))
 
 (def ui-context (atom nil))
 
+(defn add-event [event]
+  (let [frame (:frame @ui-context)
+        tree (select frame [:#header-tree])
+        model (config tree :model)
+        root (.getRoot model)
+        child-count (.getChildCount root)
+        child (DefaultMutableTreeNode. (:id event))]
+    (.insertNodeInto model child root child-count)
+    (.makeVisible tree (TreePath. (.getPath child))))
+  )
+
+(declare display-jframe
+         render-event)
 (defn setup-jframe [event-agent]
   (invoke-now (display-jframe event-agent))
   (->seesawHandler))
 
+(declare make-edit-window)
 (defn display-jframe [event-agent]
   (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
         article-area (text :multi-line? true
@@ -42,15 +42,16 @@
                            :editable? false)
         header-tree (tree :renderer (partial render-event event-agent)
                           :root-visible? false
+                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty"))
                           :id :header-tree)
         reply-button (button :text "Reply")
         create-button (button :text "Create")]
-    ;(clear-tree header-tree)
     (reset! ui-context {:frame main-frame :event-agent event-agent})
-    (listen main-frame :window-closing (fn [_]
-                                         (async/>!! (:send-chan @event-agent)
-                                                    [:closed])
-                                         (.dispose main-frame)))
+    (listen main-frame :window-closing
+            (fn [_]
+              (async/>!! (:send-chan @event-agent)
+                         [:closed])
+              (.dispose main-frame)))
 
     (listen header-tree :selection
             (fn [e]
@@ -59,7 +60,7 @@
                       event-state @event-agent
                       text-map (:text-event-map event-state)
                       event (get text-map selected-id)]
-                  (text! article-area (format-article event-state event))))))
+                  (text! article-area (formatters/format-article event-state event))))))
 
     (listen reply-button :action
             (fn [_]
@@ -72,89 +73,8 @@
                                    :north (scrollable header-tree)
                                    :center (scrollable article-area)
                                    :south (flow-panel :items [reply-button create-button])))
-    (.setModel header-tree (DefaultTreeModel. (DefaultMutableTreeNode. "hi")))
+    (show! main-frame)))
 
-    (show! main-frame)
-    ))
-
-(defn clear-tree [tree]
-  (let [model (config tree :model)
-        root (.getRoot model)
-        count (.getChildCount root)]
-    (dotimes [_ (dec count)]
-      (let [child (.getChild model root 0)]
-        (prn 'child child)
-        (.removeNodeFromParent model child)))
-    )
-  )
-
-(defn make-edit-window [kind event-agent header-tree]
-  (let [reply? (= kind :reply)
-        event-state @event-agent
-        edit-frame (frame :title (name kind)
-                          :size [1000 :by 500]
-                          :on-close :dispose)
-        edit-area (text :multi-line? true
-                        :font config/default-font)
-        send-button (button :text "Send")
-        event-map (:text-event-map event-state)
-        selected-id (if reply? (last (selection header-tree)) nil)
-        event (if reply? (get event-map selected-id) nil)
-        ]
-    (listen send-button :action
-            (fn [_]
-              (let [message (text edit-area)]
-                (send-msg event-state event message))
-              (dispose! edit-frame)))
-    (text! edit-area
-           (if reply?
-             (prepend> (formatters/reformat-article (:content event) 80))
-             ""))
-    (config! edit-frame :content
-             (border-panel
-               :center (scrollable edit-area)
-               :south (flow-panel :items [send-button])))
-    (show! edit-frame)))
-
-(defn format-article [event-state {:keys [id pubkey created-at content]}]
-  (let [nicknames (:nicknames event-state)
-        time (formatters/format-time created-at)
-        name (get nicknames pubkey (util/num->hex-string pubkey))
-        name (formatters/abbreviate name 20)
-        article (formatters/reformat-article content 80)
-        formatted-id (formatters/abbreviate (util/num->hex-string id) 10)]
-    (format "%s %20s %s\n%s" time name formatted-id article))
-  )
-
-(declare has-children? get-children)
-
-(defn has-children? [event-state node]
-  (if (seqable? node)
-    true
-    (let [event-id node
-          event (get (:text-event-map event-state) event-id)
-          references (:references event)
-          ref-count (count references)]
-      (pos-int? ref-count))))
-
-(defn get-children [event-state node]
-  (if (seqable? node)
-    node
-    (let [event-id node
-          event-map (:text-event-map event-state)
-          event (get event-map event-id)
-          references (:references event)]
-      (sort-by #(:created-at (get event-map %)) references))))
-
-(defn format-event [nicknames {:keys [pubkey created-at content] :as event}]
-  (if (nil? event)
-    "nil"
-    (let [name (get nicknames pubkey (util/num->hex-string pubkey))
-          name (formatters/abbreviate name 20)
-          time (formatters/format-time created-at)
-          content (string/replace content \newline \~)
-          content (formatters/abbreviate content 50)]
-      (format "%20s %s %s\n" name time content))))
 
 (defn render-event [event-agent widget info]
   (config! widget :font config/default-font)
@@ -166,31 +86,36 @@
           node (:value info)
           event-id (.getUserObject node)
           event (get event-map event-id)]
-      (text! widget (format-event nicknames event)))
+      (text! widget (formatters/format-header nicknames event)))
     ))
 
-(defn prepend> [text]
-  (let [lines (string/split-lines text)
-        lines (map #(str ">" %) lines)]
-    (string/join "\n" lines)))
-
-(defn send-msg [event-state event message]
-  (let [private-key (get-in event-state [:keys :private-key])
-        private-key (ecc/hex-string->bytes private-key)
-        reply-to (:id event)
-        event (events/compose-text-event private-key message reply-to)
-        send-chan (:send-chan event-state)]
-    (async/>!! send-chan [:event event])))
-
-(defn add-event [event]
-  (let [frame (:frame @ui-context)
-        tree (select frame [:#header-tree])
-        ;model (config tree :model)
-        model (.getModel tree)
-        root (.getRoot model)
-        child-count (.getChildCount ^DefaultMutableTreeNode root)
-        child (DefaultMutableTreeNode. (:id event))]
-    (.insertNodeInto ^DefaultTreeModel model child root child-count)
-    (.makeVisible tree (TreePath. (.getPath child))))
-
-  )
+(defn make-edit-window [kind event-agent header-tree]
+  (let [reply? (= kind :reply)
+        event-state @event-agent
+        edit-frame (frame :title (name kind)
+                          :size [1000 :by 500]
+                          :on-close :dispose)
+        edit-area (text :multi-line? true
+                        :font config/default-font)
+        send-button (button :text "Send")
+        event-map (:text-event-map event-state)
+        selected-id (if reply?
+                      (.getUserObject (last (selection header-tree)))
+                      nil)
+        event (if reply?
+                (get event-map selected-id)
+                nil)]
+    (listen send-button :action
+            (fn [_]
+              (let [message (text edit-area)]
+                (events/send-msg event-state event message))
+              (dispose! edit-frame)))
+    (text! edit-area
+           (if reply?
+             (formatters/format-reply event)
+             ""))
+    (config! edit-frame :content
+             (border-panel
+               :center (scrollable edit-area)
+               :south (flow-panel :items [send-button])))
+    (show! edit-frame)))

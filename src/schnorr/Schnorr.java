@@ -80,12 +80,7 @@ public class Schnorr    {
         System.arraycopy(msg, 0, buf, 32 + pubkey.length, msg.length);
         BigInteger e = Util.bigIntFromBytes(Point.taggedHash("BIP0340/challenge", buf)).mod(Point.getn());
         Point R = Point.add(Point.mul(Point.getG(), s), Point.mul(P, Point.getn().subtract(e)));
-        if(R == null || !R.hasEvenY() || R.getX().compareTo(r) != 0)    {
-            return false;
-        }
-        else    {
-            return true;
-        }
+      return R != null && R.hasEvenY() && R.getX().compareTo(r) == 0;
     }
 
     public static byte[] genPubKey(byte[] secKey) throws Exception {

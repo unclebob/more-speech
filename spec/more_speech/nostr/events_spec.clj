@@ -3,6 +3,11 @@
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]))
 
+(defrecord event-handler-dummy []
+  event-handler
+  (handle-text-event [_ _event])
+  )
+
 (declare now event state)
 (describe "Processing Text events (Kind 1)"
   (with now (int (/ (System/currentTimeMillis) 1000)))
@@ -17,6 +22,7 @@
   (with state
         {:text-event-map {}
          :chronological-text-events (make-chronological-text-events)
+         :event-handler (->event-handler-dummy)
          }
         )
   (it "creates the map of text events by id"
