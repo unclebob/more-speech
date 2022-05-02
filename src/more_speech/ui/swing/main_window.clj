@@ -29,7 +29,7 @@
         child (DefaultMutableTreeNode. event-id)]
     (.insertNodeInto model child root child-count)
     (.makeVisible tree (TreePath. (.getPath child)))
-    ;(add-references root event)
+    (add-references root event)
     ))
 
 (defn add-references [root event]
