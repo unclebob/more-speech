@@ -16,7 +16,9 @@
   (events/handle-text-event [_handler event]
     (invoke-later (add-event event))))
 
-(def ui-context (atom nil))
+(def ui-context (atom {:frame nil
+                       :event-agent nil
+                       :node-map {}}))
 
 (declare find-header-node add-references)
 (defn add-event [event]
@@ -29,19 +31,26 @@
         child (DefaultMutableTreeNode. event-id)]
     (.insertNodeInto model child root child-count)
     (.makeVisible tree (TreePath. (.getPath child)))
-    (add-references root event)
+    (swap! ui-context update-in [:node-map event-id] conj child)
+    (add-references event)
     ))
 
-(defn add-references [root event]
+(defn add-reference [reference id]
+  (loop [nodes (get-in @ui-context [:node-map reference])]
+    (if (empty? nodes)
+      nil
+      (let [node (first nodes)
+            child (DefaultMutableTreeNode. id)]
+        (.add ^DefaultMutableTreeNode node child)
+        (swap! ui-context update-in [:node-map id] conj child)
+        (recur (rest nodes))))))
+
+(defn add-references [event]
   (loop [references (events/get-references event)]
     (if (empty? references)
       nil
-      (let [reference (first references)
-            node (find-header-node root reference)]
-        (when (some? node)
-          (.add ^DefaultMutableTreeNode node
-                (DefaultMutableTreeNode. (:id event))))
-        (recur (rest references))))))
+      (do (add-reference (first references) (:id event))
+          (recur (rest references))))))
 
 (defn find-header-node [root id]
   (loop [children (enumeration-seq (.children root))]
@@ -81,7 +90,7 @@
         reply-button (button :text "Reply")
         create-button (button :text "Create")
         timer (Timer. 100 nil)]
-    (reset! ui-context {:frame main-frame :event-agent event-agent})
+    (swap! ui-context assoc :frame main-frame :event-agent event-agent)
 
     (listen timer :action timer-action)
 

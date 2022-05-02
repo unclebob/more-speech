@@ -1,4 +1,6 @@
 ;;Stories
+;; - e and p tags for text events
+;; - ping/pong heartbeat for web services
 ;; - validate incoming messages.
 ;; - Add author/date, etc. to replies.
 ;; - Start checking sdefs in update.

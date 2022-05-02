@@ -59,8 +59,9 @@
   (onBinary [_this _webSocket _data _last]
     (prn 'binary)
     )
-  (onPing [_this _webSocket _message]
+  (onPing [_this webSocket message]
     (prn 'ping)
+    (.sendPong webSocket message)
     )
   (onPong [_this _webSocket _message]
     (prn 'pong)
