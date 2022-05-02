@@ -1,4 +1,5 @@
 ;;Stories
+;; - validate incoming messages.
 ;; - Add author/date, etc. to replies.
 ;; - Start checking sdefs in update.
 ;; - Clean up java schnorr library.

@@ -33,7 +33,6 @@
   (agent {:chronological-text-events []
           :nicknames {}
           :text-event-map {}
-          :update false
           :keys keys
           :send-chan send-chan}))
 
@@ -58,12 +57,17 @@
       (do (prn "unknown event: " event)
           event-state))))
 
-(defn process-name-event [event-state {:strs [_id pubkey _created_at _kind _tags content _sig]}]
-  (let [pubkey (hex-string->num pubkey)
-        name (get (json/read-str content) "name" "tilt")]
-    (-> event-state
-        (update-in [:nicknames] assoc pubkey name)
-        (assoc :update true))))
+(defn process-name-event [event-state {:strs [_id pubkey _created_at _kind _tags content _sig] :as event}]
+  (try
+    (let [pubkey (hex-string->num pubkey)
+          name (get (json/read-str content) "name" "tilt")]
+      (-> event-state
+          (update-in [:nicknames] assoc pubkey name)
+          ))
+    (catch Exception e
+      (prn 'json-exception-process-name-event-ignored e)
+      (prn event)
+      event-state)))
 
 (defn process-tag [[type arg1 arg2]]
   [(keyword type) arg1 arg2])
@@ -71,11 +75,15 @@
 (defn process-tags [tags]
   (map process-tag tags))
 
-(defn process-references [state {:keys [id tags] :as _event}]
-  (let [e-tags (filter #(= :e (first %)) tags)
-        refs (map second e-tags)
-        refs (map hex-string->num (take 1 refs))            ;; Hack.  Only the first reference is counted.
-        ]
+(defn get-references [event]
+  (let [tags (:tags event)
+        e-tags (filter #(= :e (first %)) tags)
+          refs (map second e-tags)
+          refs (map hex-string->num refs)]
+    refs))
+
+(defn process-references [state event]
+  (let [refs (take 1 (get-references event))]  ;; Hack.  Only the first reference is counted.
     (loop [refs refs
            state state]
       (if (empty? refs)
@@ -87,7 +95,7 @@
                    (update-in
                      state
                      (concat referent-path [:references])
-                     conj id))))))))
+                     conj (:id event)))))))))
 
 (defn translate-text-event [event]
   (let [id (hex-string->num (get event "id"))
@@ -112,8 +120,7 @@
         handler (:event-handler event-state)
         event-state (-> event-state
                         (add-event event)
-                        (process-references event)
-                        (assoc :update true))]
+                        (process-references event))]
     (handle-text-event handler event)
     event-state)
   )

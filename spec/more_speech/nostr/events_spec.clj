@@ -5,7 +5,7 @@
 
 (defrecord event-handler-dummy []
   event-handler
-  (handle-text-event [_ _event])
+  (handle-text-event [_ _event-id])
   )
 
 (declare now event state)

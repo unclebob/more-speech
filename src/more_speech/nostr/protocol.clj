@@ -69,7 +69,7 @@
     (prn 'close statusCode reason)
     )
   (onError [_this _webSocket error]
-    (prn 'error)
+    (prn 'websocket-listener-error error)
     )
   )
 
