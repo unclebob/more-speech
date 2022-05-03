@@ -5,7 +5,8 @@
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
-           (java.net URI)))
+           (java.net URI)
+           ))
 
 (def relays ["wss://nostr-pub.wellorder.net"                ;*
              "wss://expensive-relay.fiatjaf.com"
@@ -62,9 +63,12 @@
   (onPing [_this webSocket message]
     (prn 'ping)
     (.sendPong webSocket message)
+    (.request webSocket 1)
+    (prn 'sent-pong)
     )
-  (onPong [_this _webSocket _message]
+  (onPong [_this webSocket _message]
     (prn 'pong)
+    (.request webSocket 1)
     )
   (onClose [_this _webSocket statusCode reason]
     (prn 'close statusCode reason)
