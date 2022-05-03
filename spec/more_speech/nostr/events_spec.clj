@@ -3,6 +3,9 @@
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]))
 
+(defn hexify [n]
+  (->> n (ecc/num->bytes 32) ecc/bytes->hex-string))
+
 (defrecord event-handler-dummy []
   event-handler
   (handle-text-event [_ _event-id])
@@ -88,10 +91,11 @@
 
 (describe "Composing outgoing events"
   (it "composes an original message."
-    (let [private-key (ecc/num->bytes 64 42)
+    (let [private-key (ecc/num->bytes 64 314159)
+          event-state {:keys {:private-key (ecc/bytes->hex-string private-key)}}
           public-key (ecc/get-pub-key private-key)
           text "message text"
-          event (compose-text-event private-key text)
+          event (compose-text-event event-state text)
           {:keys [pubkey created_at kind tags content id sig]} (second event)
           now (quot (System/currentTimeMillis) 1000)]
       (should= "EVENT" (first event))
@@ -104,19 +108,46 @@
                              public-key
                              (ecc/hex-string->bytes sig)))))
 
-  (it "composes a reply."
+  (it "composes a reply to a root article."
     (let [private-key (ecc/num->bytes 64 42)
+          reply-to 7734
+          reply-to-hex (->> reply-to (ecc/num->bytes 32) ecc/bytes->hex-string)
+          event-state {:keys {:private-key (ecc/bytes->hex-string private-key)}
+                       :text-event-map {reply-to {:tags []}}}
           public-key (ecc/get-pub-key private-key)
-          reply-to (ecc/num->bytes 32 7734)
           text "message text"
-          event (compose-text-event private-key text reply-to)
+          event (compose-text-event event-state text reply-to)
           {:keys [pubkey created_at kind tags content id sig]} (second event)
           now (quot (System/currentTimeMillis) 1000)]
       (should= "EVENT" (first event))
       (should= (ecc/bytes->hex-string public-key) pubkey)
       (should (<= 0 (- now created_at) 1))                  ;within one second.
       (should= 1 kind)
-      (should= [[:e (ecc/bytes->hex-string reply-to)]] tags)
+      (should= [[:e reply-to-hex]] tags)
+      (should= text content)
+      (should (ecc/do-verify (ecc/hex-string->bytes id)
+                             public-key
+                             (ecc/hex-string->bytes sig)))))
+
+  (it "composes a reply to a non-root article."
+    (let [private-key (ecc/num->bytes 64 42)
+          reply-to-child 7734
+          reply-to-hex (->> reply-to-child (ecc/num->bytes 32) ecc/bytes->hex-string)
+          root 1952
+          root-hex (->> root (ecc/num->bytes 32) ecc/bytes->hex-string)
+          event-state {:keys {:private-key (ecc/bytes->hex-string private-key)}
+                       :text-event-map {reply-to-child {:tags [[:e root-hex]]}
+                                        root {:tags []}}}
+          public-key (ecc/get-pub-key private-key)
+          text "message text"
+          event (compose-text-event event-state text reply-to-child)
+          {:keys [pubkey created_at kind tags content id sig]} (second event)
+          now (quot (System/currentTimeMillis) 1000)]
+      (should= "EVENT" (first event))
+      (should= (ecc/bytes->hex-string public-key) pubkey)
+      (should (<= 0 (- now created_at) 1))                  ;within one second.
+      (should= 1 kind)
+      (should= [[:e root-hex] [:e reply-to-hex]] tags)
       (should= text content)
       (should (ecc/do-verify (ecc/hex-string->bytes id)
                              public-key
@@ -124,10 +155,10 @@
 
   (it "composes a message with a slash."
     (let [private-key (ecc/num->bytes 64 42)
+          event-state {:keys {:private-key (ecc/bytes->hex-string private-key)}}
           public-key (ecc/get-pub-key private-key)
-          reply-to nil
           text "message/text"
-          event (compose-text-event private-key text reply-to)
+          event (compose-text-event event-state text)
           {:keys [pubkey created_at kind tags content id sig]} (second event)
           now (quot (System/currentTimeMillis) 1000)]
       (should= "EVENT" (first event))
@@ -139,6 +170,41 @@
       (should (ecc/do-verify (ecc/hex-string->bytes id)
                              public-key
                              (ecc/hex-string->bytes sig)))))
+  )
+
+(describe "get references"
+  (it "given no tags, finds no references"
+    (let [event {:tags []}
+          [root mentions referent] (get-references event)]
+      (should-be-nil root)
+      (should= [] mentions)
+      (should-be-nil referent)))
+
+  (it "given one tag, finds only the referent"
+      (let [event {:tags [[:e (hexify 1)]]}
+            [root mentions referent] (get-references event)]
+        (should-be-nil root)
+        (should= [] mentions)
+        (should= 1 referent)))
+
+  (it "given two tags, finds root and referent"
+      (let [event {:tags [[:e (hexify 1)]
+                          [:e (hexify 2)]]}
+            [root mentions referent] (get-references event)]
+        (should= 1 root)
+        (should= [] mentions)
+        (should= 2 referent)))
+
+  (it "given n>2 tags, finds root and referent"
+      (let [event {:tags [[:e (hexify 1)]
+                          [:e (hexify 2)]
+                          [:e (hexify 3)]
+                          [:e (hexify 4)]
+                          [:e (hexify 5)]]}
+            [root mentions referent] (get-references event)]
+        (should= 1 root)
+        (should= [2 3 4] mentions)
+        (should= 5 referent)))
   )
 
 (describe "json"

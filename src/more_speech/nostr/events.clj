@@ -78,24 +78,24 @@
 (defn get-references [event]
   (let [tags (:tags event)
         e-tags (filter #(= :e (first %)) tags)
-          refs (map second e-tags)
-          refs (map hex-string->num refs)]
-    refs))
+        refs (map second e-tags)
+        refs (map hex-string->num refs)
+        root (if (< (count refs) 2) nil (first refs))
+        referent (last refs)
+        mentions (drop-last (rest refs))]
+    [root mentions referent]))
 
 (defn process-references [state event]
-  (let [refs (take 1 (get-references event))]  ;; Hack.  Only the first reference is counted.
-    (loop [refs refs
-           state state]
-      (if (empty? refs)
-        state
-        (let [referent-path [:text-event-map (first refs)]]
-          (if (nil? (get-in state referent-path))
-            (recur (rest refs) state)
-            (recur (rest refs)
-                   (update-in
-                     state
-                     (concat referent-path [:references])
-                     conj (:id event)))))))))
+  (let [[_ _ referent] (get-references event)]
+    (if (nil? referent)
+      state
+      (let [referent-path [:text-event-map referent]]
+        (if (nil? (get-in state referent-path))
+          state
+          (update-in
+            state
+            (concat referent-path [:references])
+            conj (:id event)))))))
 
 (defn translate-text-event [event]
   (let [id (hex-string->num (get event "id"))
@@ -141,17 +141,18 @@
     id)
   )
 
-(declare make-reply-tag)
+(declare make-reply-tags get-reply-root)
 
 (defn compose-text-event
-  ([private-key text]
-   (compose-text-event private-key text nil))
+  ([event-state text]
+   (compose-text-event event-state text nil))
 
-  ([private-key text reply-to]
-   (let [pubkey (ecc/get-pub-key private-key)
-         tags (if (some? reply-to)
-                [(make-reply-tag reply-to)]
-                [])
+  ([event-state text reply-to-or-nil]
+   (let [private-key (get-in event-state [:keys :private-key])
+         private-key (ecc/hex-string->bytes private-key)
+         pubkey (ecc/get-pub-key private-key)
+         root (get-reply-root event-state reply-to-or-nil)
+         tags (make-reply-tags reply-to-or-nil root)
          content text
          now (quot (System/currentTimeMillis) 1000)
          body {:pubkey (ecc/bytes->hex-string pubkey)
@@ -167,16 +168,36 @@
          ]
      ["EVENT" event])))
 
-(defn make-reply-tag [reply-to]
-  (let [reply-to (ecc/num->bytes 32 reply-to)
-        reply-to (ecc/bytes->hex-string reply-to)]
-    [:e reply-to])
+(defn get-reply-root [event-state reply-to-or-nil]
+  (if (nil? reply-to-or-nil)
+    nil
+    (loop [parent-id reply-to-or-nil
+           event-map (:text-event-map event-state)]
+      (let [event (get event-map parent-id)
+            [_ _ referent] (get-references event)]
+        (if (nil? referent)
+          parent-id
+          (recur referent event-map)))))
   )
 
-(defn send-msg [event-state event message]
-  (let [private-key (get-in event-state [:keys :private-key])
-        private-key (ecc/hex-string->bytes private-key)
-        reply-to (:id event)
-        event (compose-text-event private-key message reply-to)
+(defn make-reply-tags
+  ([reply-to root]
+   (if (or (nil? root) (= root reply-to))
+     (make-reply-tags reply-to)
+     (let [root (->> root (ecc/num->bytes 32) (ecc/bytes->hex-string))
+           reply-to (->> reply-to (ecc/num->bytes 32) (ecc/bytes->hex-string))]
+       [[:e root] [:e reply-to]]))
+   )
+  ([reply-to]
+   (if (nil? reply-to)
+     []
+     (let [reply-to (->> reply-to (ecc/num->bytes 32) (ecc/bytes->hex-string))]
+       [[:e reply-to]]))
+   )
+  )
+
+(defn send-msg [event-state source-event-or-nil message]
+  (let [reply-to-or-nil (:id source-event-or-nil)
+        outgoing-event (compose-text-event event-state message reply-to-or-nil)
         send-chan (:send-chan event-state)]
-    (async/>!! send-chan [:event event])))
+    (async/>!! send-chan [:event outgoing-event])))

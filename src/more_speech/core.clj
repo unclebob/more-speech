@@ -1,5 +1,5 @@
 ;;Stories
-;; - e and p tags for text events
+;; - p tags for text events
 ;; - validate incoming messages.
 ;; - Add author/date, etc. to replies.
 ;; - Start checking sdefs in update.
@@ -11,7 +11,6 @@
 
 ;;Notes:
 ;; Nice debug site: https://nostr-army-knife.netlify.app
-
 
 (ns more-speech.core
   (:require [clojure.core.async :as async]

@@ -35,6 +35,11 @@
     (add-references event)
     ))
 
+;; at the moment an event can appear in several places in the tree.
+;; it can be in the reply chain of an event, and it can stand alone.
+;; The node-map holds the list of nodes that correspond to the id of
+;; an event.
+
 (defn add-reference [reference id]
   (loop [nodes (get-in @ui-context [:node-map reference])]
     (if (empty? nodes)
@@ -46,11 +51,10 @@
         (recur (rest nodes))))))
 
 (defn add-references [event]
-  (loop [references (events/get-references event)]
-    (if (empty? references)
+  (let [[_ _ referent] (events/get-references event)]
+    (if (nil? referent)
       nil
-      (do (add-reference (first references) (:id event))
-          (recur (rest references))))))
+      (add-reference referent (:id event)))))
 
 (defn find-header-node [root id]
   (loop [children (enumeration-seq (.children root))]
