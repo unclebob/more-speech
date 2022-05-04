@@ -3,9 +3,6 @@
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]))
 
-(defn hexify [n]
-  (->> n (ecc/num->bytes 32) ecc/bytes->hex-string))
-
 (defrecord event-handler-dummy []
   event-handler
   (handle-text-event [_ _event-id])
@@ -89,6 +86,7 @@
     )
   )
 
+
 (describe "Composing outgoing events"
   (it "composes an original message."
     (let [private-key (ecc/num->bytes 64 314159)
@@ -110,20 +108,22 @@
 
   (it "composes a reply to a root article."
     (let [private-key (ecc/num->bytes 64 42)
-          reply-to 7734
-          reply-to-hex (->> reply-to (ecc/num->bytes 32) ecc/bytes->hex-string)
+          root-id 7734
+          root-id-hex (hexify root-id)
+          root-author 99
           event-state {:keys {:private-key (ecc/bytes->hex-string private-key)}
-                       :text-event-map {reply-to {:tags []}}}
+                       :text-event-map {root-id {:pubkey root-author
+                                                 :tags []}}}
           public-key (ecc/get-pub-key private-key)
           text "message text"
-          event (compose-text-event event-state text reply-to)
+          event (compose-text-event event-state text root-id)
           {:keys [pubkey created_at kind tags content id sig]} (second event)
           now (quot (System/currentTimeMillis) 1000)]
       (should= "EVENT" (first event))
       (should= (ecc/bytes->hex-string public-key) pubkey)
       (should (<= 0 (- now created_at) 1))                  ;within one second.
       (should= 1 kind)
-      (should= [[:e reply-to-hex]] tags)
+      (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)
       (should= text content)
       (should (ecc/do-verify (ecc/hex-string->bytes id)
                              public-key
@@ -131,27 +131,47 @@
 
   (it "composes a reply to a non-root article."
     (let [private-key (ecc/num->bytes 64 42)
-          reply-to-child 7734
-          reply-to-hex (->> reply-to-child (ecc/num->bytes 32) ecc/bytes->hex-string)
-          root 1952
-          root-hex (->> root (ecc/num->bytes 32) ecc/bytes->hex-string)
+          root-child-id 7734
+          root-child-id-hex (hexify root-child-id)
+          root-child-author 88
+          root-id 1952
+          root-id-hex (hexify root-id)
+          root-author 99
           event-state {:keys {:private-key (ecc/bytes->hex-string private-key)}
-                       :text-event-map {reply-to-child {:tags [[:e root-hex]]}
-                                        root {:tags []}}}
+                       :text-event-map {root-child-id {:pubkey root-child-author
+                                                       :tags [[:e root-id-hex]
+                                                              [:p (hexify root-author)]]}
+                                        root-id {:pubkey root-author
+                                                 :tags []}}}
           public-key (ecc/get-pub-key private-key)
           text "message text"
-          event (compose-text-event event-state text reply-to-child)
+          event (compose-text-event event-state text root-child-id)
           {:keys [pubkey created_at kind tags content id sig]} (second event)
           now (quot (System/currentTimeMillis) 1000)]
       (should= "EVENT" (first event))
       (should= (ecc/bytes->hex-string public-key) pubkey)
       (should (<= 0 (- now created_at) 1))                  ;within one second.
       (should= 1 kind)
-      (should= [[:e root-hex] [:e reply-to-hex]] tags)
+      (should= [[:e root-id-hex] [:e root-child-id-hex]
+                [:p (hexify root-child-author)] [:p (hexify root-author)]] tags)
       (should= text content)
       (should (ecc/do-verify (ecc/hex-string->bytes id)
                              public-key
                              (ecc/hex-string->bytes sig)))))
+
+  (it "author is removed from replies"
+      (let [private-key (ecc/num->bytes 64 42)
+            author (ecc/bytes->num (ecc/get-pub-key private-key))
+            root-id 7734
+            root-id-hex (hexify root-id)
+            root-author 99
+            event-state {:keys {:private-key (ecc/bytes->hex-string private-key)}
+                         :text-event-map {root-id {:pubkey root-author
+                                                   :tags [[:p (hexify author)]]}}}
+            event (compose-text-event event-state "" root-id)
+            {:keys [tags]} (second event)]
+
+        (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)))
 
   (it "composes a message with a slash."
     (let [private-key (ecc/num->bytes 64 42)

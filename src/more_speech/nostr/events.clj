@@ -21,6 +21,8 @@
                                 ::sig
                                 ::tags
                                 ::references]))
+(defn hexify [n]
+  (ecc/num32->hex-string n))
 
 (defprotocol event-handler
   (handle-text-event [handler event])
@@ -141,7 +143,9 @@
     id)
   )
 
-(declare make-reply-tags get-reply-root)
+(declare make-event-reference-tags
+         make-people-reference-tags
+         get-reply-root)
 
 (defn compose-text-event
   ([event-state text]
@@ -152,7 +156,8 @@
          private-key (ecc/hex-string->bytes private-key)
          pubkey (ecc/get-pub-key private-key)
          root (get-reply-root event-state reply-to-or-nil)
-         tags (make-reply-tags reply-to-or-nil root)
+         tags (concat (make-event-reference-tags reply-to-or-nil root)
+                      (make-people-reference-tags event-state pubkey reply-to-or-nil))
          content text
          now (quot (System/currentTimeMillis) 1000)
          body {:pubkey (ecc/bytes->hex-string pubkey)
@@ -180,21 +185,31 @@
           (recur referent event-map)))))
   )
 
-(defn make-reply-tags
+(defn make-event-reference-tags
   ([reply-to root]
    (if (or (nil? root) (= root reply-to))
-     (make-reply-tags reply-to)
-     (let [root (->> root (ecc/num->bytes 32) (ecc/bytes->hex-string))
-           reply-to (->> reply-to (ecc/num->bytes 32) (ecc/bytes->hex-string))]
-       [[:e root] [:e reply-to]]))
-   )
+     (make-event-reference-tags reply-to)
+     [[:e (hexify root)] [:e (hexify reply-to)]]))
+
   ([reply-to]
    (if (nil? reply-to)
      []
-     (let [reply-to (->> reply-to (ecc/num->bytes 32) (ecc/bytes->hex-string))]
-       [[:e reply-to]]))
+     [[:e (hexify reply-to)]])
    )
   )
+
+(defn make-people-reference-tags [event-state pubkey reply-to-or-nil]
+  (if (nil? reply-to-or-nil)
+    []
+    (let [event-map (:text-event-map event-state)
+          parent-event-id reply-to-or-nil
+          parent-event (get event-map parent-event-id)
+          parent-tags (:tags parent-event)
+          people-ids (map second (filter #(= :p (first %)) parent-tags))
+          parent-author (:pubkey parent-event)
+          people-ids (conj people-ids (hexify parent-author))
+          people-ids (remove #(= (hexify pubkey) %) people-ids)]
+      (map #(vector :p %) people-ids))))
 
 (defn send-msg [event-state source-event-or-nil message]
   (let [reply-to-or-nil (:id source-event-or-nil)

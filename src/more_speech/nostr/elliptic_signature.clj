@@ -34,6 +34,9 @@
         byte-strings (map #(apply str (take-last 2 (format "%02x" %))) byte-seq)]
     (apply str (apply concat byte-strings))))
 
+(defn num32->hex-string [n]
+  (->> n (num->bytes 32) bytes->hex-string))
+
 (defn ^bytes hex-string->bytes
   "returns a byte-array containing the bytes described
   by the hex-string.  This is the inverse of bytes->hex-string."
