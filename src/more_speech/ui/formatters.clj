@@ -53,14 +53,5 @@
           content (abbreviate content 50)]
       (format "%20s %s %s\n" name time content))))
 
-(defn format-article [event-state {:keys [id pubkey created-at content]}]
-  (let [nicknames (:nicknames event-state)
-        time (format-time created-at)
-        name (format-user-id nicknames pubkey)
-        article (reformat-article content 80)
-        formatted-id (abbreviate (util/num->hex-string id) 10)]
-    (format "%s %20s %s\n%s" time name formatted-id article))
-  )
-
 (defn format-reply [event]
   (prepend> (reformat-article (:content event) 80)))

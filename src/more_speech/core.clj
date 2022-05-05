@@ -32,7 +32,7 @@
 (defn ^:export -main [& _args]
   (let [keys (read-string (slurp "private/keys"))
         event-agent (events/make-event-agent keys send-chan)
-        handler (swing/setup-jframe event-agent)
+        handler (swing/setup-main-window event-agent)
         ]
     (send event-agent set-event-handler handler)
     (protocol/get-events event-agent))

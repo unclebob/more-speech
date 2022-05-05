@@ -3,107 +3,41 @@
             [more-speech.ui.formatters :as formatters]
             [more-speech.nostr.events :as events]
             [more-speech.ui.config :as config]
-            [more-speech.nostr.elliptic-signature :as ecc])
+            [more-speech.ui.swing.article-tree :as article-tree])
   (:use [seesaw core font tree])
-  (:import [javax.swing.tree
-            DefaultMutableTreeNode
-            DefaultTreeModel
-            TreePath]
-           (javax.swing Timer)))
-
-(declare add-event)
-(defrecord seesawHandler []
-  events/event-handler
-  (events/handle-text-event [_handler event]
-    (invoke-later (add-event event))))
+  (:import (javax.swing Timer)))
 
 (def ui-context (atom {:frame nil
                        :event-agent nil
                        :node-map {}}))
 
-(declare find-header-node add-references)
-(defn add-event [event]
-  (let [frame (:frame @ui-context)
-        event-id (:id event)
-        tree (select frame [:#header-tree])
-        model (config tree :model)
-        root (.getRoot model)
-        child-count (.getChildCount root)
-        child (DefaultMutableTreeNode. event-id)]
-    (.insertNodeInto model child root child-count)
-    (.makeVisible tree (TreePath. (.getPath child)))
-    (swap! ui-context update-in [:node-map event-id] conj child)
-    (add-references event)
-    ))
+(defrecord seesawHandler []
+  events/event-handler
+  (events/handle-text-event [_handler event]
+    (invoke-later (article-tree/add-event ui-context event))))
 
-;; at the moment an event can appear in several places in the tree.
-;; it can be in the reply chain of an event, and it can stand alone.
-;; The node-map holds the list of nodes that correspond to the id of
-;; an event.
+(declare make-main-window)
 
-(defn add-reference [reference id]
-  (loop [nodes (get-in @ui-context [:node-map reference])]
-    (if (empty? nodes)
-      nil
-      (let [node (first nodes)
-            child (DefaultMutableTreeNode. id)]
-        (.add ^DefaultMutableTreeNode node child)
-        (swap! ui-context update-in [:node-map id] conj child)
-        (recur (rest nodes))))))
-
-(defn add-references [event]
-  (let [[_ _ referent] (events/get-references event)]
-    (if (nil? referent)
-      nil
-      (add-reference referent (:id event)))))
-
-(defn find-header-node [root id]
-  (loop [children (enumeration-seq (.children root))]
-    (let [child (first children)]
-      (cond
-        (empty? children)
-        nil
-
-        (= id (.getUserObject child))
-        child
-
-        :else
-        (let [found-child (find-header-node child id)]
-          (if (some? found-child)
-            found-child
-            (recur (rest children)))
-          ))
-      )))
-
-(declare display-jframe
-         render-event)
-(defn setup-jframe [event-agent]
-  (invoke-now (display-jframe event-agent))
+(defn setup-main-window [event-agent]
+  (invoke-now (make-main-window event-agent))
   (->seesawHandler))
 
 (declare make-edit-window
+         make-article-info-panel
+         make-article-area
+         make-control-panel
          timer-action)
-(defn display-jframe [event-agent]
+
+(defn make-main-window [event-agent]
   (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
-        article-info-panel (grid-panel :rows 2 :columns 2
-                                       :items [(label :id :author-id)
-                                               (label :id :created-at)
-                                               (label :id :reply-to)
-                                               (label :id :citing)])
-        article-area (text :multi-line? true
-                           :font config/default-font
-                           :editable? false)
-        header-tree (tree :renderer (partial render-event event-agent)
-                          :root-visible? false
-                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty"))
-                          :id :header-tree)
-        reply-button (button :text "Reply")
-        create-button (button :text "Create")
-        control-panel (flow-panel :items [reply-button create-button])
-        article-panel (border-panel :north article-info-panel
+        article-area (make-article-area)
+        header-tree (article-tree/make-article-tree event-agent main-frame)
+        article-panel (border-panel :north (make-article-info-panel)
                                     :center (scrollable article-area)
-                                    :south control-panel)
-        main-panel (top-bottom-split (scrollable header-tree) article-panel)
+                                    :south (make-control-panel event-agent header-tree))
+        main-panel (top-bottom-split
+                     (scrollable header-tree)
+                     article-panel)
         timer (Timer. 100 nil)]
     (config! main-frame :content main-panel)
     (swap! ui-context assoc :frame main-frame :event-agent event-agent)
@@ -117,57 +51,39 @@
                          [:closed])
               (.dispose main-frame)))
 
-    (listen header-tree :selection
-            (fn [e]
-              (when (last (selection e))
-                (let [selected-id (.getUserObject (last (selection e)))
-                      event-state @event-agent
-                      nicknames (:nicknames event-state)
-                      format-user (partial formatters/format-user-id nicknames)
-                      text-map (:text-event-map event-state)
-                      event (get text-map selected-id)
-                      [_ _ referent] (events/get-references event)
-                      reply-to (select main-frame [:#reply-to])
-                      citing (select main-frame [:#citing])]
-                  (text! article-area (formatters/format-article event-state event))
-                  (text! (select main-frame [:#author-id])
-                         (format-user (:pubkey event)))
-                  (text! (select main-frame [:#created-at])
-                         (formatters/format-time (:created-at event)))
-                  (if (some? referent)
-                    (let [replied-event (get text-map referent)]
-                      (text! reply-to (format-user (:pubkey replied-event)))
-                      (text! citing (formatters/abbreviate (ecc/num32->hex-string referent) 32)))
-                    (do (text! reply-to "")
-                        (text! citing "")))
-                  ))))
+    (show! main-frame)
+    (.start timer)))
 
+(defn make-article-info-panel []
+  (grid-panel
+    :rows 2 :columns 2
+    :items [(label :id :author-id)
+            (label :id :created-at)
+            (label :id :reply-to)
+            (label :id :citing)]))
+
+(defn make-article-area []
+  (text :multi-line? true
+        :font config/default-font
+        :editable? false
+        :id :article-area))
+
+(defn make-control-panel [event-agent header-tree]
+  (let [reply-button (button :text "Reply")
+        create-button (button :text "Create")]
     (listen reply-button :action
             (fn [_]
               (make-edit-window :reply event-agent header-tree)))
 
     (listen create-button :action
             (fn [_] (make-edit-window :send event-agent nil)))
-
-    (show! main-frame)
-    (.start timer)))
+    (flow-panel :items [reply-button create-button])))
 
 (defn timer-action [_]
   ;nothing for now.
   )
 
-(defn render-event [event-agent widget info]
-  (config! widget :font config/default-font)
-  (if (seqable? (:value info))
-    (text! widget "Articles")
-    (let [event-state @event-agent
-          nicknames (:nicknames event-state)
-          event-map (:text-event-map event-state)
-          node (:value info)
-          event-id (.getUserObject node)
-          event (get event-map event-id)]
-      (text! widget (formatters/format-header nicknames event)))
-    ))
+
 
 (defn make-edit-window [kind event-agent header-tree]
   (let [reply? (= kind :reply)
