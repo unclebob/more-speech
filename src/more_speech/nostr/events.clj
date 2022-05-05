@@ -77,7 +77,9 @@
 (defn process-tags [tags]
   (map process-tag tags))
 
-(defn get-references [event]
+(defn get-references
+  "returns [root mentions referent] as BigIntegers"
+  [event]
   (let [tags (:tags event)
         e-tags (filter #(= :e (first %)) tags)
         refs (map second e-tags)

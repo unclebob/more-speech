@@ -2,7 +2,8 @@
   (:require [clojure.core.async :as async]
             [more-speech.ui.formatters :as formatters]
             [more-speech.nostr.events :as events]
-            [more-speech.ui.config :as config])
+            [more-speech.ui.config :as config]
+            [more-speech.nostr.elliptic-signature :as ecc])
   (:use [seesaw core font tree])
   (:import [javax.swing.tree
             DefaultMutableTreeNode
@@ -84,6 +85,11 @@
          timer-action)
 (defn display-jframe [event-agent]
   (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
+        article-info-panel (grid-panel :rows 2 :columns 2
+                                       :items [(label :id :author-id)
+                                               (label :id :created-at)
+                                               (label :id :reply-to)
+                                               (label :id :citing)])
         article-area (text :multi-line? true
                            :font config/default-font
                            :editable? false)
@@ -93,7 +99,13 @@
                           :id :header-tree)
         reply-button (button :text "Reply")
         create-button (button :text "Create")
+        control-panel (flow-panel :items [reply-button create-button])
+        article-panel (border-panel :north article-info-panel
+                                    :center (scrollable article-area)
+                                    :south control-panel)
+        main-panel (top-bottom-split (scrollable header-tree) article-panel)
         timer (Timer. 100 nil)]
+    (config! main-frame :content main-panel)
     (swap! ui-context assoc :frame main-frame :event-agent event-agent)
 
     (listen timer :action timer-action)
@@ -110,9 +122,25 @@
               (when (last (selection e))
                 (let [selected-id (.getUserObject (last (selection e)))
                       event-state @event-agent
+                      nicknames (:nicknames event-state)
+                      format-user (partial formatters/format-user-id nicknames)
                       text-map (:text-event-map event-state)
-                      event (get text-map selected-id)]
-                  (text! article-area (formatters/format-article event-state event))))))
+                      event (get text-map selected-id)
+                      [_ _ referent] (events/get-references event)
+                      reply-to (select main-frame [:#reply-to])
+                      citing (select main-frame [:#citing])]
+                  (text! article-area (formatters/format-article event-state event))
+                  (text! (select main-frame [:#author-id])
+                         (format-user (:pubkey event)))
+                  (text! (select main-frame [:#created-at])
+                         (formatters/format-time (:created-at event)))
+                  (if (some? referent)
+                    (let [replied-event (get text-map referent)]
+                      (text! reply-to (format-user (:pubkey replied-event)))
+                      (text! citing (formatters/abbreviate (ecc/num32->hex-string referent) 32)))
+                    (do (text! reply-to "")
+                        (text! citing "")))
+                  ))))
 
     (listen reply-button :action
             (fn [_]
@@ -121,10 +149,6 @@
     (listen create-button :action
             (fn [_] (make-edit-window :send event-agent nil)))
 
-    (config! main-frame :content (border-panel
-                                   :north (scrollable header-tree)
-                                   :center (scrollable article-area)
-                                   :south (flow-panel :items [reply-button create-button])))
     (show! main-frame)
     (.start timer)))
 

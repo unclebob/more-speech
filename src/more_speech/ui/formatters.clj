@@ -39,11 +39,15 @@
         head
         (str head break-string (reformat-article tail width))))))
 
+(defn format-user-id [nicknames user-id]
+  (if (nil? user-id)
+    ""
+    (abbreviate (get nicknames user-id (util/num->hex-string user-id)) 20)))
+
 (defn format-header [nicknames {:keys [pubkey created-at content] :as event}]
   (if (nil? event)
     "nil"
-    (let [name (get nicknames pubkey (util/num->hex-string pubkey))
-          name (abbreviate name 20)
+    (let [name (format-user-id nicknames pubkey)
           time (format-time created-at)
           content (string/replace content \newline \~)
           content (abbreviate content 50)]
@@ -52,8 +56,7 @@
 (defn format-article [event-state {:keys [id pubkey created-at content]}]
   (let [nicknames (:nicknames event-state)
         time (format-time created-at)
-        name (get nicknames pubkey (util/num->hex-string pubkey))
-        name (abbreviate name 20)
+        name (format-user-id nicknames pubkey)
         article (reformat-article content 80)
         formatted-id (abbreviate (util/num->hex-string id) 10)]
     (format "%s %20s %s\n%s" time name formatted-id article))

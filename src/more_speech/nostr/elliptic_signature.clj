@@ -45,6 +45,11 @@
         byte-vector (map #(Integer/parseInt % 16) byte-strings)]
     (byte-array byte-vector)))
 
+(defn hex-string->num
+  "returns BigInteger from a hex string"
+  [hex-string]
+  (-> hex-string hex-string->bytes bytes->num))
+
 (defn bytes= [^bytes b1 ^bytes b2]
   (assert (= (alength b1) (alength b2)) "bytes= args not same size.")
   (loop [index 0]
