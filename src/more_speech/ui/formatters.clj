@@ -42,7 +42,7 @@
 (defn format-user-id [nicknames user-id]
   (if (nil? user-id)
     ""
-    (abbreviate (get nicknames user-id (util/num->hex-string user-id)) 20)))
+    (abbreviate (get nicknames user-id (util/num32->hex-string user-id)) 20)))
 
 (defn format-header [nicknames {:keys [pubkey created-at content] :as event}]
   (if (nil? event)

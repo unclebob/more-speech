@@ -1,9 +1,8 @@
 ;;Stories
-;; - validate incoming messages.
 ;; - Add author/date, etc. to replies.
 ;; - Start checking sdefs in update.
 ;; - Clean up java schnorr library.
-;; - Threading does not work quite right.  Do some diagnosis.
+;; - Threading needs some rethinking.
 ;; - Mark read and highlight properly.
 ;; - Save names and headers.  Request after latest save.
 ;; - Consider subject/topic in the tags

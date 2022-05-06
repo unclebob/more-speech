@@ -1,8 +1,8 @@
 (ns more-speech.ui.swing.article-tree
   (:require [more-speech.nostr.events :as events]
             [more-speech.ui.formatters :as formatters]
-            [more-speech.nostr.elliptic-signature :as ecc]
-            [more-speech.ui.config :as config])
+            [more-speech.ui.config :as config]
+            [more-speech.nostr.util :as util])
   (:use [seesaw core font tree])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -36,7 +36,7 @@
       (if (some? referent)
         (let [replied-event (get text-map referent)]
           (text! reply-to (format-user (:pubkey replied-event)))
-          (text! citing (formatters/abbreviate (ecc/num32->hex-string referent) 32)))
+          (text! citing (formatters/abbreviate (util/num32->hex-string referent) 32)))
         (do (text! reply-to "")
             (text! citing "")))
       )))

@@ -3,7 +3,8 @@
             [clojure.data.json :as json]
             [more-speech.nostr.util :refer [hex-string->num]]
             [more-speech.nostr.elliptic-signature :as ecc]
-            [clojure.core.async :as async])
+            [clojure.core.async :as async]
+            [more-speech.nostr.util :as util])
   (:import (java.nio.charset StandardCharsets)))
 
 (s/def ::id number?)
@@ -22,7 +23,7 @@
                                 ::tags
                                 ::references]))
 (defn hexify [n]
-  (ecc/num32->hex-string n))
+  (util/num32->hex-string n))
 
 (defprotocol event-handler
   (handle-text-event [handler event])
@@ -44,20 +45,27 @@
 (defn process-event [{:keys [nicknames] :as event-state} event]
   (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
         [_name _subscription-id inner-event :as _decoded-msg] event
-        {:strs [_id _pubkey _created_at kind _tags _content _sig]} inner-event]
-    (condp = kind
-      0 (process-name-event event-state inner-event)
-      3 (do
-          ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
-          event-state)
-      1 (do
-          ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) (subs content 0 (min 50 (count content))))
-          (process-text-event event-state inner-event))
-      4 (do
-          ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
-          event-state)
-      (do (prn "unknown event: " event)
-          event-state))))
+        {:strs [id pubkey _created_at kind _tags _content sig]} inner-event
+        valid? (ecc/do-verify (util/hex-string->bytes id)
+                              (util/hex-string->bytes pubkey)
+                              (util/hex-string->bytes sig))]
+    (if (not valid?)
+      (do
+        (prn 'signature-verification-failed event)
+        event-state)
+      (condp = kind
+        0 (process-name-event event-state inner-event)
+        3 (do
+            ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
+            event-state)
+        1 (do
+            ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) (subs content 0 (min 50 (count content))))
+            (process-text-event event-state inner-event))
+        4 (do
+            ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
+            event-state)
+        (do (prn "unknown event: " event)
+            event-state)))))
 
 (defn process-name-event [event-state {:strs [_id pubkey _created_at _kind _tags content _sig] :as event}]
   (try
@@ -141,7 +149,7 @@
   "returns byte array of id given the clojure form of the body"
   [{:keys [pubkey created_at kind tags content]}]
   (let [id-event (to-json [0 pubkey created_at kind tags content])
-        id (ecc/sha-256 (.getBytes id-event StandardCharsets/UTF_8))]
+        id (util/sha-256 (.getBytes id-event StandardCharsets/UTF_8))]
     id)
   )
 
@@ -155,23 +163,23 @@
 
   ([event-state text reply-to-or-nil]
    (let [private-key (get-in event-state [:keys :private-key])
-         private-key (ecc/hex-string->bytes private-key)
+         private-key (util/hex-string->bytes private-key)
          pubkey (ecc/get-pub-key private-key)
          root (get-reply-root event-state reply-to-or-nil)
          tags (concat (make-event-reference-tags reply-to-or-nil root)
                       (make-people-reference-tags event-state pubkey reply-to-or-nil))
          content text
          now (quot (System/currentTimeMillis) 1000)
-         body {:pubkey (ecc/bytes->hex-string pubkey)
+         body {:pubkey (util/bytes->hex-string pubkey)
                :created_at now
                :kind 1
                :tags tags
                :content content}
          id (make-id body)
-         aux-rand (ecc/num->bytes 32 (biginteger (System/currentTimeMillis)))
+         aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
          signature (ecc/do-sign id private-key aux-rand)
-         event (assoc body :id (ecc/bytes->hex-string id)
-                           :sig (ecc/bytes->hex-string signature))
+         event (assoc body :id (util/bytes->hex-string id)
+                           :sig (util/bytes->hex-string signature))
          ]
      ["EVENT" event])))
 
