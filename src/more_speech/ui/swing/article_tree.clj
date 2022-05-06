@@ -11,34 +11,49 @@
 (defn make-article-tree [event-agent main-frame]
   (let [header-tree (tree :renderer (partial render-event event-agent)
                           :root-visible? false
+                          :expands-selected-paths? true
                           :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty"))
                           :id :header-tree)]
     (listen header-tree :selection (partial select-article event-agent main-frame))
     header-tree))
 
 (defn select-article [event-agent main-frame e]
-  (when (last (selection e))
-    (let [selected-id (.getUserObject (last (selection e)))
+  (when (and
+          (some? (last (selection e)))
+          (instance? DefaultMutableTreeNode (last (selection e))))
+    (let [selected-node (last (selection e))
+          selected-id (.getUserObject selected-node)
           event-state @event-agent
           nicknames (:nicknames event-state)
           format-user (partial formatters/format-user-id nicknames)
           text-map (:text-event-map event-state)
           event (get text-map selected-id)
-          [_ _ referent] (events/get-references event)
-          reply-to (select main-frame [:#reply-to])
-          citing (select main-frame [:#citing])
+          [root-id _ referent] (events/get-references event)
+          reply-to (select main-frame [:#reply-to-label])
+          citing (select main-frame [:#citing-label])
+          root-label (select main-frame [:#root-label])
           article-area (select main-frame [:#article-area])]
       (text! article-area (formatters/reformat-article (:content event) 80))
-      (text! (select main-frame [:#author-id])
+      (text! (select main-frame [:#author-id-label])
              (format-user (:pubkey event)))
-      (text! (select main-frame [:#created-at])
+      (text! (select main-frame [:#created-time-label])
              (formatters/format-time (:created-at event)))
+      (config! (select main-frame [:#id-label])
+               :user-data (:id event)
+               :text (formatters/abbreviate (util/num32->hex-string (:id event)) 30))
       (if (some? referent)
         (let [replied-event (get text-map referent)]
           (text! reply-to (format-user (:pubkey replied-event)))
-          (text! citing (formatters/abbreviate (util/num32->hex-string referent) 32)))
+          (config! citing
+                   :user-data referent
+                   :text (formatters/abbreviate (util/num32->hex-string referent) 30)))
         (do (text! reply-to "")
             (text! citing "")))
+      (if (some? root-id)
+        (config! root-label
+                 :user-data root-id
+                 :text (formatters/abbreviate (util/num32->hex-string root-id) 30))
+        (text! root-label ""))
       )))
 
 (defn render-event [event-agent widget info]
@@ -104,3 +119,15 @@
             (recur (rest children)))
           ))
       )))
+
+(defn id-click [ui-context id]
+  (let [frame (:frame @ui-context)
+        tree (select frame [:#header-tree])
+        model (config tree :model)
+        root-node (.getRoot model)
+        node (find-header-node root-node id)]
+    (when (some? node)
+      (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]
+        (.setSelectionPath tree tree-path)
+        (.scrollPathToVisible tree tree-path)
+        ))))

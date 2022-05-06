@@ -46,9 +46,11 @@
   (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
         [_name _subscription-id inner-event :as _decoded-msg] event
         {:strs [id pubkey _created_at kind _tags _content sig]} inner-event
-        valid? (ecc/do-verify (util/hex-string->bytes id)
-                              (util/hex-string->bytes pubkey)
-                              (util/hex-string->bytes sig))]
+        ;valid? (ecc/do-verify (util/hex-string->bytes id)
+        ;                      (util/hex-string->bytes pubkey)
+        ;                      (util/hex-string->bytes sig))
+        valid? true
+        ]
     (if (not valid?)
       (do
         (prn 'signature-verification-failed event)
