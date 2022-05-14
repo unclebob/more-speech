@@ -3,7 +3,8 @@
             [more-speech.ui.formatters :as formatters]
             [more-speech.nostr.events :as events]
             [more-speech.ui.config :as config]
-            [more-speech.ui.swing.article-tree :as article-tree])
+            [more-speech.ui.swing.article-tree :as article-tree]
+            [more-speech.nostr.protocol :as protocol])
   (:use [seesaw core font tree])
   (:import (javax.swing Timer)))
 
@@ -26,17 +27,21 @@
          make-article-info-panel
          make-article-area
          make-control-panel
+         make-relay-panel
          timer-action)
 
 (defn make-main-window [event-agent]
   (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
         article-area (make-article-area)
         header-tree (article-tree/make-article-tree event-agent main-frame)
+        relay-panel (make-relay-panel)
+        header-panel (left-right-split (scrollable relay-panel)
+                                       (scrollable header-tree))
         article-panel (border-panel :north (make-article-info-panel)
                                     :center (scrollable article-area)
                                     :south (make-control-panel event-agent header-tree))
         main-panel (top-bottom-split
-                     (scrollable header-tree)
+                     header-panel
                      article-panel)
         timer (Timer. 100 nil)]
     (config! main-frame :content main-panel)
@@ -56,6 +61,10 @@
 
 (defn id-click [e]
   (article-tree/id-click ui-context (config e :user-data)))
+
+(defn make-relay-panel []
+  (let [relay-panel (listbox :model protocol/relays)]
+    relay-panel))
 
 (defn make-article-info-panel []
   (let [author-id-label (label :id :author-id-label)
