@@ -7,7 +7,7 @@
 (defn format-time [time]
   (let [time (* time 1000)
         date (Date. (long time))]
-    (.format (SimpleDateFormat. "yy MMM dd kk:mm:ss") date))
+    (.format (SimpleDateFormat. "MM/dd/yy kk:mm:ss") date))
   )
 
 (defn abbreviate [s n]

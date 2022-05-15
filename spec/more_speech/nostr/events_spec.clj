@@ -27,7 +27,7 @@
          }
         )
   (it "creates the map of text events by id"
-    (let [state (process-text-event @state @event)
+    (let [state (process-text-event @state @event "url")
           event-map (get-in state [:text-event-map])
           text-events (get-in state [:chronological-text-events])
           event (get event-map 0xdeadbeef :not-in-map)]
@@ -40,6 +40,7 @@
       (should= @now (:created-at event))
       (should= "the content" (:content event))
       (should= 0xdddddd (:sig event))
+      (should= ["url"] (:relays event))
       (should= [[:p "0001" "someurl"]
                 [:e "0002" "anotherurl"]] (:tags event))))
 
@@ -55,33 +56,36 @@
 
   (context "sorted set for handling events"
     (it "adds one element"
-      (let [state (add-event @state {:id 10 :created-at 0})]
+      (let [state (add-event @state {:id 10 :created-at 0} "url")]
         (should= #{[10 0]} (get-in state [:chronological-text-events]))
-        (should= {10 {:id 10 :created-at 0}} (get-in state [:text-event-map]))))
+        (should= {10 {:id 10 :created-at 0 :relays ["url"]}} (get-in state [:text-event-map]))))
 
     (it "adds two elements in chronological order, should be reversed"
-      (let [state (add-event @state {:id 10 :created-at 0})
-            state (add-event state {:id 20 :created-at 1})
+      (let [state (add-event @state {:id 10 :created-at 0} "url")
+            state (add-event state {:id 20 :created-at 1} "url")
             ]
         (should= [[20 1] [10 0]] (seq (get-in state [:chronological-text-events])))
-        (should= {10 {:id 10 :created-at 0}
-                  20 {:id 20 :created-at 1}} (get-in state [:text-event-map])))
+        (should= {10 {:id 10 :created-at 0 :relays ["url"]}
+                  20 {:id 20 :created-at 1 :relays ["url"]}} (get-in state [:text-event-map])))
       )
     (it "adds two elements in reverse chronological order, should remain."
-      (let [state (add-event @state {:id 10 :created-at 1})
-            state (add-event state {:id 20 :created-at 0})
+      (let [state (add-event @state {:id 10 :created-at 1} "url")
+            state (add-event state {:id 20 :created-at 0} "url")
             ]
         (should= [[10 1] [20 0]] (seq (get-in state [:chronological-text-events])))
-        (should= {10 {:id 10 :created-at 1}
-                  20 {:id 20 :created-at 0}} (get-in state [:text-event-map])))
+        (should= {10 {:id 10 :created-at 1 :relays ["url"]}
+                  20 {:id 20 :created-at 0 :relays ["url"]}}
+                 (get-in state [:text-event-map])))
       )
 
-    (it "adds two elements with equal ids"
-      (let [state (add-event @state {:id 10 :created-at 1})
-            state (add-event state {:id 10 :created-at 0})
-            event-map (get-in state [:text-event-map])]
+    (it "adds two elements with equal ids from two different relays"
+      (let [state (add-event @state {:id 10 :created-at 1} "url1")
+            state (add-event state {:id 10 :created-at 0} "url2")
+            event-map (get-in state [:text-event-map])
+            event (get event-map 10)]
         (should= [[10 1]] (seq (get-in state [:chronological-text-events])))
         (should= 1 (count event-map))
+        (should= ["url1" "url2"] (:relays event))
         )
       )
     )
@@ -104,8 +108,8 @@
       (should= [] tags)
       (should= text content)
       (should (do-verify (hex-string->bytes id)
-                             public-key
-                             (hex-string->bytes sig)))))
+                         public-key
+                         (hex-string->bytes sig)))))
 
   (it "composes a reply to a root article."
     (let [private-key (num->bytes 64 42)
@@ -127,8 +131,8 @@
       (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)
       (should= text content)
       (should (do-verify (hex-string->bytes id)
-                             public-key
-                             (hex-string->bytes sig)))))
+                         public-key
+                         (hex-string->bytes sig)))))
 
   (it "composes a reply to a non-root article."
     (let [private-key (num->bytes 64 42)
@@ -157,22 +161,22 @@
                 [:p (hexify root-child-author)] [:p (hexify root-author)]] tags)
       (should= text content)
       (should (do-verify (hex-string->bytes id)
-                             public-key
-                             (hex-string->bytes sig)))))
+                         public-key
+                         (hex-string->bytes sig)))))
 
   (it "author is removed from replies"
-      (let [private-key (num->bytes 64 42)
-            author (bytes->num (get-pub-key private-key))
-            root-id 7734
-            root-id-hex (hexify root-id)
-            root-author 99
-            event-state {:keys {:private-key (bytes->hex-string private-key)}
-                         :text-event-map {root-id {:pubkey root-author
-                                                   :tags [[:p (hexify author)]]}}}
-            event (compose-text-event event-state "" root-id)
-            {:keys [tags]} (second event)]
+    (let [private-key (num->bytes 64 42)
+          author (bytes->num (get-pub-key private-key))
+          root-id 7734
+          root-id-hex (hexify root-id)
+          root-author 99
+          event-state {:keys {:private-key (bytes->hex-string private-key)}
+                       :text-event-map {root-id {:pubkey root-author
+                                                 :tags [[:p (hexify author)]]}}}
+          event (compose-text-event event-state "" root-id)
+          {:keys [tags]} (second event)]
 
-        (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)))
+      (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)))
 
   (it "composes a message with a slash."
     (let [private-key (num->bytes 64 42)
@@ -189,8 +193,8 @@
       (should= [] tags)
       (should= text content)
       (should (do-verify (hex-string->bytes id)
-                             public-key
-                             (hex-string->bytes sig)))))
+                         public-key
+                         (hex-string->bytes sig)))))
   )
 
 (describe "get references"
@@ -202,30 +206,30 @@
       (should-be-nil referent)))
 
   (it "given one tag, finds only the referent"
-      (let [event {:tags [[:e (hexify 1)]]}
-            [root mentions referent] (get-references event)]
-        (should-be-nil root)
-        (should= [] mentions)
-        (should= 1 referent)))
+    (let [event {:tags [[:e (hexify 1)]]}
+          [root mentions referent] (get-references event)]
+      (should-be-nil root)
+      (should= [] mentions)
+      (should= 1 referent)))
 
   (it "given two tags, finds root and referent"
-      (let [event {:tags [[:e (hexify 1)]
-                          [:e (hexify 2)]]}
-            [root mentions referent] (get-references event)]
-        (should= 1 root)
-        (should= [] mentions)
-        (should= 2 referent)))
+    (let [event {:tags [[:e (hexify 1)]
+                        [:e (hexify 2)]]}
+          [root mentions referent] (get-references event)]
+      (should= 1 root)
+      (should= [] mentions)
+      (should= 2 referent)))
 
   (it "given n>2 tags, finds root and referent"
-      (let [event {:tags [[:e (hexify 1)]
-                          [:e (hexify 2)]
-                          [:e (hexify 3)]
-                          [:e (hexify 4)]
-                          [:e (hexify 5)]]}
-            [root mentions referent] (get-references event)]
-        (should= 1 root)
-        (should= [2 3 4] mentions)
-        (should= 5 referent)))
+    (let [event {:tags [[:e (hexify 1)]
+                        [:e (hexify 2)]
+                        [:e (hexify 3)]
+                        [:e (hexify 4)]
+                        [:e (hexify 5)]]}
+          [root mentions referent] (get-references event)]
+      (should= 1 root)
+      (should= [2 3 4] mentions)
+      (should= 5 referent)))
   )
 
 (describe "json"

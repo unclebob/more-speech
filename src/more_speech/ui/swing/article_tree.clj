@@ -32,6 +32,7 @@
           reply-to (select main-frame [:#reply-to-label])
           citing (select main-frame [:#citing-label])
           root-label (select main-frame [:#root-label])
+          relays-label (select main-frame [:#relays-label])
           article-area (select main-frame [:#article-area])]
       (text! article-area (formatters/reformat-article (:content event) 80))
       (text! (select main-frame [:#author-id-label])
@@ -54,6 +55,7 @@
                  :user-data root-id
                  :text (formatters/abbreviate (util/num32->hex-string root-id) 30))
         (text! root-label ""))
+      (text! relays-label (pr-str (count (:relays event)) (first (:relays event))))
       )))
 
 (defn render-event [event-agent widget info]

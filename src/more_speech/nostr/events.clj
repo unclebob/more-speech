@@ -42,7 +42,7 @@
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
-(defn process-event [{:keys [nicknames] :as event-state} event]
+(defn process-event [{:keys [nicknames] :as event-state} event url]
   (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
         [_name _subscription-id inner-event :as _decoded-msg] event
         {:strs [id pubkey _created_at kind _tags _content sig]} inner-event
@@ -62,7 +62,7 @@
             event-state)
         1 (do
             ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) (subs content 0 (min 50 (count content))))
-            (process-text-event event-state inner-event))
+            (process-text-event event-state inner-event url))
         4 (do
             ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             event-state)
@@ -77,7 +77,7 @@
           (update-in [:nicknames] assoc pubkey name)
           ))
     (catch Exception e
-      (prn 'json-exception-process-name-event-ignored e)
+      (prn 'json-exception-process-name-event-ignored (.getMessage e))
       (prn event)
       event-state)))
 
@@ -122,20 +122,25 @@
      :sig sig
      :tags (process-tags (get event "tags"))}))
 
-(defn add-event [event-state event]
+(defn add-event [event-state event url]
   (let [id (:id event)
         time (:created-at event)]
-    (-> event-state
-        (assoc-in [:text-event-map id] event)
-        (update-in [:chronological-text-events] conj [id time]))))
+    (if (contains? (:text-event-map event-state) id)
+      (update-in event-state [:text-event-map id :relays] conj url)
+      (-> event-state
+          (assoc-in [:text-event-map id] event)
+          (assoc-in [:text-event-map id :relays] [url])
+          (update-in [:chronological-text-events] conj [id time])
+          (process-references event)))))
 
-(defn process-text-event [event-state event]
+(defn process-text-event [event-state event url]
   (let [event (translate-text-event event)
-        handler (:event-handler event-state)
-        event-state (-> event-state
-                        (add-event event)
-                        (process-references event))]
-    (handle-text-event handler event)
+        id (:id event)
+        dup? (contains? (:text-event-map event-state) id)
+        ui-handler (:event-handler event-state)
+        event-state (add-event event-state event url)]
+    (when (not dup?)
+      (handle-text-event ui-handler event))
     event-state)
   )
 

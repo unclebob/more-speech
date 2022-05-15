@@ -72,17 +72,19 @@
         reply-to-label (label :id :reply-to-label)
         id-label (label :id :id-label)
         citing-label (label :id :citing-label)
-        root-label (label :id :root-label)]
+        root-label (label :id :root-label)
+        relays-label (label :id :relays-label)]
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
     (grid-panel
-      :rows 2 :columns 3
+      :rows 3 :columns 3
       :items [(flow-panel :align :left :items [(label "author:") author-id-label])
               (flow-panel :align :left :items [(label "created at:") created-time-label])
               (flow-panel :align :left :items [(label "reply to:") reply-to-label])
               (flow-panel :align :left :items [(label "id:") id-label])
               (flow-panel :align :left :items [(label "citing:") citing-label])
-              (flow-panel :align :left :items [(label "root") root-label])
+              (flow-panel :align :left :items [(label "root:") root-label])
+              (flow-panel :align :left :items [(label "relays:") relays-label])
               ])))
 
 (defn make-article-area []

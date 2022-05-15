@@ -9,14 +9,14 @@
            ))
 
 (def relays ["wss://nostr-pub.wellorder.net"                ;*
-             "wss://expensive-relay.fiatjaf.com"
+             ;"wss://expensive-relay.fiatjaf.com"
              "wss://wlvs.space"
              "wss://nostr.rocks"
-             "wss://nostr-relay.herokuapp.com"
+             ;"wss://nostr-relay.herokuapp.com"
              "wss://freedom-relay.herokuapp.com/ws"         ;*
-             "wss://nodestr-relay.dolu.dev/ws"
-             "wss://nostrrr.bublina.eu.org"
-             "wss://nostr-relay.freeberty.ne"
+             ;"wss://nodestr-relay.dolu.dev/ws"
+             ;"wss://nostrrr.bublina.eu.org"
+             ;"wss://nostr-relay.freeberty.ne"
              "ws://nostr.rocks:7448"                        ;*
              "ws://nostr-pub.wellorder.net:7000"
              ])
@@ -46,14 +46,15 @@
 (defn unsubscribe [^WebSocket conn id]
   (send-to conn ["CLOSE" id]))
 
-(defrecord listener [buffer event-agent]
+(defrecord listener [buffer event-agent url]
   WebSocket$Listener
   (onOpen [_this _webSocket]
-    (prn 'open))
+    (prn 'open url))
   (onText [_this webSocket data last]
     (.append buffer (.toString data))
     (when last
-      (send event-agent events/process-event (json/read-str (.toString buffer)))
+      (let [event (json/read-str (.toString buffer))]
+        (send event-agent events/process-event event url))
       (.delete buffer 0 (.length buffer)))
     (.request webSocket 1)
     )
@@ -71,45 +72,54 @@
     (.request webSocket 1)
     )
   (onClose [_this _webSocket statusCode reason]
-    (prn 'close statusCode reason)
+    (prn 'close url statusCode reason)
     )
   (onError [_this _webSocket error]
-    (prn 'websocket-listener-error error)
+    (prn 'websocket-listener-error url error)
     )
   )
 
 (defn connect-to-relay ^WebSocket [url event-agent]
-  (let [client (HttpClient/newHttpClient)
-        cl (.newWebSocketBuilder client)
-        cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) event-agent))
-        ws (.get cws)
-        ]
-    ws)
+  (try
+    (let [client (HttpClient/newHttpClient)
+          cl (.newWebSocketBuilder client)
+          cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) event-agent url))
+          ws (.get cws)
+          ]
+      ws)
+    (catch Exception e
+      (prn 'connect-to-relay-failed url (:reason e))
+      nil))
   )
 
+(defn close-connection [conn id]
+  (unsubscribe conn id)
+  (try
+    (.get (.sendClose conn WebSocket/NORMAL_CLOSURE "done"))
+    (catch Exception e
+      (prn 'on-send-close-error (:reason e)))))
+
 (defn get-events [event-agent]
-  (let [conn (connect-to-relay (get relays 0) event-agent)
+  (let [connections (map #(connect-to-relay % event-agent) relays)
+        connections (filter some? connections)
         id "more-speech"
         date (make-date "04/20/2022")
         send-chan (:send-chan @event-agent)
         ]
     (prn date (format-time date))
-    (unsubscribe conn id)
-    (subscribe conn id date)
+    (doseq [conn connections]
+      (unsubscribe conn id)
+      (subscribe conn id date))
     (loop [msg (async/<!! send-chan)]
       (condp = (first msg)
         :closed nil
         :event
         (do
-          (send-to conn (second msg))
+          (send-to (first connections) (second msg))
           (recur (async/<!! send-chan)))))
-    (unsubscribe conn id)
-    (.get (.sendClose conn WebSocket/NORMAL_CLOSURE "done"))
+    (doseq [conn connections]
+      (close-connection conn id)
+      )
     (Thread/sleep 100))
   (prn 'done)
-  )
-
-(defn close-connection [state]
-  (prn 'close-connection)
-  (async/>!! (:send-chan state) [:closed])
   )
