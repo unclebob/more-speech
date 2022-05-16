@@ -4,7 +4,8 @@
             [more-speech.ui.config :as config]
             [more-speech.nostr.util :as util])
   (:use [seesaw core font tree])
-  (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
+  (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)
+           (java.util Collections)))
 
 (declare render-event select-article)
 
@@ -77,11 +78,10 @@
         event-state @(:event-agent @ui-context)
         event-map (:text-event-map event-state)
         event-id (:id event)
-        event-time (:created-at event)
         tree (select frame [:#header-tree])
         model (config tree :model)
         root (.getRoot model)
-        insertion-point (find-chronological-insertion-point root event-time event-map)
+        insertion-point (find-chronological-insertion-point root event-id event-map)
         child (DefaultMutableTreeNode. event-id)]
     (.insertNodeInto model child root insertion-point)
     (.makeVisible tree (TreePath. (.getPath child)))
@@ -109,20 +109,23 @@
             (recur (rest nodes))))))))
 
 
-(defn find-chronological-insertion-point [root time event-map]
-  (loop [insertion-point 0
-         children (enumeration-seq (.children root))]
-    (cond
-      (empty? children)
-      insertion-point
+(defn find-chronological-insertion-point [root event-id event-map]
+  (let [comparator (fn [node1 node2]
+                     (let [v1 (->> node1 .getUserObject (get event-map) :created-at)
+                           v2 (->> node2 .getUserObject (get event-map) :created-at)]
+                       (compare v1 v2)))
+        children (enumeration-seq (.children root))
 
-      (>
-        (->> (first children) .getUserObject (get event-map) :created-at)
-        time)
-      insertion-point
-
-      :else
-      (recur (inc insertion-point) (rest children)))))
+        insertion-point (if (nil? children)
+                          0
+                          (Collections/binarySearch children
+                                                    (DefaultMutableTreeNode. event-id)
+                                                    comparator))]
+    (if (neg? insertion-point)
+      (- (inc insertion-point))
+      insertion-point)
+    )
+  )
 
 (defn search-for-node [root matcher]
   (loop [children (enumeration-seq (.children root))]
