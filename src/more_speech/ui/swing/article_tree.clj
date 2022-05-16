@@ -70,16 +70,20 @@
           event (get event-map event-id)]
       (text! widget (formatters/format-header nicknames event)))))
 
-(declare add-references)
+(declare add-references
+         find-chronological-insertion-point)
 (defn add-event [ui-context event]
   (let [frame (:frame @ui-context)
+        event-state @(:event-agent @ui-context)
+        event-map (:text-event-map event-state)
         event-id (:id event)
+        event-time (:created-at event)
         tree (select frame [:#header-tree])
         model (config tree :model)
         root (.getRoot model)
-        child-count (.getChildCount root)
+        insertion-point (find-chronological-insertion-point root event-time event-map)
         child (DefaultMutableTreeNode. event-id)]
-    (.insertNodeInto model child root child-count)
+    (.insertNodeInto model child root insertion-point)
     (.makeVisible tree (TreePath. (.getPath child)))
     (swap! ui-context update-in [:node-map event-id] conj child)
     (add-references ui-context event)
@@ -104,23 +108,42 @@
             (swap! ui-context update-in [:node-map id] conj child)
             (recur (rest nodes))))))))
 
-(defn find-header-node [root id]
+
+(defn find-chronological-insertion-point [root time event-map]
+  (loop [insertion-point 0
+         children (enumeration-seq (.children root))]
+    (cond
+      (empty? children)
+      insertion-point
+
+      (>
+        (->> (first children) .getUserObject (get event-map) :created-at)
+        time)
+      insertion-point
+
+      :else
+      (recur (inc insertion-point) (rest children)))))
+
+(defn search-for-node [root matcher]
   (loop [children (enumeration-seq (.children root))]
     (let [child (first children)]
       (cond
         (empty? children)
         nil
 
-        (= id (.getUserObject child))
+        (matcher (.getUserObject child))
         child
 
         :else
-        (let [found-child (find-header-node child id)]
+        (let [found-child (search-for-node child matcher)]
           (if (some? found-child)
             found-child
             (recur (rest children)))
           ))
       )))
+
+(defn find-header-node [root id]
+  (search-for-node root #(= id %)))
 
 (defn id-click [ui-context id]
   (let [frame (:frame @ui-context)
