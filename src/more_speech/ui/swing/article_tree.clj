@@ -109,20 +109,21 @@
             (recur (rest nodes))))))))
 
 
-(defn find-chronological-insertion-point [root event-id event-map]
+(defn find-chronological-insertion-point
+  "Searches first level of the header tree (not including any of the children) for
+  the best place to chronologically insert a new event.  Returns the index."
+  [root event-id event-map]
   (let [comparator (fn [node1 node2]
                      (let [v1 (->> node1 .getUserObject (get event-map) :created-at)
                            v2 (->> node2 .getUserObject (get event-map) :created-at)]
                        (compare v1 v2)))
         children (enumeration-seq (.children root))
-
+        dummy-node (DefaultMutableTreeNode. event-id)
         insertion-point (if (nil? children)
                           0
-                          (Collections/binarySearch children
-                                                    (DefaultMutableTreeNode. event-id)
-                                                    comparator))]
+                          (Collections/binarySearch children dummy-node comparator))]
     (if (neg? insertion-point)
-      (- (inc insertion-point))
+      (- (inc insertion-point)) ;undo weird 'not-found' math of binarySearch
       insertion-point)
     )
   )
