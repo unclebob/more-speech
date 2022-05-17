@@ -1,11 +1,12 @@
 (ns more-speech.ui.swing.article-tree
-  (:require [more-speech.nostr.events :as events]
-            [more-speech.ui.formatters :as formatters]
-            [more-speech.ui.config :as config]
-            [more-speech.nostr.util :as util])
+  (:require
+    [more-speech.ui.swing.article-tree-util :refer :all]
+    [more-speech.nostr.events :as events]
+    [more-speech.ui.formatters :as formatters]
+    [more-speech.ui.config :as config]
+    [more-speech.ui.swing.article-panel :as article-panel])
   (:use [seesaw core font tree])
-  (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)
-           (java.util Collections)))
+  (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
 (declare render-event select-article)
 
@@ -24,40 +25,8 @@
           (instance? DefaultMutableTreeNode (last (selection e))))
     (let [selected-node (last (selection e))
           selected-id (.getUserObject selected-node)
-          event-state @event-agent
-          nicknames (:nicknames event-state)
-          format-user (partial formatters/format-user-id nicknames)
-          text-map (:text-event-map event-state)
-          event (get text-map selected-id)
-          [root-id _ referent] (events/get-references event)
-          reply-to (select main-frame [:#reply-to-label])
-          citing (select main-frame [:#citing-label])
-          root-label (select main-frame [:#root-label])
-          relays-label (select main-frame [:#relays-label])
-          article-area (select main-frame [:#article-area])]
-      (text! article-area (formatters/reformat-article (:content event) 80))
-      (text! (select main-frame [:#author-id-label])
-             (format-user (:pubkey event)))
-      (text! (select main-frame [:#created-time-label])
-             (formatters/format-time (:created-at event)))
-      (config! (select main-frame [:#id-label])
-               :user-data (:id event)
-               :text (formatters/abbreviate (util/num32->hex-string (:id event)) 30))
-      (if (some? referent)
-        (let [replied-event (get text-map referent)]
-          (text! reply-to (format-user (:pubkey replied-event)))
-          (config! citing
-                   :user-data referent
-                   :text (formatters/abbreviate (util/num32->hex-string referent) 30)))
-        (do (text! reply-to "")
-            (text! citing "")))
-      (if (some? root-id)
-        (config! root-label
-                 :user-data root-id
-                 :text (formatters/abbreviate (util/num32->hex-string root-id) 30))
-        (text! root-label ""))
-      (text! relays-label (pr-str (count (:relays event)) (first (:relays event))))
-      )))
+          event-state @event-agent]
+      (article-panel/load-article-info event-state selected-id main-frame))))
 
 (defn render-event [event-agent widget info]
   (config! widget :font config/default-font)
@@ -71,8 +40,8 @@
           event (get event-map event-id)]
       (text! widget (formatters/format-header nicknames event)))))
 
-(declare add-references
-         find-chronological-insertion-point)
+(declare add-references)
+
 (defn add-event [ui-context event]
   (let [frame (:frame @ui-context)
         event-state @(:event-agent @ui-context)
@@ -107,56 +76,3 @@
             (.add ^DefaultMutableTreeNode node child)
             (swap! ui-context update-in [:node-map id] conj child)
             (recur (rest nodes))))))))
-
-
-(defn find-chronological-insertion-point
-  "Searches first level of the header tree (not including any of the children) for
-  the best place to chronologically insert a new event.  Returns the index."
-  [root event-id event-map]
-  (let [comparator (fn [node1 node2]
-                     (let [v1 (->> node1 .getUserObject (get event-map) :created-at)
-                           v2 (->> node2 .getUserObject (get event-map) :created-at)]
-                       (compare v1 v2)))
-        children (enumeration-seq (.children root))
-        dummy-node (DefaultMutableTreeNode. event-id)
-        insertion-point (if (nil? children)
-                          0
-                          (Collections/binarySearch children dummy-node comparator))]
-    (if (neg? insertion-point)
-      (- (inc insertion-point)) ;undo weird 'not-found' math of binarySearch
-      insertion-point)
-    )
-  )
-
-(defn search-for-node [root matcher]
-  (loop [children (enumeration-seq (.children root))]
-    (let [child (first children)]
-      (cond
-        (empty? children)
-        nil
-
-        (matcher (.getUserObject child))
-        child
-
-        :else
-        (let [found-child (search-for-node child matcher)]
-          (if (some? found-child)
-            found-child
-            (recur (rest children)))
-          ))
-      )))
-
-(defn find-header-node [root id]
-  (search-for-node root #(= id %)))
-
-(defn id-click [ui-context id]
-  (let [frame (:frame @ui-context)
-        tree (select frame [:#header-tree])
-        model (config tree :model)
-        root-node (.getRoot model)
-        node (find-header-node root-node id)]
-    (when (some? node)
-      (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]
-        (.setSelectionPath tree tree-path)
-        (.scrollPathToVisible tree tree-path)
-        ))))

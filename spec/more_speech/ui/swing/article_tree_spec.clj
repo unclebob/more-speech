@@ -1,6 +1,6 @@
 (ns more-speech.ui.swing.article-tree-spec
   (:require [speclj.core :refer :all]
-            [more-speech.ui.swing.article-tree :refer :all]
+            [more-speech.ui.swing.article-tree-util :refer :all]
             )
   (:import (javax.swing.tree DefaultMutableTreeNode)))
 
