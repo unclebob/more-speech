@@ -1,6 +1,6 @@
 (ns more-speech.ui.swing.relay-panel
   (:use [seesaw core])
-  (:require [more-speech.nostr.protocol :as protocol]))
+  (:require [more-speech.nostr.relays :refer [relays]]))
 
 (defn make-relay-control-panel [relay]
   (let [read-check-box (checkbox :text "R")
@@ -13,6 +13,6 @@
     control-panel))
 
 (defn make-relay-panel []
-  (let [relay-control-panels (for [relay protocol/relays] (make-relay-control-panel relay))
+  (let [relay-control-panels (for [url (keys @relays)] (make-relay-control-panel url))
         relay-panel (vertical-panel :items relay-control-panels)]
     relay-panel))

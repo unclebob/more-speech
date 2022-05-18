@@ -1,25 +1,13 @@
 (ns more-speech.nostr.protocol
   (:require [clojure.data.json :as json]
             [clojure.core.async :as async]
-            [more-speech.nostr.events :as events])
+            [more-speech.nostr.events :as events]
+            [more-speech.nostr.relays :refer [relays]])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
            (java.net URI)
            ))
-
-(def relays ["wss://nostr-pub.wellorder.net"                ;*
-             ;"wss://expensive-relay.fiatjaf.com"
-             "wss://wlvs.space"
-             "wss://nostr.rocks"
-             ;"wss://nostr-relay.herokuapp.com"
-             "wss://freedom-relay.herokuapp.com/ws"         ;*
-             ;"wss://nodestr-relay.dolu.dev/ws"
-             ;"wss://nostrrr.bublina.eu.org"
-             ;"wss://nostr-relay.freeberty.ne"
-             "ws://nostr.rocks:7448"                        ;*
-             "ws://nostr-pub.wellorder.net:7000"
-             ])
 
 (defn send-to [^WebSocket conn msg]
   (let [msg (events/to-json msg)]
@@ -101,26 +89,34 @@
       (prn 'on-send-close-error (:reason e)))))
 
 (defn get-events [event-agent]
-  (let [connections (map #(connect-to-relay % event-agent) relays)
-        connections (filter some? connections)
-        id "more-speech"
+  (doseq [url (keys @relays)]
+    (let [connection (connect-to-relay url event-agent)]
+      (swap! relays assoc-in [url :connection] connection)))
+  (let [id "more-speech"
         date (make-date "04/20/2022")
         send-chan (:send-chan @event-agent)
+        send-url (first (keys @relays))
+        send-connection (get-in @relays [send-url :connection])
         ]
     (prn date (format-time date))
-    (doseq [conn connections]
-      (unsubscribe conn id)
-      (subscribe conn id date))
-    (loop [msg (async/<!! send-chan)]
-      (condp = (first msg)
+    (doseq [url (keys @relays)]
+      (let [conn (get-in @relays [url :connection])]
+        (when (some? conn)
+          (unsubscribe conn id)
+          (subscribe conn id date))
+        (swap! relays assoc-in [url :subscribed] true)))
+    (loop [[type msg] (async/<!! send-chan)]
+      (condp = type
         :closed nil
         :event
         (do
-          (send-to (first connections) (second msg))
+          (send-to send-connection msg)
           (recur (async/<!! send-chan)))))
-    (doseq [conn connections]
-      (close-connection conn id)
-      )
+    (doseq [url (keys @relays)]
+      (let [conn (get-in @relays [url :connection])]
+        (when (some? conn)
+          (prn 'closing url)
+          (close-connection conn id))))
     (Thread/sleep 100))
   (prn 'done)
   )
