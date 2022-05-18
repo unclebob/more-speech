@@ -88,35 +88,46 @@
     (catch Exception e
       (prn 'on-send-close-error (:reason e)))))
 
-(defn get-events [event-agent]
+(defn connect-to-relays [event-agent]
   (doseq [url (keys @relays)]
     (let [connection (connect-to-relay url event-agent)]
-      (swap! relays assoc-in [url :connection] connection)))
-  (let [id "more-speech"
-        date (make-date "04/20/2022")
-        send-chan (:send-chan @event-agent)
-        send-url (first (keys @relays))
-        send-connection (get-in @relays [send-url :connection])
-        ]
-    (prn date (format-time date))
+      (swap! relays assoc-in [url :connection] connection))))
+
+(defn subscribe-to-relays [id]
+  (let [date (make-date "04/20/2022")]
+    (prn 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
       (let [conn (get-in @relays [url :connection])]
         (when (some? conn)
           (unsubscribe conn id)
           (subscribe conn id date))
-        (swap! relays assoc-in [url :subscribed] true)))
+        (swap! relays assoc-in [url :subscribed] true)))))
+
+(defn process-send-channel [event-agent]
+  (let [send-chan (:send-chan @event-agent)
+        send-url (first (keys @relays))
+        send-connection (get-in @relays [send-url :connection])]
     (loop [[type msg] (async/<!! send-chan)]
       (condp = type
         :closed nil
         :event
         (do
           (send-to send-connection msg)
-          (recur (async/<!! send-chan)))))
-    (doseq [url (keys @relays)]
-      (let [conn (get-in @relays [url :connection])]
-        (when (some? conn)
-          (prn 'closing url)
-          (close-connection conn id))))
-    (Thread/sleep 100))
+          (recur (async/<!! send-chan)))))))
+
+(defn unsubscribe-from-relays [id]
+  (doseq [url (keys @relays)]
+    (let [conn (get-in @relays [url :connection])]
+      (when (some? conn)
+        (prn 'closing url)
+        (close-connection conn id)))))
+
+(defn get-events [event-agent]
+  (let [id "more-speech"]
+    (connect-to-relays event-agent)
+    (subscribe-to-relays id)
+    (process-send-channel event-agent)
+    (unsubscribe-from-relays id))
+  (Thread/sleep 100)
   (prn 'done)
   )
