@@ -46,37 +46,38 @@
 (defn unsubscribe [^WebSocket conn id]
   (send-to conn ["CLOSE" id]))
 
+(defn handle-text [{:keys [buffer event-agent url]} data last]
+  (.append buffer (.toString data))
+  (when last
+    (try
+      (let [event (json/read-str (.toString buffer))]
+        (send event-agent events/process-event event url))
+      (catch Exception e
+        (prn 'onText url (.getMessage e))
+        (prn (.toString buffer))))
+    (.delete buffer 0 (.length buffer))))
+
 (defrecord listener [buffer event-agent url]
   WebSocket$Listener
   (onOpen [_this _webSocket]
     (prn 'open url))
-  (onText [_this webSocket data last]
-    (.append buffer (.toString data))
-    (when last
-      (let [event (json/read-str (.toString buffer))]
-        (send event-agent events/process-event event url))
-      (.delete buffer 0 (.length buffer)))
-    (.request webSocket 1)
-    )
+  (onText [this webSocket data last]
+    (handle-text this data last)
+    (.request webSocket 1))
   (onBinary [_this _webSocket _data _last]
-    (prn 'binary)
-    )
+    (prn 'binary))
   (onPing [_this webSocket message]
-    (prn 'ping)
+    (prn 'ping url)
     (.sendPong webSocket message)
     (.request webSocket 1)
-    (prn 'sent-pong)
-    )
+    (prn 'sent-pong))
   (onPong [_this webSocket _message]
-    (prn 'pong)
-    (.request webSocket 1)
-    )
+    (prn 'pong url)
+    (.request webSocket 1))
   (onClose [_this _webSocket statusCode reason]
-    (prn 'close url statusCode reason)
-    )
+    (prn 'close url statusCode reason))
   (onError [_this _webSocket error]
-    (prn 'websocket-listener-error url error)
-    )
+    (prn 'websocket-listener-error url error))
   )
 
 (defn connect-to-relay ^WebSocket [url event-agent]
