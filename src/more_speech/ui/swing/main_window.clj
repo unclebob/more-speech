@@ -10,8 +10,10 @@
 
 (defrecord seesawHandler []
   events/event-handler
-  (events/handle-text-event [_handler event]
-    (invoke-later (article-tree/add-event ui-context event))))
+  (handle-text-event [_handler event]
+    (invoke-later (article-tree/add-event ui-context event)))
+  (update-relay-panel [_handler]
+    (invoke-later (relay-panel/update-relay-panel ui-context))))
 
 (declare make-main-window)
 

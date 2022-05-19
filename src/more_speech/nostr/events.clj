@@ -27,6 +27,7 @@
 
 (defprotocol event-handler
   (handle-text-event [handler event])
+  (update-relay-panel [handler])
   )
 
 (declare process-text-event

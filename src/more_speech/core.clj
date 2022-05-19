@@ -31,6 +31,7 @@
         handler (swing/setup-main-window event-agent)
         ]
     (send event-agent set-event-handler handler)
+    (await event-agent) ; wait for the agent to complete.
     (protocol/get-events event-agent))
   (System/exit 1)
   )

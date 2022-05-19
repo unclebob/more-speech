@@ -100,8 +100,8 @@
       (let [conn (get-in @relays [url :connection])]
         (when (some? conn)
           (unsubscribe conn id)
-          (subscribe conn id date))
-        (swap! relays assoc-in [url :subscribed] true)))))
+          (subscribe conn id date)
+          (swap! relays assoc-in [url :subscribed] true))))))
 
 (defn process-send-channel [event-agent]
   (let [send-chan (:send-chan @event-agent)
@@ -123,9 +123,11 @@
         (close-connection conn id)))))
 
 (defn get-events [event-agent]
-  (let [id "more-speech"]
+  (let [id "more-speech"
+        event-handler (:event-handler @event-agent)]
     (connect-to-relays event-agent)
     (subscribe-to-relays id)
+    (events/update-relay-panel event-handler)
     (process-send-channel event-agent)
     (unsubscribe-from-relays id))
   (Thread/sleep 100)
