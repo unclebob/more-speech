@@ -20,11 +20,6 @@
 
 (def send-chan (async/chan))
 
-;(defn get-keys [state]
-;  (let [keys (read-string (slurp "private/keys"))
-;        state (assoc state :keys keys)]
-;    state))
-
 (declare more-speech
          setup-jframe
          set-event-handler)
