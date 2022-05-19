@@ -97,22 +97,24 @@
   (let [date (make-date "04/20/2022")]
     (prn 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
-      (let [conn (get-in @relays [url :connection])]
-        (when (some? conn)
+      (let [conn (get-in @relays [url :connection])
+            read? (get-in @relays [url :read])]
+        (when (and read? (some? conn))
           (unsubscribe conn id)
           (subscribe conn id date)
           (swap! relays assoc-in [url :subscribed] true))))))
 
 (defn process-send-channel [event-agent]
   (let [send-chan (:send-chan @event-agent)
-        send-url (first (keys @relays))
-        send-connection (get-in @relays [send-url :connection])]
+        urls (keys @relays)
+        send-urls (filter #(:write (get @relays %)) urls)
+        send-connections (map #(get-in @relays [% :connection]) send-urls)]
     (loop [[type msg] (async/<!! send-chan)]
       (condp = type
         :closed nil
         :event
         (do
-          (send-to send-connection msg)
+          (doseq [send-connection send-connections] (send-to send-connection msg))
           (recur (async/<!! send-chan)))))))
 
 (defn unsubscribe-from-relays [id]

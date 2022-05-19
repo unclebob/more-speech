@@ -4,6 +4,6 @@
   "wss://nostr.rocks"                    {:read true :write false}
   "wss://freedom-relay.herokuapp.com/ws" {:read true :write false}
   "ws://nostr.rocks:7448"                {:read true :write false}
-  "ws://nostr-pub.wellorder.net:7000"    {:read true :write false}
+  "ws://nostr-pub.wellorder.net:7000"    {:read false :write true}
   "ws://fake.site"                       {:read false :write false}
 }
