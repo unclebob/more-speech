@@ -14,15 +14,16 @@
   (:require [clojure.core.async :as async]
             [more-speech.nostr.protocol :as protocol]
             [more-speech.ui.swing.main-window :as swing]
-            [more-speech.nostr.events :as events])
+            [more-speech.nostr.events :as events]
+            [more-speech.nostr.relays :as relays])
   )
 
 (def send-chan (async/chan))
 
-(defn get-keys [state]
-  (let [keys (read-string (slurp "private/keys"))
-        state (assoc state :keys keys)]
-    state))
+;(defn get-keys [state]
+;  (let [keys (read-string (slurp "private/keys"))
+;        state (assoc state :keys keys)]
+;    state))
 
 (declare more-speech
          setup-jframe
@@ -30,6 +31,7 @@
 
 (defn ^:export -main [& _args]
   (let [keys (read-string (slurp "private/keys"))
+        _ (relays/load-relays-from-file "private/relays")
         event-agent (events/make-event-agent keys send-chan)
         handler (swing/setup-main-window event-agent)
         ]

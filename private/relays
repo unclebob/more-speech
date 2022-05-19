@@ -1,0 +1,8 @@
+{
+  "wss://nostr-pub.wellorder.net"        {:read true :write true}
+  "wss://wlvs.space"                     {:read true :write true}
+  "wss://nostr.rocks"                    {:read true :write true}
+  "wss://freedom-relay.herokuapp.com/ws" {:read true :write true}
+  "ws://nostr.rocks:7448"                {:read true :write true}
+  "ws://nostr-pub.wellorder.net:7000"    {:read true :write true}
+}
