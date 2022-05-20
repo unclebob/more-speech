@@ -27,12 +27,14 @@
 (defn ^:export -main [& _args]
   (let [keys (read-string (slurp "private/keys"))
         _ (relays/load-relays-from-file "private/relays")
-        event-agent (events/make-event-agent keys send-chan)
+        nicknames (read-string (slurp "private/nicknames"))
+        event-agent (events/make-event-agent keys send-chan nicknames)
         handler (swing/setup-main-window event-agent)
         ]
     (send event-agent set-event-handler handler)
     (await event-agent) ; wait for the agent to complete.
-    (protocol/get-events event-agent))
+    (protocol/get-events event-agent)
+    (spit "private/nicknames" (:nicknames @event-agent)))
   (System/exit 1)
   )
 

@@ -94,7 +94,7 @@
       (swap! relays assoc-in [url :connection] connection))))
 
 (defn subscribe-to-relays [id]
-  (let [date (make-date "04/20/2022")]
+  (let [date (make-date "05/01/2022")]
     (prn 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
       (let [conn (get-in @relays [url :connection])

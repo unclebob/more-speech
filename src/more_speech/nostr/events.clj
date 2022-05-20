@@ -33,9 +33,9 @@
 (declare process-text-event
          process-name-event)
 
-(defn make-event-agent [keys send-chan]
+(defn make-event-agent [keys send-chan nicknames]
   (agent {:chronological-text-events []
-          :nicknames {}
+          :nicknames nicknames
           :text-event-map {}
           :keys keys
           :send-chan send-chan}))
