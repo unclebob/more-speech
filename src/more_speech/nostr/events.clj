@@ -161,19 +161,17 @@
     id)
   )
 
-(defn compose-metadata-event [event-state]
+(defn body->event
+  "Adds pubkey, created-at, id, and sig to the partially composed body,
+  which must include kind, tags, and content.  The body is put into an
+  EVENT wrapper that is ready to send."
+  [event-state body]
   (let [keys (:keys event-state)
         private-key (util/hex-string->bytes (:private-key keys))
         pubkey (ecc/get-pub-key private-key)
-        content (to-json {:name (:name keys)
-                          :about (:about keys)
-                          :picture (:picture keys)})
         now (quot (System/currentTimeMillis) 1000)
-        body {:pubkey (util/bytes->hex-string pubkey)
-              :created_at now
-              :kind 0
-              :tags []
-              :content content}
+        body (assoc body :pubkey (util/bytes->hex-string pubkey)
+                          :created_at now)
         id (make-id body)
         aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
         signature (ecc/do-sign id private-key aux-rand)
@@ -181,6 +179,17 @@
                           :sig (util/bytes->hex-string signature))
         ]
     ["EVENT" event])
+  )
+
+(defn compose-metadata-event [event-state]
+  (let [keys (:keys event-state)
+        content (to-json {:name (:name keys)
+                          :about (:about keys)
+                          :picture (:picture keys)})
+        body {:kind 0
+              :tags []
+              :content content}]
+    (body->event event-state body))
   )
 
 (declare make-event-reference-tags
@@ -199,19 +208,10 @@
          tags (concat (make-event-reference-tags reply-to-or-nil root)
                       (make-people-reference-tags event-state pubkey reply-to-or-nil))
          content text
-         now (quot (System/currentTimeMillis) 1000)
-         body {:pubkey (util/bytes->hex-string pubkey)
-               :created_at now
-               :kind 1
+         body {:kind 1
                :tags tags
-               :content content}
-         id (make-id body)
-         aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
-         signature (ecc/do-sign id private-key aux-rand)
-         event (assoc body :id (util/bytes->hex-string id)
-                           :sig (util/bytes->hex-string signature))
-         ]
-     ["EVENT" event])))
+               :content content}]
+     (body->event event-state body))))
 
 (defn get-reply-root [event-state reply-to-or-nil]
   (if (nil? reply-to-or-nil)
