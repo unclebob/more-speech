@@ -130,6 +130,7 @@
     (connect-to-relays event-agent)
     (subscribe-to-relays id)
     (events/update-relay-panel event-handler)
+    (future (events/compose-and-send-metadata-event @event-agent))
     (process-send-channel event-agent)
     (unsubscribe-from-relays id))
   (Thread/sleep 100)

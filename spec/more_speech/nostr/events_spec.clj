@@ -91,110 +91,136 @@
     )
   )
 
-
 (describe "Composing outgoing events"
-  (it "composes an original message."
-    (let [private-key (num->bytes 64 314159)
-          event-state {:keys {:private-key (bytes->hex-string private-key)}}
-          public-key (get-pub-key private-key)
-          text "message text"
-          event (compose-text-event event-state text)
-          {:keys [pubkey created_at kind tags content id sig]} (second event)
-          now (quot (System/currentTimeMillis) 1000)]
-      (should= "EVENT" (first event))
-      (should= (bytes->hex-string public-key) pubkey)
-      (should (<= 0 (- now created_at) 1))                  ;within one second.
-      (should= 1 kind)
-      (should= [] tags)
-      (should= text content)
-      (should (do-verify (hex-string->bytes id)
-                         public-key
-                         (hex-string->bytes sig)))))
+  (context "composing metadata (kind:0) messages"
+    (it "composes using the keys data structure"
+      (let [private-key (num->bytes 64 314159)
+            public-key (get-pub-key private-key)
+            keys {:private-key (bytes->hex-string private-key)
+                  :public-key (bytes->hex-string public-key)
+                  :name "name"
+                  :about "about"
+                  :picture "picture"}
+            event-state {:keys keys}
+            now (quot (System/currentTimeMillis) 1000)
+            event (compose-metadata-event event-state)
+            {:keys [pubkey created_at kind tags content id sig]} (second event)
+            ]
+        (should= "EVENT" (first event))
+        (should= (bytes->hex-string public-key) pubkey)
+        (should (<= 0 (- now created_at) 1))                ;within one second.
+        (should= 0 kind)
+        (should= [] tags)
+        (should= (to-json {:name "name" :about "about" :picture "picture"}) content)
+        (should (do-verify (hex-string->bytes id)
+                           public-key
+                           (hex-string->bytes sig))))
+      )
+    )
+  (context "composing Text (kind 1) messages"
+    (it "composes an original message."
+      (let [private-key (num->bytes 64 314159)
+            event-state {:keys {:private-key (bytes->hex-string private-key)}}
+            public-key (get-pub-key private-key)
+            text "message text"
+            event (compose-text-event event-state text)
+            {:keys [pubkey created_at kind tags content id sig]} (second event)
+            now (quot (System/currentTimeMillis) 1000)]
+        (should= "EVENT" (first event))
+        (should= (bytes->hex-string public-key) pubkey)
+        (should (<= 0 (- now created_at) 1))                ;within one second.
+        (should= 1 kind)
+        (should= [] tags)
+        (should= text content)
+        (should (do-verify (hex-string->bytes id)
+                           public-key
+                           (hex-string->bytes sig)))))
 
-  (it "composes a reply to a root article."
-    (let [private-key (num->bytes 64 42)
-          root-id 7734
-          root-id-hex (hexify root-id)
-          root-author 99
-          event-state {:keys {:private-key (bytes->hex-string private-key)}
-                       :text-event-map {root-id {:pubkey root-author
-                                                 :tags []}}}
-          public-key (get-pub-key private-key)
-          text "message text"
-          event (compose-text-event event-state text root-id)
-          {:keys [pubkey created_at kind tags content id sig]} (second event)
-          now (quot (System/currentTimeMillis) 1000)]
-      (should= "EVENT" (first event))
-      (should= (bytes->hex-string public-key) pubkey)
-      (should (<= 0 (- now created_at) 1))                  ;within one second.
-      (should= 1 kind)
-      (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)
-      (should= text content)
-      (should (do-verify (hex-string->bytes id)
-                         public-key
-                         (hex-string->bytes sig)))))
+    (it "composes a reply to a root article."
+      (let [private-key (num->bytes 64 42)
+            root-id 7734
+            root-id-hex (hexify root-id)
+            root-author 99
+            event-state {:keys {:private-key (bytes->hex-string private-key)}
+                         :text-event-map {root-id {:pubkey root-author
+                                                   :tags []}}}
+            public-key (get-pub-key private-key)
+            text "message text"
+            event (compose-text-event event-state text root-id)
+            {:keys [pubkey created_at kind tags content id sig]} (second event)
+            now (quot (System/currentTimeMillis) 1000)]
+        (should= "EVENT" (first event))
+        (should= (bytes->hex-string public-key) pubkey)
+        (should (<= 0 (- now created_at) 1))                ;within one second.
+        (should= 1 kind)
+        (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)
+        (should= text content)
+        (should (do-verify (hex-string->bytes id)
+                           public-key
+                           (hex-string->bytes sig)))))
 
-  (it "composes a reply to a non-root article."
-    (let [private-key (num->bytes 64 42)
-          root-child-id 7734
-          root-child-id-hex (hexify root-child-id)
-          root-child-author 88
-          root-id 1952
-          root-id-hex (hexify root-id)
-          root-author 99
-          event-state {:keys {:private-key (bytes->hex-string private-key)}
-                       :text-event-map {root-child-id {:pubkey root-child-author
-                                                       :tags [[:e root-id-hex]
-                                                              [:p (hexify root-author)]]}
-                                        root-id {:pubkey root-author
-                                                 :tags []}}}
-          public-key (get-pub-key private-key)
-          text "message text"
-          event (compose-text-event event-state text root-child-id)
-          {:keys [pubkey created_at kind tags content id sig]} (second event)
-          now (quot (System/currentTimeMillis) 1000)]
-      (should= "EVENT" (first event))
-      (should= (bytes->hex-string public-key) pubkey)
-      (should (<= 0 (- now created_at) 1))                  ;within one second.
-      (should= 1 kind)
-      (should= [[:e root-id-hex] [:e root-child-id-hex]
-                [:p (hexify root-child-author)] [:p (hexify root-author)]] tags)
-      (should= text content)
-      (should (do-verify (hex-string->bytes id)
-                         public-key
-                         (hex-string->bytes sig)))))
+    (it "composes a reply to a non-root article."
+      (let [private-key (num->bytes 64 42)
+            root-child-id 7734
+            root-child-id-hex (hexify root-child-id)
+            root-child-author 88
+            root-id 1952
+            root-id-hex (hexify root-id)
+            root-author 99
+            event-state {:keys {:private-key (bytes->hex-string private-key)}
+                         :text-event-map {root-child-id {:pubkey root-child-author
+                                                         :tags [[:e root-id-hex]
+                                                                [:p (hexify root-author)]]}
+                                          root-id {:pubkey root-author
+                                                   :tags []}}}
+            public-key (get-pub-key private-key)
+            text "message text"
+            event (compose-text-event event-state text root-child-id)
+            {:keys [pubkey created_at kind tags content id sig]} (second event)
+            now (quot (System/currentTimeMillis) 1000)]
+        (should= "EVENT" (first event))
+        (should= (bytes->hex-string public-key) pubkey)
+        (should (<= 0 (- now created_at) 1))                ;within one second.
+        (should= 1 kind)
+        (should= [[:e root-id-hex] [:e root-child-id-hex]
+                  [:p (hexify root-child-author)] [:p (hexify root-author)]] tags)
+        (should= text content)
+        (should (do-verify (hex-string->bytes id)
+                           public-key
+                           (hex-string->bytes sig)))))
 
-  (it "author is removed from replies"
-    (let [private-key (num->bytes 64 42)
-          author (bytes->num (get-pub-key private-key))
-          root-id 7734
-          root-id-hex (hexify root-id)
-          root-author 99
-          event-state {:keys {:private-key (bytes->hex-string private-key)}
-                       :text-event-map {root-id {:pubkey root-author
-                                                 :tags [[:p (hexify author)]]}}}
-          event (compose-text-event event-state "" root-id)
-          {:keys [tags]} (second event)]
+    (it "author is removed from replies"
+      (let [private-key (num->bytes 64 42)
+            author (bytes->num (get-pub-key private-key))
+            root-id 7734
+            root-id-hex (hexify root-id)
+            root-author 99
+            event-state {:keys {:private-key (bytes->hex-string private-key)}
+                         :text-event-map {root-id {:pubkey root-author
+                                                   :tags [[:p (hexify author)]]}}}
+            event (compose-text-event event-state "" root-id)
+            {:keys [tags]} (second event)]
 
-      (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)))
+        (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)))
 
-  (it "composes a message with a slash."
-    (let [private-key (num->bytes 64 42)
-          event-state {:keys {:private-key (bytes->hex-string private-key)}}
-          public-key (get-pub-key private-key)
-          text "message/text"
-          event (compose-text-event event-state text)
-          {:keys [pubkey created_at kind tags content id sig]} (second event)
-          now (quot (System/currentTimeMillis) 1000)]
-      (should= "EVENT" (first event))
-      (should= (bytes->hex-string public-key) pubkey)
-      (should (<= 0 (- now created_at) 1))                  ;within one second.
-      (should= 1 kind)
-      (should= [] tags)
-      (should= text content)
-      (should (do-verify (hex-string->bytes id)
-                         public-key
-                         (hex-string->bytes sig)))))
+    (it "composes a message with a slash."
+      (let [private-key (num->bytes 64 42)
+            event-state {:keys {:private-key (bytes->hex-string private-key)}}
+            public-key (get-pub-key private-key)
+            text "message/text"
+            event (compose-text-event event-state text)
+            {:keys [pubkey created_at kind tags content id sig]} (second event)
+            now (quot (System/currentTimeMillis) 1000)]
+        (should= "EVENT" (first event))
+        (should= (bytes->hex-string public-key) pubkey)
+        (should (<= 0 (- now created_at) 1))                ;within one second.
+        (should= 1 kind)
+        (should= [] tags)
+        (should= text content)
+        (should (do-verify (hex-string->bytes id)
+                           public-key
+                           (hex-string->bytes sig)))))
+    )
   )
 
 (describe "get references"

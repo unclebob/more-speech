@@ -23,7 +23,7 @@
     (listen send-button :action
             (fn [_]
               (let [message (text edit-area)]
-                (events/send-msg event-state event message))
+                (events/compose-and-send-text-event event-state event message))
               (dispose! edit-frame)))
     (text! edit-area
            (if reply?

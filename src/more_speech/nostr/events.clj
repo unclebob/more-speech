@@ -161,6 +161,28 @@
     id)
   )
 
+(defn compose-metadata-event [event-state]
+  (let [keys (:keys event-state)
+        private-key (util/hex-string->bytes (:private-key keys))
+        pubkey (ecc/get-pub-key private-key)
+        content (to-json {:name (:name keys)
+                          :about (:about keys)
+                          :picture (:picture keys)})
+        now (quot (System/currentTimeMillis) 1000)
+        body {:pubkey (util/bytes->hex-string pubkey)
+              :created_at now
+              :kind 0
+              :tags []
+              :content content}
+        id (make-id body)
+        aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
+        signature (ecc/do-sign id private-key aux-rand)
+        event (assoc body :id (util/bytes->hex-string id)
+                          :sig (util/bytes->hex-string signature))
+        ]
+    ["EVENT" event])
+  )
+
 (declare make-event-reference-tags
          make-people-reference-tags
          get-reply-root)
@@ -229,8 +251,15 @@
           people-ids (remove #(= (hexify pubkey) %) people-ids)]
       (map #(vector :p %) people-ids))))
 
-(defn send-msg [event-state source-event-or-nil message]
+(defn send-event [event-state event]
+  (let [send-chan (:send-chan event-state)]
+    (async/>!! send-chan [:event event])))
+
+(defn compose-and-send-text-event [event-state source-event-or-nil message]
   (let [reply-to-or-nil (:id source-event-or-nil)
-        outgoing-event (compose-text-event event-state message reply-to-or-nil)
-        send-chan (:send-chan event-state)]
-    (async/>!! send-chan [:event outgoing-event])))
+        event (compose-text-event event-state message reply-to-or-nil)]
+    (send-event event-state event)))
+
+(defn compose-and-send-metadata-event [event-state]
+  (send-event event-state (compose-metadata-event event-state)))
+
