@@ -44,14 +44,30 @@
     ""
     (abbreviate (get nicknames user-id (util/num32->hex-string user-id)) 20)))
 
-(defn format-header [nicknames {:keys [pubkey created-at content] :as event}]
+(declare get-subject)
+
+(defn format-header [nicknames {:keys [pubkey created-at content tags] :as event}]
   (if (nil? event)
     "nil"
     (let [name (format-user-id nicknames pubkey)
           time (format-time created-at)
-          content (string/replace content \newline \~)
-          content (abbreviate content 50)]
+          subject (get-subject tags)
+          content (if (empty? subject)
+                    (-> content (string/replace \newline \~) (abbreviate 50))
+                    (abbreviate subject 50))]
       (format "%20s %s %s\n" name time content))))
 
 (defn format-reply [event]
   (prepend> (reformat-article (:content event) 80)))
+
+(defn get-subject [tags]
+  (if (empty? tags)
+    nil
+    (let [tag (first tags)]
+      (if (= (first tag) :subject)
+        (second tag)
+        (recur (rest tags))
+        ))
+
+    )
+  )

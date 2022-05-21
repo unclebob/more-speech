@@ -1,9 +1,14 @@
 {
-  "wss://nostr-pub.wellorder.net"        {:read true :write true}
-  "wss://wlvs.space"                     {:read true :write false}
-  "wss://nostr.rocks"                    {:read true :write false}
-  "wss://freedom-relay.herokuapp.com/ws" {:read true :write false}
-  "ws://nostr.rocks:7448"                {:read true :write false}
-  "ws://nostr-pub.wellorder.net:7000"    {:read false :write true}
-  "ws://fake.site"                       {:read false :write false}
+  "wss://nostr-pub.wellorder.net"        {:read true  :write true}
+  "wss://wlvs.space"                     {:read true  :write true}
+  "wss://nostr.rocks"                    {:read true  :write false}
+  "wss://freedom-relay.herokuapp.com/ws" {:read true  :write false}
+  "ws://nostr.rocks:7448"                {:read true  :write false}
+  "ws://nostr-pub.wellorder.net:7000"    {:read false :write false}
+  "wss://rsslay.fiatjaf.com"             {:read true  :write false}
+  "wss://nostr-relay.wlvs.space"         {:read true  :write false}
+  "wss://nostr.bitcoiner.social"         {:read true  :write false}
+  "wss://nostr.semisol.dev"              {:read true  :write false}
+  "wss://relay.damus.io"                 {:read true  :write false}
+  "wss://nostrrr.bublina.eu.org"         {:read true  :write false}
 }

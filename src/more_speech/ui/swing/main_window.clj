@@ -12,7 +12,7 @@
   events/event-handler
   (handle-text-event [_handler event]
     (invoke-later (article-tree/add-event ui-context event)))
-  (update-relay-panel [_handler]
+  (update-relay-panel  [_handler]
     (invoke-later (relay-panel/update-relay-panel ui-context))))
 
 (declare make-main-window)
@@ -35,7 +35,8 @@
                                     :south (article-panel/make-control-panel event-agent header-tree))
         main-panel (top-bottom-split
                      header-panel
-                     article-panel)
+                     article-panel
+                     :divider-location 1/2)
         timer (Timer. 100 nil)]
     (config! main-frame :content main-panel)
     (swap! ui-context assoc :frame main-frame :event-agent event-agent)

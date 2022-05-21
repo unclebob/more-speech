@@ -42,3 +42,63 @@
   (it "should not break this line. (bug-fix)"
     (should= "I found you!" (reformat-article "I found you!" 50)))
   )
+
+ (describe "format header"
+  (it "formats an empty message"
+    (let [nicknames {}
+          event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
+                 :created-at 1
+                 :content ""
+                 :tags []}
+          header (format-header nicknames event)]
+      (should= "11111111111111111... 12/31/69 18:00:01 \n" header)))
+
+  (it "formats a simple message"
+      (let [nicknames {}
+            event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
+                   :created-at 1
+                   :content "the message"
+                   :tags []}
+            header (format-header nicknames event)]
+        (should= "11111111111111111... 12/31/69 18:00:01 the message\n" header)))
+
+  (it "formats a long message with line ends."
+        (let [nicknames {}
+              event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
+                     :created-at 1
+                     :content "Four score and seven years ago
+our fathers brought forth upon this continent
+a new nation concieved in liberty and dedicated to
+the proposition that all men are created equal."
+                     :tags []}
+              header (format-header nicknames event)]
+          (should= "11111111111111111... 12/31/69 18:00:01 Four score and seven years ago~our fathers brou...\n" header)))
+
+  (it "formats a message with a subject"
+        (let [nicknames {}
+              event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
+                     :created-at 1
+                     :content "the message"
+                     :tags [[:subject "the subject"]]}
+              header (format-header nicknames event)]
+          (should= "11111111111111111... 12/31/69 18:00:01 the subject\n" header)))
+  )
+
+(describe "subject and discussion tags"
+  (context "get-subject"
+    (it "returns null if no tags"
+      (let [tags []
+            subject (get-subject tags)]
+        (should= nil subject)))
+
+    (it "returns null if no subject tag"
+          (let [tags [[:p "hi"]]
+                subject (get-subject tags)]
+            (should= nil subject)))
+
+    (it "returns subject if found"
+          (let [tags [[:p "hi"] ["subject" "the subject"]]
+                subject (get-subject tags)]
+            (should= "the subject" subject)))
+    ))
+
