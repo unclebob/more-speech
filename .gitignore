@@ -10,5 +10,5 @@ pom.xml.asc
 .idea
 *.iml
 private/keys
-
+private/nicknames
 
