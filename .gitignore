@@ -9,6 +9,7 @@ pom.xml.asc
 /.nrepl-port
 .idea
 *.iml
+*.log
 private/keys
 private/nicknames
 
