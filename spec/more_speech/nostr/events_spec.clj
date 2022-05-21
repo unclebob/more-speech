@@ -118,12 +118,13 @@
       )
     )
   (context "composing Text (kind 1) messages"
-    (it "composes an original message."
+    (it "composes an original message with no subject."
       (let [private-key (num->bytes 64 314159)
             event-state {:keys {:private-key (bytes->hex-string private-key)}}
             public-key (get-pub-key private-key)
             text "message text"
-            event (compose-text-event event-state text)
+            subject ""
+            event (compose-text-event event-state subject text)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))
@@ -136,6 +137,25 @@
                            public-key
                            (hex-string->bytes sig)))))
 
+    (it "composes an original message with a subject."
+          (let [private-key (num->bytes 64 314159)
+                event-state {:keys {:private-key (bytes->hex-string private-key)}}
+                public-key (get-pub-key private-key)
+                text "message text"
+                subject "subject"
+                event (compose-text-event event-state subject text)
+                {:keys [pubkey created_at kind tags content id sig]} (second event)
+                now (quot (System/currentTimeMillis) 1000)]
+            (should= "EVENT" (first event))
+            (should= (bytes->hex-string public-key) pubkey)
+            (should (<= 0 (- now created_at) 1))                ;within one second.
+            (should= 1 kind)
+            (should= [[:subject "subject"]] tags)
+            (should= text content)
+            (should (do-verify (hex-string->bytes id)
+                               public-key
+                               (hex-string->bytes sig)))))
+
     (it "composes a reply to a root article."
       (let [private-key (num->bytes 64 42)
             root-id 7734
@@ -146,7 +166,7 @@
                                                    :tags []}}}
             public-key (get-pub-key private-key)
             text "message text"
-            event (compose-text-event event-state text root-id)
+            event (compose-text-event event-state "" text root-id)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))
@@ -175,7 +195,7 @@
                                                    :tags []}}}
             public-key (get-pub-key private-key)
             text "message text"
-            event (compose-text-event event-state text root-child-id)
+            event (compose-text-event event-state "" text root-child-id)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))
@@ -198,7 +218,7 @@
             event-state {:keys {:private-key (bytes->hex-string private-key)}
                          :text-event-map {root-id {:pubkey root-author
                                                    :tags [[:p (hexify author)]]}}}
-            event (compose-text-event event-state "" root-id)
+            event (compose-text-event event-state "" "message" root-id)
             {:keys [tags]} (second event)]
 
         (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)))
@@ -208,7 +228,7 @@
             event-state {:keys {:private-key (bytes->hex-string private-key)}}
             public-key (get-pub-key private-key)
             text "message/text"
-            event (compose-text-event event-state text)
+            event (compose-text-event event-state "" text)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))

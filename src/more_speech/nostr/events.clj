@@ -194,24 +194,31 @@
 
 (declare make-event-reference-tags
          make-people-reference-tags
+         make-subject-tag
          get-reply-root)
 
 (defn compose-text-event
-  ([event-state text]
-   (compose-text-event event-state text nil))
+  ([event-state subject text]
+   (compose-text-event event-state subject text nil))
 
-  ([event-state text reply-to-or-nil]
+  ([event-state subject text reply-to-or-nil]
    (let [private-key (get-in event-state [:keys :private-key])
          private-key (util/hex-string->bytes private-key)
          pubkey (ecc/get-pub-key private-key)
          root (get-reply-root event-state reply-to-or-nil)
          tags (concat (make-event-reference-tags reply-to-or-nil root)
-                      (make-people-reference-tags event-state pubkey reply-to-or-nil))
+                      (make-people-reference-tags event-state pubkey reply-to-or-nil)
+                      (make-subject-tag subject))
          content text
          body {:kind 1
                :tags tags
                :content content}]
      (body->event event-state body))))
+
+(defn make-subject-tag [subject]
+  (if (empty? (.trim subject))
+    []
+    [[:subject subject]]))
 
 (defn get-reply-root [event-state reply-to-or-nil]
   (if (nil? reply-to-or-nil)
@@ -255,9 +262,9 @@
   (let [send-chan (:send-chan event-state)]
     (async/>!! send-chan [:event event])))
 
-(defn compose-and-send-text-event [event-state source-event-or-nil message]
+(defn compose-and-send-text-event [event-state source-event-or-nil subject message]
   (let [reply-to-or-nil (:id source-event-or-nil)
-        event (compose-text-event event-state message reply-to-or-nil)]
+        event (compose-text-event event-state subject message reply-to-or-nil)]
     (send-event event-state event)))
 
 (defn compose-and-send-metadata-event [event-state]

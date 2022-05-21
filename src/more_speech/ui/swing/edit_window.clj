@@ -7,6 +7,10 @@
 (defn make-edit-window [kind event-agent header-tree]
   (let [reply? (= kind :reply)
         event-state @event-agent
+        subject-label (label "Subject:")
+        subject-text (text :id :subject :text "")
+        subject-panel (left-right-split subject-label subject-text
+                                        :divider-location 1/10)
         edit-frame (frame :title (name kind)
                           :size [1000 :by 500]
                           :on-close :dispose)
@@ -22,8 +26,9 @@
                 nil)]
     (listen send-button :action
             (fn [_]
-              (let [message (text edit-area)]
-                (events/compose-and-send-text-event event-state event message))
+              (let [message (text edit-area)
+                    subject (text subject-text)]
+                (events/compose-and-send-text-event event-state event subject message))
               (dispose! edit-frame)))
     (text! edit-area
            (if reply?
@@ -31,6 +36,7 @@
              ""))
     (config! edit-frame :content
              (border-panel
+               :north subject-panel
                :center (scrollable edit-area)
                :south (flow-panel :items [send-button])))
     (show! edit-frame)))
