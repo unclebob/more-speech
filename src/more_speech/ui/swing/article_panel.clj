@@ -5,7 +5,8 @@
             [more-speech.ui.config :as config]
             [more-speech.ui.formatters :as formatters]
             [more-speech.nostr.events :as events]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [more-speech.ui.swing.util :as swing-util])
   (:use [seesaw core])
   )
 
@@ -18,7 +19,14 @@
         id-label (label :id :id-label)
         citing-label (label :id :citing-label)
         root-label (label :id :root-label)
-        relays-label (label :id :relays-label)]
+        relays-popup (popup :enabled? false)
+        relays-label (label :id :relays-label :user-data relays-popup)]
+    (listen relays-label
+            :mouse-entered (fn [e]
+                             (-> relays-popup
+                                 (move! :to (.getLocationOnScreen e))
+                                 show!))
+            :mouse-exited (fn [_e] (hide! relays-popup)))
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
     (grid-panel
@@ -62,7 +70,10 @@
         citing (select main-frame [:#citing-label])
         root-label (select main-frame [:#root-label])
         relays-label (select main-frame [:#relays-label])
+        relays-popup (config relays-label :user-data)
         article-area (select main-frame [:#article-area])]
+    (swing-util/clear-popup relays-popup)
+    (config! relays-popup :items (:relays event))
     (text! article-area (formatters/reformat-article (:content event) 80))
     (text! (select main-frame [:#author-id-label])
            (format-user (:pubkey event)))
