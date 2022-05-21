@@ -52,9 +52,10 @@
     (let [name (format-user-id nicknames pubkey)
           time (format-time created-at)
           subject (get-subject tags)
+          header-text (-> content (string/replace \newline \~) (abbreviate 80))
           content (if (empty? subject)
-                    (-> content (string/replace \newline \~) (abbreviate 50))
-                    (abbreviate subject 50))]
+                    header-text
+                    (abbreviate (str subject "|" header-text) 80))]
       (format "%20s %s %s\n" name time content))))
 
 (defn format-reply [event]

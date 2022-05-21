@@ -18,6 +18,7 @@
         reply-to-label (label :id :reply-to-label)
         id-label (label :id :id-label)
         citing-label (label :id :citing-label)
+        subject-label (label :id :subject-label)
         root-label (label :id :root-label)
         relays-popup (popup :enabled? false)
         relays-label (label :id :relays-label :user-data relays-popup)]
@@ -37,6 +38,7 @@
               (flow-panel :align :left :items [(label "id:") id-label])
               (flow-panel :align :left :items [(label "citing:") citing-label])
               (flow-panel :align :left :items [(label "root:") root-label])
+              (flow-panel :align :left :items [(label "Subject:") subject-label])
               (flow-panel :align :left :items [(label "relays:") relays-label])
               ])))
 
@@ -71,7 +73,8 @@
         root-label (select main-frame [:#root-label])
         relays-label (select main-frame [:#relays-label])
         relays-popup (config relays-label :user-data)
-        article-area (select main-frame [:#article-area])]
+        article-area (select main-frame [:#article-area])
+        subject-label (select main-frame [:#subject-label])]
     (swing-util/clear-popup relays-popup)
     (config! relays-popup :items (:relays event))
     (text! article-area (formatters/reformat-article (:content event) 80))
@@ -95,5 +98,6 @@
                :user-data root-id
                :text (formatters/abbreviate (util/num32->hex-string root-id) 30))
       (text! root-label ""))
+    (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (pr-str (count (:relays event)) (first (:relays event))))
     ))

@@ -24,6 +24,10 @@
         event (if reply?
                 (get event-map selected-id)
                 nil)]
+    (when reply?
+      (let [subject (formatters/get-subject (:tags event))
+            prefix (if (empty? subject) "" "Re: ")]
+        (text! subject-text (str prefix subject))))
     (listen send-button :action
             (fn [_]
               (let [message (text edit-area)
