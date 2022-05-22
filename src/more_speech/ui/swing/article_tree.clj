@@ -40,7 +40,7 @@
           event (get event-map event-id)]
       (text! widget (formatters/format-header nicknames event)))))
 
-(declare add-references)
+(declare add-references resolve-any-orphans)
 
 (defn add-event [ui-context event]
   (let [frame (:frame @ui-context)
@@ -55,24 +55,54 @@
     (.insertNodeInto model child root insertion-point)
     (.makeVisible tree (TreePath. (.getPath child)))
     (swap! ui-context update-in [:node-map event-id] conj child)
+    (resolve-any-orphans ui-context event-id)
     (add-references ui-context event)
     ))
+
+(defn resolve-any-orphans [ui-context parent-id]
+  (let [parent-node (first (get-in @ui-context [:node-map parent-id]))
+        orphans (get-in @ui-context [:orphaned-references parent-id])]
+    (if (empty? orphans)
+      nil
+      (loop [orphans orphans]
+        (if (empty? orphans)
+          nil
+          (let [orphan-id (first orphans)
+                orphan-node (DefaultMutableTreeNode. orphan-id)]
+            (.add ^DefaultMutableTreeNode parent-node orphan-node)
+            (swap! ui-context update-in [:node-map orphan-id] conj orphan-node)
+            (recur (rest orphans))))
+        (swap! ui-context assoc-in [:orphaned-references parent-id] nil))))
+  )
 
 ;; at the moment an event can appear in several places in the tree.
 ;; it can be in the reply chain of an event, and it can stand alone.
 ;; The node-map holds the list of nodes that correspond to the id of
 ;; an event.
 
+(declare add-orphaned-reference add-this-node-to-reference-nodes)
+
 (defn add-references [ui-context event]
   (let [[_ _ referent] (events/get-references event)
         id (:id event)]
     (if (nil? referent)
       nil
-      (loop [nodes (get-in @ui-context [:node-map referent])]
+      (let [nodes (get-in @ui-context [:node-map referent])]
         (if (empty? nodes)
-          nil
-          (let [node (first nodes)
-                child (DefaultMutableTreeNode. id)]
-            (.add ^DefaultMutableTreeNode node child)
-            (swap! ui-context update-in [:node-map id] conj child)
-            (recur (rest nodes))))))))
+          (add-orphaned-reference ui-context referent id)
+          (add-this-node-to-reference-nodes ui-context nodes id)
+          )))))
+
+
+(defn add-orphaned-reference [ui-context referent id]
+  (swap! ui-context update-in [:orphaned-references referent] conj id))
+
+(defn add-this-node-to-reference-nodes [ui-context reference-nodes this-id]
+  (loop [nodes reference-nodes]
+    (if (empty? nodes)
+      nil
+      (let [node (first nodes)
+            child (DefaultMutableTreeNode. this-id)]
+        (.add ^DefaultMutableTreeNode node child)
+        (swap! ui-context update-in [:node-map this-id] conj child)
+        (recur (rest nodes))))))
