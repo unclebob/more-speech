@@ -254,7 +254,7 @@
   (it "given one tag, finds only the referent"
     (let [event {:tags [[:e (hexify 1)]]}
           [root mentions referent] (get-references event)]
-      (should-be-nil root)
+      (should= 1 root)
       (should= [] mentions)
       (should= 1 referent)))
 

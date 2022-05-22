@@ -89,13 +89,17 @@
   (map process-tag tags))
 
 (defn get-references
-  "returns [root mentions referent] as BigIntegers"
+  "returns [root mentions referent] as BigIntegers.
+  root is the root id of the thread.
+  referent is the id of the event being replied to.
+  mentions is a list of cited ids.
+  (See NIP-10)"
   [event]
   (let [tags (:tags event)
         e-tags (filter #(= :e (first %)) tags)
         refs (map second e-tags)
         refs (map hex-string->num refs)
-        root (if (< (count refs) 2) nil (first refs))
+        root (if (empty? refs) nil (first refs))
         referent (last refs)
         mentions (drop-last (rest refs))]
     [root mentions referent]))
@@ -223,13 +227,12 @@
 (defn get-reply-root [event-state reply-to-or-nil]
   (if (nil? reply-to-or-nil)
     nil
-    (loop [parent-id reply-to-or-nil
-           event-map (:text-event-map event-state)]
-      (let [event (get event-map parent-id)
-            [_ _ referent] (get-references event)]
-        (if (nil? referent)
-          parent-id
-          (recur referent event-map)))))
+    (let [reply-id reply-to-or-nil
+          event-map (:text-event-map event-state)
+          replied-to-event (get event-map reply-id)
+          [root _mentions _referent] (get-references replied-to-event)]
+      root)
+    )
   )
 
 (defn make-event-reference-tags
