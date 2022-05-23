@@ -51,7 +51,7 @@
                  :content ""
                  :tags []}
           header (format-header nicknames event)]
-      (should= "11111111111111111... 12/31/69 18:00:01 \n" header)))
+      (should= "  11111111111111111... 12/31/69 18:00:01 \n" header)))
 
   (it "formats a simple message"
       (let [nicknames {}
@@ -60,7 +60,7 @@
                    :content "the message"
                    :tags []}
             header (format-header nicknames event)]
-        (should= "11111111111111111... 12/31/69 18:00:01 the message\n" header)))
+        (should= "  11111111111111111... 12/31/69 18:00:01 the message\n" header)))
 
   (it "formats a long message with line ends."
         (let [nicknames {}
@@ -72,7 +72,7 @@ a new nation concieved in liberty and dedicated to
 the proposition that all men are created equal."
                      :tags []}
               header (format-header nicknames event)]
-          (should= "11111111111111111... 12/31/69 18:00:01 Four score and seven years ago~our fathers brought forth upon this continent~...\n" header)))
+          (should= "  11111111111111111... 12/31/69 18:00:01 Four score and seven years ago~our fathers brought forth upon this continent~...\n" header)))
 
   (it "formats a message with a subject"
         (let [nicknames {}
@@ -81,7 +81,7 @@ the proposition that all men are created equal."
                      :content "the message"
                      :tags [[:subject "the subject"]]}
               header (format-header nicknames event)]
-          (should= "11111111111111111... 12/31/69 18:00:01 the subject|the message\n" header)))
+          (should= "  11111111111111111... 12/31/69 18:00:01 the subject|the message\n" header)))
   )
 
 (describe "subject and discussion tags"

@@ -2,12 +2,13 @@
   (:require [clojure.data.json :as json]
             [clojure.core.async :as async]
             [more-speech.nostr.events :as events]
-            [more-speech.nostr.relays :refer [relays]])
+            [more-speech.nostr.relays :refer [relays]]
+            [java-time :as t])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
            (java.net URI)
-           ))
+           (java.time ZoneOffset)))
 
 (defn send-to [^WebSocket conn msg]
   (let [msg (events/to-json msg)]
@@ -94,7 +95,12 @@
       (swap! relays assoc-in [url :connection] connection))))
 
 (defn subscribe-to-relays [id]
-  (let [date (make-date "05/01/2022")]
+  (let [
+        date (-> (t/local-date-time)
+                 (t/minus (t/days 2))
+                 (t/adjust (t/local-time 0)))
+        date (.toEpochSecond date ZoneOffset/UTC)
+        ]
     (prn 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
       (let [conn (get-in @relays [url :connection])

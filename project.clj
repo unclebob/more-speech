@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.10.3"]
                  [org.clojure/data.json "2.4.0"]
                  [org.clojure/core.async "1.5.648"]
+                 [clojure.java-time "0.3.3"]
                  [seesaw "1.5.0"]
                  ]
   :profiles {:dev {:dependencies [[speclj "3.4.1"]]}}
