@@ -26,10 +26,10 @@
     (let [selected-node (last (selection e))
           selected-id (.getUserObject selected-node)
           event-state @event-agent]
+      (send event-agent events/add-read-event selected-id)
       (article-panel/load-article-info event-state selected-id main-frame))))
 
 (defn render-event [event-agent widget info]
-  (config! widget :font config/default-font)
   (if (seqable? (:value info))
     (text! widget "Articles")
     (let [event-state @event-agent
@@ -37,7 +37,10 @@
           event-map (:text-event-map event-state)
           node (:value info)
           event-id (.getUserObject node)
-          event (get event-map event-id)]
+          event (get event-map event-id)
+          read? (contains? (:read-event-ids @event-agent) event-id)
+          font (if read? config/default-font config/bold-font)]
+      (config! widget :font font)
       (text! widget (formatters/format-header nicknames event)))))
 
 (declare add-references resolve-any-orphans)

@@ -1,6 +1,7 @@
 (ns more-speech.ui.formatters
   (:require [clojure.string :as string]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [more-speech.nostr.events :as events])
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
@@ -52,11 +53,13 @@
     (let [name (format-user-id nicknames pubkey)
           time (format-time created-at)
           subject (get-subject tags)
+          [reply-id _ _] (events/get-references event)
+          reply-mark (if (some? reply-id) "^" " ")
           header-text (-> content (string/replace \newline \~) (abbreviate 80))
           content (if (empty? subject)
                     header-text
                     (abbreviate (str subject "|" header-text) 80))]
-      (format "%20s %s %s\n" name time content))))
+      (format "%s %20s %s %s\n" reply-mark name time content))))
 
 (defn format-reply [event]
   (prepend> (reformat-article (:content event) 80)))
