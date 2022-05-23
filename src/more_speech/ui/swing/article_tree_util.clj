@@ -10,7 +10,7 @@
   (let [comparator (fn [node1 node2]
                      (let [v1 (->> node1 .getUserObject (get event-map) :created-at)
                            v2 (->> node2 .getUserObject (get event-map) :created-at)]
-                       (compare v1 v2)))
+                       (compare v2 v1)))
         children (enumeration-seq (.children root))
         dummy-node (DefaultMutableTreeNode. event-id)
         insertion-point (if (nil? children)

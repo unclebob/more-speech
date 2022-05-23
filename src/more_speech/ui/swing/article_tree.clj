@@ -64,14 +64,15 @@
         orphans (get-in @ui-context [:orphaned-references parent-id])]
     (if (empty? orphans)
       nil
-      (loop [orphans orphans]
-        (if (empty? orphans)
-          nil
-          (let [orphan-id (first orphans)
-                orphan-node (DefaultMutableTreeNode. orphan-id)]
-            (.add ^DefaultMutableTreeNode parent-node orphan-node)
-            (swap! ui-context update-in [:node-map orphan-id] conj orphan-node)
-            (recur (rest orphans))))
+      (do
+        (loop [orphans orphans]
+          (if (empty? orphans)
+            nil
+            (let [orphan-id (first orphans)
+                  orphan-node (DefaultMutableTreeNode. orphan-id)]
+              (.add ^DefaultMutableTreeNode parent-node orphan-node)
+              (swap! ui-context update-in [:node-map orphan-id] conj orphan-node)
+              (recur (rest orphans)))))
         (swap! ui-context assoc-in [:orphaned-references parent-id] nil))))
   )
 

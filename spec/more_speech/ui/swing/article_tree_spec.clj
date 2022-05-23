@@ -14,18 +14,7 @@
             insertion-point (find-chronological-insertion-point root 99 event-map)]
         (should= 0 insertion-point)))
 
-    (it "returns zero if time is earlier than all events in tree"
-      (let [root (DefaultMutableTreeNode.)
-            child-id 1
-            child (DefaultMutableTreeNode. child-id)
-            _ (.add ^DefaultMutableTreeNode root child)
-            event {:id 99 :created-at 1}
-            event-map {99 event
-                       child-id {:created-at 10}}
-            insertion-point (find-chronological-insertion-point root 99 event-map)]
-        (should= 0 insertion-point)))
-
-    (it "returns 1 when event is later than only event in tree"
+    (it "returns zero if time is later than all events in tree"
       (let [root (DefaultMutableTreeNode.)
             child-id 1
             child (DefaultMutableTreeNode. child-id)
@@ -34,10 +23,21 @@
             event-map {99 event
                        child-id {:created-at 10}}
             insertion-point (find-chronological-insertion-point root 99 event-map)]
+        (should= 0 insertion-point)))
+
+    (it "returns 1 when event is ealier than only event in tree"
+      (let [root (DefaultMutableTreeNode.)
+            child-id 1
+            child (DefaultMutableTreeNode. child-id)
+            _ (.add ^DefaultMutableTreeNode root child)
+            event {:id 99 :created-at 5}
+            event-map {99 event
+                       child-id {:created-at 10}}
+            insertion-point (find-chronological-insertion-point root 99 event-map)]
         (should= 1 insertion-point))
       )
 
-    (it "returns n when event is later than n events in tree"
+    (it "returns n when event is earlier than n events in tree"
       (let [root (DefaultMutableTreeNode.)
             child-id 1
             child-1 (DefaultMutableTreeNode. child-id)
@@ -46,7 +46,7 @@
             _ (.add ^DefaultMutableTreeNode root child-1)
             _ (.add ^DefaultMutableTreeNode root child-2)
             _ (.add ^DefaultMutableTreeNode root child-3)
-            event {:id 99 :created-at 20}
+            event {:id 99 :created-at 5}
             event-map {99 event
                        child-id {:created-at 10}
                        (+ 1 child-id) {:created-at 10}
@@ -54,7 +54,7 @@
             insertion-point (find-chronological-insertion-point root 99 event-map)]
         (should= 3 insertion-point)))
 
-    (it "returns chronological insertion point"
+    (it "returns chronological insertion point above first earliest"
       (let [root (DefaultMutableTreeNode.)
             child-id 1
             child-1 (DefaultMutableTreeNode. child-id)
@@ -63,11 +63,11 @@
             _ (.add ^DefaultMutableTreeNode root child-1)
             _ (.add ^DefaultMutableTreeNode root child-2)
             _ (.add ^DefaultMutableTreeNode root child-3)
-            event {:id 99 :created-at 25}
+            event {:id 99 :created-at 15}
             event-map {99 event
-                       child-id {:created-at 10}
+                       child-id {:created-at 30}
                        (+ 1 child-id) {:created-at 20}
-                       (+ 2 child-id) {:created-at 30}}
+                       (+ 2 child-id) {:created-at 10}}
             insertion-point (find-chronological-insertion-point root 99 event-map)]
         (should= 2 insertion-point))
       )
