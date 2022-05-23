@@ -12,7 +12,7 @@
   events/event-handler
   (handle-text-event [_handler event]
     (invoke-later (article-tree/add-event ui-context event)))
-  (update-relay-panel  [_handler]
+  (update-relay-panel [_handler]
     (invoke-later (relay-panel/update-relay-panel ui-context))))
 
 (declare make-main-window)
@@ -27,9 +27,11 @@
   (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
         article-area (article-panel/make-article-area)
         header-tree (article-tree/make-article-tree event-agent main-frame)
+        header-tab-panel (tabbed-panel :tabs [{:title "All"
+                                               :content (scrollable header-tree)}])
         relay-panel (relay-panel/make-relay-panel)
         header-panel (left-right-split (scrollable relay-panel)
-                                       (scrollable header-tree))
+                                       header-tab-panel)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)
                                     :south (article-panel/make-control-panel event-agent header-tree))
