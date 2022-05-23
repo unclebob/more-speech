@@ -12,4 +12,6 @@ pom.xml.asc
 *.log
 private/keys
 private/nicknames
+private/read-event-ids
+
 
