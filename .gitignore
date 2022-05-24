@@ -10,8 +10,6 @@ pom.xml.asc
 .idea
 *.iml
 *.log
-private/keys
-private/nicknames
-private/read-event-ids
+private
 
 
