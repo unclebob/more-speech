@@ -23,18 +23,32 @@
 
 (declare timer-action)
 
+(defn make-tabs [event-agent main-frame]
+  (let [tabs (:tabs @event-agent)]
+    (loop [tab-names (keys tabs)
+           header-tree-tabs []]
+      (if (empty? tab-names)
+        header-tree-tabs
+        (let [tab-name (first tab-names)
+              header-tree (article-tree/make-header-tree event-agent main-frame)
+              _ (config! header-tree
+                         :user-data (get tabs tab-name)
+                         :id tab-name)
+              tab-data {:title (name tab-name)
+                        :content (scrollable header-tree)}]
+          (recur (rest tab-names) (conj header-tree-tabs tab-data)))
+        )))
+  )
 (defn make-main-window [event-agent]
   (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
         article-area (article-panel/make-article-area)
-        header-tree (article-tree/make-article-tree event-agent main-frame)
-        header-tab-panel (tabbed-panel :tabs [{:title "All"
-                                               :content (scrollable header-tree)}])
+        header-tab-panel (tabbed-panel :tabs (make-tabs event-agent main-frame))
         relay-panel (relay-panel/make-relay-panel)
         header-panel (left-right-split (scrollable relay-panel)
                                        header-tab-panel)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)
-                                    :south (article-panel/make-control-panel event-agent header-tree))
+                                    :south (article-panel/make-control-panel event-agent))
         main-panel (top-bottom-split
                      header-panel
                      article-panel

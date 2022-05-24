@@ -39,11 +39,14 @@
                  :nicknames {}
                  :keys {}
                  :read-event-ids #{}
+                 :tabs {}
                  }
                 event-agent-map)))
 
-(defn add-read-event [event-state id]
-  (update event-state :read-event-ids conj id))
+(defn select-event [event-state id]
+  (-> event-state
+      (update :read-event-ids conj id)
+      (assoc :selected-event id)))
 
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))

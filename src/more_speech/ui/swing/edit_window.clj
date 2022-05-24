@@ -4,7 +4,7 @@
             [more-speech.ui.formatters :as formatters])
   (:use [seesaw core]))
 
-(defn make-edit-window [kind event-agent header-tree]
+(defn make-edit-window [kind event-agent]
   (let [reply? (= kind :reply)
         event-state @event-agent
         subject-label (label "Subject:")
@@ -18,12 +18,8 @@
                         :font config/default-font)
         send-button (button :text "Send")
         event-map (:text-event-map event-state)
-        selected-id (if reply?
-                      (.getUserObject (last (selection header-tree)))
-                      nil)
-        event (if reply?
-                (get event-map selected-id)
-                nil)]
+        selected-id (if reply? (:selected-event @event-agent) nil)
+        event (if reply? (get event-map selected-id) nil)]
     (when reply?
       (let [subject (formatters/get-subject (:tags event))
             prefix (if (empty? subject) "" "Re: ")]

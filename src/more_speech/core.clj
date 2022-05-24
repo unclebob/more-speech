@@ -29,10 +29,12 @@
         _ (relays/load-relays-from-file "private/relays")
         read-event-ids (read-string (slurp "private/read-event-ids"))
         nicknames (read-string (slurp "private/nicknames"))
+        tabs (read-string (slurp "private/tabs"))
         event-agent (events/make-event-agent {:keys keys
                                               :send-chan send-chan
                                               :nicknames nicknames
                                               :read-event-ids read-event-ids
+                                              :tabs tabs
                                               })
         handler (swing/setup-main-window event-agent)
         ]

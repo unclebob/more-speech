@@ -10,12 +10,11 @@
 
 (declare render-event select-article)
 
-(defn make-article-tree [event-agent main-frame]
+(defn make-header-tree [event-agent main-frame]
   (let [header-tree (tree :renderer (partial render-event event-agent)
                           :root-visible? false
                           :expands-selected-paths? true
-                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty"))
-                          :id :header-tree)]
+                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty")))]
     (listen header-tree :selection (partial select-article event-agent main-frame))
     header-tree))
 
@@ -26,7 +25,7 @@
     (let [selected-node (last (selection e))
           selected-id (.getUserObject selected-node)
           event-state @event-agent]
-      (send event-agent events/add-read-event selected-id)
+      (send event-agent events/select-event selected-id)
       (article-panel/load-article-info event-state selected-id main-frame))))
 
 (defn render-event [event-agent widget info]
@@ -45,22 +44,38 @@
 
 (declare add-references resolve-any-orphans)
 
+(defn should-add-event? [tree event]
+  (let [tab-data (config tree :user-data)
+        selected (:selected tab-data)
+        _blocked (:blocked tab-data)]
+    (or
+      (empty? selected)
+      (some #(= % (:pubkey event)) selected)))
+  )
+
 (defn add-event [ui-context event]
   (let [frame (:frame @ui-context)
         event-state @(:event-agent @ui-context)
         event-map (:text-event-map event-state)
         event-id (:id event)
-        tree (select frame [:#header-tree])
-        model (config tree :model)
-        root (.getRoot model)
-        insertion-point (find-chronological-insertion-point root event-id event-map)
-        child (DefaultMutableTreeNode. event-id)]
-    (.insertNodeInto model child root insertion-point)
-    (.makeVisible tree (TreePath. (.getPath child)))
-    (swap! ui-context update-in [:node-map event-id] conj child)
-    (resolve-any-orphans ui-context event-id)
-    (add-references ui-context event)
-    ))
+        tabs (:tabs event-state)]
+    (loop [tab-names (keys tabs)]
+      (if (empty? tab-names)
+        nil
+        (let [tree-id (keyword (str "#" (name (first tab-names))))
+              tree (select frame [tree-id])]
+          (when (should-add-event? tree event)
+            (let [model (config tree :model)
+                  root (.getRoot model)
+                  insertion-point (find-chronological-insertion-point root event-id event-map)
+                  child (DefaultMutableTreeNode. event-id)]
+              (.insertNodeInto model child root insertion-point)
+              (.makeVisible tree (TreePath. (.getPath child)))
+              (swap! ui-context update-in [:node-map event-id] conj child)
+              (resolve-any-orphans ui-context event-id)
+              (add-references ui-context event)
+              ))
+          (recur (rest tab-names)))))))
 
 (defn resolve-any-orphans [ui-context parent-id]
   (let [parent-node (first (get-in @ui-context [:node-map parent-id]))

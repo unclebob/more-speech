@@ -45,7 +45,7 @@
 
 (defn id-click [ui-context id]
   (let [frame (:frame @ui-context)
-        tree (select frame [:#header-tree])
+        tree (select frame [:#all]) ;hack need to find a better solution.
         model (config tree :model)
         root-node (.getRoot model)
         node (find-header-node root-node id)]
