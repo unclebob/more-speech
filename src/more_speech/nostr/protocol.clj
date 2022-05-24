@@ -97,7 +97,7 @@
 (defn subscribe-to-relays [id]
   (let [
         date (-> (t/local-date-time)
-                 (t/minus (t/days 2))
+                 (t/minus (t/days 10))
                  (t/adjust (t/local-time 0)))
         date (.toEpochSecond date ZoneOffset/UTC)
         ]
