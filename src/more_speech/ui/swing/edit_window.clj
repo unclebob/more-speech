@@ -1,11 +1,13 @@
 (ns more-speech.ui.swing.edit-window
   (:require [more-speech.nostr.events :as events]
             [more-speech.ui.config :as config]
-            [more-speech.ui.formatters :as formatters])
+            [more-speech.ui.formatters :as formatters]
+            [more-speech.ui.swing.ui-context :refer :all])
   (:use [seesaw core]))
 
-(defn make-edit-window [kind event-agent]
+(defn make-edit-window [kind]
   (let [reply? (= kind :reply)
+        event-agent (:event-agent ui-context)
         event-state @event-agent
         subject-label (label "Subject:")
         subject-text (text :id :subject :text "")

@@ -48,15 +48,15 @@
         :editable? false
         :id :article-area))
 
-(defn make-control-panel [event-agent]
+(defn make-control-panel []
   (let [reply-button (button :text "Reply")
         create-button (button :text "Create")]
     (listen reply-button :action
             (fn [_]
-              (edit-window/make-edit-window :reply event-agent)))
+              (edit-window/make-edit-window :reply)))
 
     (listen create-button :action
-            (fn [_] (edit-window/make-edit-window :send event-agent)))
+            (fn [_] (edit-window/make-edit-window :send)))
     (flow-panel :items [reply-button create-button])))
 
 (defn id-click [e]

@@ -15,7 +15,8 @@
             [more-speech.nostr.protocol :as protocol]
             [more-speech.ui.swing.main-window :as swing]
             [more-speech.nostr.events :as events]
-            [more-speech.nostr.relays :as relays])
+            [more-speech.nostr.relays :as relays]
+            [more-speech.ui.swing.ui-context :refer :all])
   )
 
 (def send-chan (async/chan))
@@ -36,7 +37,8 @@
                                               :read-event-ids read-event-ids
                                               :tabs tabs
                                               })
-        handler (swing/setup-main-window event-agent)
+        _ (swap! ui-context assoc :event-agent event-agent)
+        handler (swing/setup-main-window)
         ]
     (send event-agent set-event-handler handler)
     (await event-agent) ; wait for the agent to complete.

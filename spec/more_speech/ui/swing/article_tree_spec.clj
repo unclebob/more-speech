@@ -2,7 +2,8 @@
   (:require [speclj.core :refer :all]
             [more-speech.ui.swing.article-tree :refer :all]
             [more-speech.ui.swing.article-tree-util :refer :all]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [more-speech.ui.swing.ui-context :refer :all])
   (:import (javax.swing.tree DefaultMutableTreeNode)))
 
 (describe "header tree"
@@ -107,7 +108,7 @@
             parent-node (DefaultMutableTreeNode. parent-id)
             node-map {parent-id [parent-node]
                       id []}
-            ui-context (atom {:node-map node-map})
+            _ (reset! ui-context {:node-map node-map})
             event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
             _ (add-references ui-context event)
             nodes (get-in @ui-context [:node-map id])]
@@ -122,7 +123,7 @@
       (let [parent-id 2N
             id 1N
             node-map {id []}
-            ui-context (atom {:node-map node-map})
+            _  (reset! ui-context {:node-map node-map})
             event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
             _ (add-references ui-context event)
             nodes (get-in @ui-context [:node-map id])]

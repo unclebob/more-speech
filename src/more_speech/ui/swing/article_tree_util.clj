@@ -45,7 +45,9 @@
 
 (defn id-click [ui-context id]
   (let [frame (:frame @ui-context)
-        tree (select frame [:#all]) ;hack need to find a better solution.
+        selected-tab (:selected-tab @ui-context)
+        tab-selector (keyword (str "#" (name selected-tab)))
+        tree (select frame [tab-selector])
         model (config tree :model)
         root-node (.getRoot model)
         node (find-header-node root-node id)]

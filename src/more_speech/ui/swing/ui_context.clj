@@ -2,4 +2,6 @@
 
 (def ui-context (atom {:frame nil
                        :event-agent nil
-                       :node-map {}}))
+                       :node-map {}
+                       :orphaned-references {}
+                       :selected-tab nil}))

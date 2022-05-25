@@ -4,27 +4,29 @@
     [more-speech.nostr.events :as events]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.config :as config]
-    [more-speech.ui.swing.article-panel :as article-panel])
+    [more-speech.ui.swing.article-panel :as article-panel]
+    [more-speech.ui.swing.ui-context :refer :all])
   (:use [seesaw core font tree])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
 (declare render-event select-article)
 
-(defn make-header-tree [event-agent main-frame]
+(defn make-header-tree [tab-name event-agent main-frame]
   (let [header-tree (tree :renderer (partial render-event event-agent)
                           :root-visible? false
                           :expands-selected-paths? true
                           :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty")))]
-    (listen header-tree :selection (partial select-article event-agent main-frame))
+    (listen header-tree :selection (partial select-article tab-name event-agent main-frame))
     header-tree))
 
-(defn select-article [event-agent main-frame e]
+(defn select-article [tab-name event-agent main-frame e]
   (when (and
           (some? (last (selection e)))
           (instance? DefaultMutableTreeNode (last (selection e))))
     (let [selected-node (last (selection e))
           selected-id (.getUserObject selected-node)
           event-state @event-agent]
+      (swap! ui-context assoc :selected-tab tab-name)
       (send event-agent events/select-event selected-id)
       (article-panel/load-article-info event-state selected-id main-frame))))
 
@@ -53,7 +55,7 @@
       (some #(= % (:pubkey event)) selected)))
   )
 
-(defn add-event [ui-context event]
+(defn add-event [event]
   (let [frame (:frame @ui-context)
         event-state @(:event-agent @ui-context)
         event-map (:text-event-map event-state)
@@ -108,15 +110,15 @@
       nil
       (let [nodes (get-in @ui-context [:node-map referent])]
         (if (empty? nodes)
-          (add-orphaned-reference ui-context referent id)
-          (add-this-node-to-reference-nodes ui-context nodes id)
+          (add-orphaned-reference referent id)
+          (add-this-node-to-reference-nodes nodes id)
           )))))
 
 
-(defn add-orphaned-reference [ui-context referent id]
+(defn add-orphaned-reference [referent id]
   (swap! ui-context update-in [:orphaned-references referent] conj id))
 
-(defn add-this-node-to-reference-nodes [ui-context reference-nodes this-id]
+(defn add-this-node-to-reference-nodes [reference-nodes this-id]
   (loop [nodes reference-nodes]
     (if (empty? nodes)
       nil
