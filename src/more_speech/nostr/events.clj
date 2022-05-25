@@ -75,7 +75,7 @@
         4 (do
             ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             event-state)
-        (do (prn "unknown event: " url event)
+        (do #_(prn "unknown event: " url event)
             event-state)))))
 
 (defn process-name-event [event-state {:strs [_id pubkey _created_at _kind _tags content _sig] :as event}]
