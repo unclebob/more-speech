@@ -7,7 +7,7 @@
 
 (defn make-edit-window [kind]
   (let [reply? (= kind :reply)
-        event-agent (:event-agent ui-context)
+        event-agent (:event-agent @ui-context)
         event-state @event-agent
         subject-label (label "Subject:")
         subject-text (text :id :subject :text "")

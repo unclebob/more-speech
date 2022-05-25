@@ -9,31 +9,35 @@
   (:use [seesaw core font tree])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
-(declare render-event select-article)
+(declare render-event node-selected)
 
-(defn make-header-tree [tab-name event-agent main-frame]
-  (let [header-tree (tree :renderer (partial render-event event-agent)
+(defn make-header-tree [tab-name]
+  (let [header-tree (tree :renderer render-event
                           :root-visible? false
                           :expands-selected-paths? true
                           :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty")))]
-    (listen header-tree :selection (partial select-article tab-name event-agent main-frame))
+    (listen header-tree :selection (partial node-selected tab-name))
     header-tree))
 
-(defn select-article [tab-name event-agent main-frame e]
-  (when (and
-          (some? (last (selection e)))
-          (instance? DefaultMutableTreeNode (last (selection e))))
-    (let [selected-node (last (selection e))
-          selected-id (.getUserObject selected-node)
-          event-state @event-agent]
-      (swap! ui-context assoc :selected-tab tab-name)
-      (send event-agent events/select-event selected-id)
-      (article-panel/load-article-info event-state selected-id main-frame))))
+(defn select-article [tab-name selected-node]
+  (let [selected-id (.getUserObject selected-node)
+        event-agent (:event-agent @ui-context)]
+    (swap! ui-context assoc :selected-tab tab-name)
+    (send event-agent events/select-event selected-id)
+    (article-panel/load-article-info selected-id)))
 
-(defn render-event [event-agent widget info]
+(defn node-selected [tab-name e]
+  (let [selected-node (last (selection e))]
+    (when (and
+            (some? selected-node)
+            (instance? DefaultMutableTreeNode selected-node))
+      (select-article tab-name selected-node))))
+
+(defn render-event [widget info]
   (if (seqable? (:value info))
     (text! widget "Articles")
-    (let [event-state @event-agent
+    (let [event-agent (:event-agent @ui-context)
+          event-state @event-agent
           nicknames (:nicknames event-state)
           event-map (:text-event-map event-state)
           node (:value info)

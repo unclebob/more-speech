@@ -62,8 +62,10 @@
 (defn id-click [e]
   (article-tree-util/id-click ui-context (config e :user-data)))
 
-(defn load-article-info [event-state selected-id main-frame]
-  (let [nicknames (:nicknames event-state)
+(defn load-article-info [selected-id]
+  (let [event-state @(:event-agent @ui-context)
+        main-frame (:frame @ui-context)
+        nicknames (:nicknames event-state)
         format-user (partial formatters/format-user-id nicknames)
         text-map (:text-event-map event-state)
         event (get text-map selected-id)

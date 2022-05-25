@@ -23,7 +23,7 @@
 
 (declare timer-action)
 
-(defn make-tabs [main-frame]
+(defn make-tabs []
   (let [event-agent (:event-agent @ui-context)
         tabs (:tabs @event-agent)]
     (loop [tab-names (keys tabs)
@@ -31,7 +31,7 @@
       (if (empty? tab-names)
         header-tree-tabs
         (let [tab-name (first tab-names)
-              header-tree (article-tree/make-header-tree tab-name event-agent main-frame)
+              header-tree (article-tree/make-header-tree tab-name)
               _ (config! header-tree
                          :user-data (get tabs tab-name)
                          :id tab-name)
@@ -40,11 +40,23 @@
           (recur (rest tab-names) (conj header-tree-tabs tab-data)))
         )))
   )
+
+(defn select-tab [e]
+  (let [tab-name (:title (selection e))
+        frame (:frame @ui-context)
+        tree (select frame [(keyword (str "#" tab-name))])
+        selections (selection tree)]
+    (when (some? selections)
+      (article-tree/select-article (keyword tab-name) (last selections)))
+    ))
+
+
 (defn make-main-window []
   (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
         _ (swap! ui-context assoc :frame main-frame)
         article-area (article-panel/make-article-area)
-        header-tab-panel (tabbed-panel :tabs (make-tabs main-frame))
+        header-tab-panel (tabbed-panel :tabs (make-tabs) :id :header-tab-panel)
+        _ (listen header-tab-panel :selection select-tab)
         relay-panel (relay-panel/make-relay-panel)
         header-panel (left-right-split (scrollable relay-panel)
                                        header-tab-panel)

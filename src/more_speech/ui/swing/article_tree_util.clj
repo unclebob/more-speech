@@ -43,16 +43,28 @@
 (defn find-header-node [root id]
   (search-for-node root #(= id %)))
 
+(defn select-tree-node [tree node]
+  (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]
+    (.setSelectionPath tree tree-path)
+    (.scrollPathToVisible tree tree-path)))
+
 (defn id-click [ui-context id]
   (let [frame (:frame @ui-context)
+        tab-panel (select frame [:#header-tab-panel])
         selected-tab (:selected-tab @ui-context)
         tab-selector (keyword (str "#" (name selected-tab)))
         tree (select frame [tab-selector])
         model (config tree :model)
         root-node (.getRoot model)
         node (find-header-node root-node id)]
-    (when (some? node)
-      (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]
-        (.setSelectionPath tree tree-path)
-        (.scrollPathToVisible tree tree-path)
-        ))))
+    (if (some? node)
+      (select-tree-node tree node)
+      (let [tree (select frame [:#all])
+            model (config tree :model)
+            root-node (.getRoot model)
+            node (find-header-node root-node id)]
+        (when (some? node)
+          (selection! tab-panel "all")
+          (select-tree-node tree node))
+        )
+      )))
