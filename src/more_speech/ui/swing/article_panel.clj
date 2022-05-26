@@ -13,7 +13,8 @@
 (declare id-click)
 
 (defn make-article-info-panel []
-  (let [author-id-label (label :id :author-id-label)
+  (let [author-name-label (label :id :author-name-label)
+        author-id-label (text :id :author-id-label :editable? false :font config/small-font)
         created-time-label (label :id :created-time-label)
         reply-to-label (label :id :reply-to-label)
         id-label (text :id :id-label :editable? false :font config/small-font)
@@ -32,14 +33,15 @@
     (listen root-label :mouse-pressed id-click)
     (grid-panel
       :rows 3 :columns 3
-      :items [(flow-panel :align :left :items [(label "author:") author-id-label])
+      :items [(flow-panel :align :left :items [(label "author:") author-name-label])
+              (flow-panel :align :left :items [(label "Subject:") subject-label])
+              (flow-panel :align :left :items [(label "pubkey:") author-id-label])
               (flow-panel :align :left :items [(label "created at:") created-time-label])
               (flow-panel :align :left :items [(label "reply to:") reply-to-label])
+              (flow-panel :align :left :items [(label "relays:") relays-label])
               (flow-panel :align :left :items [(label "id:") id-label])
               (flow-panel :align :left :items [(label "citing:") citing-label])
               (flow-panel :align :left :items [(label "root:") root-label])
-              (flow-panel :align :left :items [(label "Subject:") subject-label])
-              (flow-panel :align :left :items [(label "relays:") relays-label])
               ])))
 
 (defn make-article-area []
@@ -80,8 +82,10 @@
     (swing-util/clear-popup relays-popup)
     (config! relays-popup :items (:relays event))
     (text! article-area (formatters/reformat-article (:content event) 80))
-    (text! (select main-frame [:#author-id-label])
+    (text! (select main-frame [:#author-name-label])
            (format-user (:pubkey event)))
+    (text! (select main-frame [:#author-id-label])
+           (util/num32->hex-string (:pubkey event)))
     (text! (select main-frame [:#created-time-label])
            (formatters/format-time (:created-at event)))
     (config! (select main-frame [:#id-label])
