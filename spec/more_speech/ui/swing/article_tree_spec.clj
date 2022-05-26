@@ -280,4 +280,31 @@
       )
     )
 
+  (context "avoiding duplicate children in a node"
+    (it "does not find a child in an empty node"
+      (let [node (DefaultMutableTreeNode. nil)]
+        (should-not (node-contains? node 1))))
+
+    (it "finds first child"
+      (let [node (DefaultMutableTreeNode. nil)
+            child (DefaultMutableTreeNode. 1)
+            _ (.add node child)]
+        (should (node-contains? node 1))
+        (should-not (node-contains? node 2))))
+
+    (it "finds children from beginning to end"
+          (let [node (DefaultMutableTreeNode. nil)
+                child1 (DefaultMutableTreeNode. 1)
+                child2 (DefaultMutableTreeNode. 2)
+                child3 (DefaultMutableTreeNode. 3)
+                _ (.add node child1)
+                _ (.add node child2)
+                _ (.add node child3)]
+            (should (node-contains? node 1))
+            (should (node-contains? node 2))
+            (should (node-contains? node 3))
+            (should-not (node-contains? node 4))))
+
+    )
+
   )

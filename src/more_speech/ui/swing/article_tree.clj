@@ -131,12 +131,25 @@
 (defn add-orphaned-reference [referent id]
   (swap! ui-context update-in [:orphaned-references referent] conj id))
 
+(defn node-contains? [node id]
+  (loop [child-indeces (range (.getChildCount node))]
+    (if (empty? child-indeces)
+      false
+      (let [child-index (first child-indeces)
+            child (.getChildAt node child-index)
+            child-id (.getUserObject child)]
+        (if (= child-id id)
+          true
+          (recur (rest child-indeces)))))
+  ))
+
 (defn add-this-node-to-reference-nodes [reference-nodes this-id]
   (loop [nodes reference-nodes]
     (if (empty? nodes)
       nil
-      (let [node (first nodes)
-            child (DefaultMutableTreeNode. this-id)]
-        (.add ^DefaultMutableTreeNode node child)
-        (swap! ui-context update-in [:node-map this-id] conj child)
-        (recur (rest nodes))))))
+      (when-not (node-contains? (first nodes) this-id)
+        (let [node (first nodes)
+              child (DefaultMutableTreeNode. this-id)]
+          (.add ^DefaultMutableTreeNode node child)
+          (swap! ui-context update-in [:node-map this-id] conj child)
+          (recur (rest nodes)))))))
