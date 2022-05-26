@@ -76,7 +76,7 @@
             ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             event-state)
         (do #_(prn "unknown event: " url event)
-            event-state)))))
+          event-state)))))
 
 (defn process-name-event [event-state {:strs [_id pubkey _created_at _kind _tags content _sig] :as event}]
   (try
@@ -96,6 +96,32 @@
 (defn process-tags [tags]
   (map process-tag tags))
 
+(defn get-unmarked-references [e-tags]
+  (let [refs (map second e-tags)
+        refs (map hex-string->num refs)
+        root (if (empty? refs) nil (first refs))
+        referent (last refs)
+        mentions (drop-last (rest refs))]
+    [root mentions referent]))
+
+(defn get-marked-references [e-tags]
+  (loop [tags e-tags
+         root nil
+         referent nil
+         mentions []]
+    (if (empty? tags)
+      (if (nil? root)
+        [referent mentions referent]
+        [root mentions referent])
+      (let [tag (first tags)
+            id (hex-string->num (nth tag 1))]
+        (if (>= (count tag) 4)
+          (condp = (nth tag 3)
+            "reply" (recur (rest tags) root id mentions)
+            "root" (recur (rest tags) id referent mentions)
+            (recur (rest tags) root referent (conj mentions id)))
+          (recur (rest tags) root referent (conj mentions id)))))))
+
 (defn get-references
   "returns [root mentions referent] as BigIntegers.
   root is the root id of the thread.
@@ -105,12 +131,10 @@
   [event]
   (let [tags (:tags event)
         e-tags (filter #(= :e (first %)) tags)
-        refs (map second e-tags)
-        refs (map hex-string->num refs)
-        root (if (empty? refs) nil (first refs))
-        referent (last refs)
-        mentions (drop-last (rest refs))]
-    [root mentions referent]))
+        markers (set (map #(nth % 3) (filter #(>= (count %) 4) e-tags)))]
+    (if (contains? markers "reply")
+      (get-marked-references e-tags)
+      (get-unmarked-references e-tags))))
 
 (defn process-references [state event]
   (let [[_ _ referent] (get-references event)]
@@ -247,12 +271,12 @@
   ([reply-to root]
    (if (or (nil? root) (= root reply-to))
      (make-event-reference-tags reply-to)
-     [[:e (hexify root)] [:e (hexify reply-to)]]))
+     [[:e (hexify root) "" "root"] [:e (hexify reply-to) "" "reply"]]))
 
   ([reply-to]
    (if (nil? reply-to)
      []
-     [[:e (hexify reply-to)]])
+     [[:e (hexify reply-to) "" "reply"]])
    )
   )
 

@@ -173,7 +173,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)
+        (should= [[:e root-id-hex "" "reply"] [:p (hexify root-author)]] tags)
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -202,7 +202,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:e root-id-hex] [:e root-child-id-hex]
+        (should= [[:e root-id-hex "" "root"] [:e root-child-id-hex "" "reply"]
                   [:p (hexify root-child-author)] [:p (hexify root-author)]] tags)
         (should= text content)
         (should (do-verify (hex-string->bytes id)
@@ -221,7 +221,7 @@
             event (compose-text-event event-state "" "message" root-id)
             {:keys [tags]} (second event)]
 
-        (should= [[:e root-id-hex] [:p (hexify root-author)]] tags)))
+        (should= [[:e root-id-hex "" "reply"] [:p (hexify root-author)]] tags)))
 
     (it "composes a message with a slash."
       (let [private-key (num->bytes 64 42)
@@ -276,6 +276,25 @@
       (should= 1 root)
       (should= [2 3 4] mentions)
       (should= 5 referent)))
+
+  (it "finds the root and reply when the tags are marked, irrespective of order."
+    (let [event {:tags [[:e (hexify 1)]
+                        [:e (hexify 2) "" "reply"]
+                        [:e (hexify 3) "" "root"]
+                        [:e (hexify 4) "" "wow"]]}
+          [root mentions referent] (get-references event)]
+      (should= 3 root)
+      (should= 2 referent)
+      (should= [1 4] mentions)))
+
+  (it "finds the root and reply when only a reply is marked."
+      (let [event {:tags [[:e (hexify 1)]
+                          [:e (hexify 2) "" "reply"]
+                          [:e (hexify 4) "" "wow"]]}
+            [root mentions referent] (get-references event)]
+        (should= 2 root)
+        (should= 2 referent)
+        (should= [1 4] mentions)))
   )
 
 (describe "json"
