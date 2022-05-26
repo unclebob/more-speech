@@ -2,3 +2,4 @@
 
 (def default-font "COURIER-PLAIN-14")
 (def bold-font "COURIER-BOLD-14")
+(def small-font "COURIER_PLAIN-9")

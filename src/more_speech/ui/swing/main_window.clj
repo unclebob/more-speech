@@ -52,7 +52,7 @@
 
 
 (defn make-main-window []
-  (let [main-frame (frame :title "More Speech" :size [1000 :by 1000])
+  (let [main-frame (frame :title "More Speech" :size [1500 :by 1000])
         _ (swap! ui-context assoc :frame main-frame)
         article-area (article-panel/make-article-area)
         header-tab-panel (tabbed-panel :tabs (make-tabs) :id :header-tab-panel)

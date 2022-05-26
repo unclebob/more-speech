@@ -16,10 +16,10 @@
   (let [author-id-label (label :id :author-id-label)
         created-time-label (label :id :created-time-label)
         reply-to-label (label :id :reply-to-label)
-        id-label (label :id :id-label)
-        citing-label (label :id :citing-label)
+        id-label (text :id :id-label :editable? false :font config/small-font)
+        citing-label (text :id :citing-label :editable? false :font config/small-font)
         subject-label (label :id :subject-label)
-        root-label (label :id :root-label)
+        root-label (text :id :root-label :editable? false :font config/small-font)
         relays-popup (popup :enabled? false)
         relays-label (label :id :relays-label :user-data relays-popup)]
     (listen relays-label
@@ -86,19 +86,19 @@
            (formatters/format-time (:created-at event)))
     (config! (select main-frame [:#id-label])
              :user-data (:id event)
-             :text (formatters/abbreviate (util/num32->hex-string (:id event)) 30))
+             :text (util/num32->hex-string (:id event)))
     (if (some? referent)
       (let [replied-event (get text-map referent)]
         (text! reply-to (format-user (:pubkey replied-event)))
         (config! citing
                  :user-data referent
-                 :text (formatters/abbreviate (util/num32->hex-string referent) 30)))
+                 :text (util/num32->hex-string referent)))
       (do (text! reply-to "")
           (text! citing "")))
     (if (some? root-id)
       (config! root-label
                :user-data root-id
-               :text (formatters/abbreviate (util/num32->hex-string root-id) 30))
+               :text (util/num32->hex-string root-id))
       (text! root-label ""))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (pr-str (count (:relays event)) (first (:relays event))))
