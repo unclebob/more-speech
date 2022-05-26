@@ -123,7 +123,7 @@
       (let [parent-id 2N
             id 1N
             node-map {id []}
-            _  (reset! ui-context {:node-map node-map})
+            _ (reset! ui-context {:node-map node-map})
             event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
             _ (add-references ui-context event)
             nodes (get-in @ui-context [:node-map id])]
@@ -233,4 +233,51 @@
             found-node (find-header-node root 4)]
         (should-be-nil found-node)))
 
-    ))
+    )
+
+  (context "filtering events in tabs."
+    (it "allows all if the filters are empty"
+      (let [event {:id 1}
+            filter {:selected []
+                    :blocked []}]
+        (should (should-add-event? filter event))))
+
+    (it "allows selected event ids"
+      (let [events [{:id 1} {:id 2} {:id 3}]
+            filter {:selected [1 3]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false true] filter-results)))
+
+    (it "allows selected pubkeys"
+      (let [events [{:id 1 :pubkey 10} {:id 2 :pubkey 20} {:id 3 :pubkey 30}]
+            filter {:selected [10 30]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false true] filter-results)))
+
+    (it "allows events that have a selected id at the root of a thread."
+      (let [events [{:id 1 :tags [[:e "10" ""]]}
+                    {:id 2 :tags [[:e "11" ""]]}
+                    {:id 3 :tags [[:e "30" ""]]}
+                    {:id 4 :tags [[:e "90" ""] [:e "30" ""]]}
+                    {:id 5 :tags [[:e "90" ""] [:e "50" ""] [:e "30" ""]]}
+                    {:id 6 :tags [[:e "90" ""] [:e "30" ""] [:e "50" ""]]}]
+            filter {:selected [16r10 16r30]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false true false false false] filter-results)))
+
+    (it "does not allow an id or pubkey that is blocked, even if it is selected."
+      (let [events [{:id 1 :pubkey 20}
+                    {:id 2 :pubkey 20}
+                    {:id 3 :pubkey 20}
+                    {:id 4 :pubkey 10}]
+            filter {:selected [1 2 3 4]
+                    :blocked [2 10]}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false true false] filter-results))
+      )
+    )
+
+  )

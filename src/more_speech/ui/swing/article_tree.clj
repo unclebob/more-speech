@@ -50,13 +50,21 @@
 
 (declare add-references resolve-any-orphans)
 
-(defn should-add-event? [tree event]
-  (let [tab-data (config tree :user-data)
-        selected (:selected tab-data)
-        _blocked (:blocked tab-data)]
-    (or
-      (empty? selected)
-      (some #(= % (:pubkey event)) selected)))
+(defn should-add-event? [filter event]
+  (let [selected (:selected filter)
+        blocked (:blocked filter)
+        [root _mentions _referent] (events/get-references event)]
+    (and
+      (or
+        (empty? selected)
+        (some #(= % (:pubkey event)) selected)
+        (some #(= % (:id event)) selected)
+        (some #(= % root) selected))
+      (not
+        (or
+          (some #(= % (:pubkey event)) blocked)
+          (some #(= % (:id event)) blocked))))
+    )
   )
 
 (defn add-event [event]
@@ -69,8 +77,9 @@
       (if (empty? tab-names)
         nil
         (let [tree-id (keyword (str "#" (name (first tab-names))))
-              tree (select frame [tree-id])]
-          (when (should-add-event? tree event)
+              tree (select frame [tree-id])
+              filter (config tree :user-data)]
+          (when (should-add-event? filter event)
             (let [model (config tree :model)
                   root (.getRoot model)
                   insertion-point (find-chronological-insertion-point root event-id event-map)
