@@ -7,10 +7,10 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.util :as util]
             [more-speech.ui.swing.util :as swing-util])
-  (:use [seesaw core])
+  (:use [seesaw core border])
   )
 
-(declare id-click)
+(declare id-click bold-label)
 
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
@@ -31,18 +31,24 @@
             :mouse-exited (fn [_e] (hide! relays-popup)))
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
-    (grid-panel
-      :rows 3 :columns 3
-      :items [(flow-panel :align :left :items [(label "author:") author-name-label])
-              (flow-panel :align :left :items [(label "Subject:") subject-label])
-              (flow-panel :align :left :items [(label "pubkey:") author-id-label])
-              (flow-panel :align :left :items [(label "created at:") created-time-label])
-              (flow-panel :align :left :items [(label "reply to:") reply-to-label])
-              (flow-panel :align :left :items [(label "relays:") relays-label])
-              (flow-panel :align :left :items [(label "id:") id-label])
-              (flow-panel :align :left :items [(label "citing:") citing-label])
-              (flow-panel :align :left :items [(label "root:") root-label])
-              ])))
+    (let [grid
+          (grid-panel
+            :columns 3
+            :preferred-size [-1 :by 70] ;icky.
+            :items [(flow-panel :align :left :items [(bold-label "Author:") author-name-label])
+                    (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
+                    (flow-panel :align :left :items [(bold-label "pubkey:") author-id-label])
+                    (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
+                    (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
+                    (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
+                    (flow-panel :align :left :items [(bold-label "id:") id-label])
+                    (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
+                    (flow-panel :align :left :items [(bold-label "Root:") root-label])])
+          ]
+      grid)))
+
+(defn bold-label [s]
+  (label :text s :font config/bold-font))
 
 (defn make-article-area []
   (text :multi-line? true
