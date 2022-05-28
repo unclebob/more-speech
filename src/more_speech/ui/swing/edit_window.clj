@@ -16,8 +16,7 @@
         edit-frame (frame :title (name kind)
                           :size [1000 :by 500]
                           :on-close :dispose)
-        edit-area (text :multi-line? true
-                        :font config/default-font)
+        edit-area (editor-pane :font config/default-font)
         send-button (button :text "Send")
         event-map (:text-event-map event-state)
         selected-id (if reply? (:selected-event @event-agent) nil)

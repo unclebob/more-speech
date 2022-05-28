@@ -1,12 +1,3 @@
-;;Stories
-;; - Add author/date, etc. to replies.
-;; - Start checking sdefs in update.
-;; - Clean up java schnorr library.
-;; - Threading needs some rethinking.
-;; - Mark read and highlight properly.
-;; - Save names and headers.  Request after latest save.
-;; - Consider subject/topic in the tags
-
 ;;Notes:
 ;; Nice debug site: https://nostr-army-knife.netlify.app
 

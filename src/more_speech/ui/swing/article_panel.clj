@@ -34,7 +34,7 @@
     (let [grid
           (grid-panel
             :columns 3
-            :preferred-size [-1 :by 70] ;icky.
+            :preferred-size [-1 :by 70]                     ;icky.
             :items [(flow-panel :align :left :items [(bold-label "Author:") author-name-label])
                     (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
                     (flow-panel :align :left :items [(bold-label "pubkey:") author-id-label])
@@ -51,10 +51,10 @@
   (label :text s :font config/bold-font))
 
 (defn make-article-area []
-  (text :multi-line? true
-        :font config/default-font
-        :editable? false
-        :id :article-area))
+  (editor-pane
+    :font config/default-font
+    :editable? false
+    :id :article-area))
 
 (defn make-control-panel []
   (let [reply-button (button :text "Reply")
