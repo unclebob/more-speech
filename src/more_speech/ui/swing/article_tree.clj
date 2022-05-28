@@ -9,7 +9,7 @@
   (:use [seesaw core font tree])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
-(declare render-event node-selected)
+(declare render-event node-selected mouse-pressed)
 
 (defn make-header-tree [tab-name]
   (let [header-tree (tree :renderer render-event
@@ -17,7 +17,29 @@
                           :expands-selected-paths? true
                           :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty")))]
     (listen header-tree :selection (partial node-selected tab-name))
+    (listen header-tree :mouse-pressed mouse-pressed)
     header-tree))
+
+(declare get-info)
+
+(defn mouse-pressed [e]
+  (when (.isPopupTrigger e)
+    (let [tree (.getComponent e)
+          path (.getPathForLocation tree (.getX e) (.getY e))
+          node (.getLastPathComponent path)
+          event-id (.getUserObject ^DefaultMutableTreeNode node)
+          event-agent (:event-agent @ui-context)
+          event-map (:text-event-map @event-agent)
+          event (get event-map event-id)
+          p (popup :items [(action :name "Get info..."
+                                   :handler (partial get-info event))])]
+      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))
+    ))
+
+(defn get-info [event _e]
+  (alert
+    (with-out-str
+      (clojure.pprint/pprint event))))
 
 (defn select-article [tab-name selected-node]
   (let [selected-id (.getUserObject selected-node)
@@ -141,7 +163,7 @@
         (if (= child-id id)
           true
           (recur (rest child-indeces)))))
-  ))
+    ))
 
 (defn add-this-node-to-reference-nodes [reference-nodes this-id]
   (loop [nodes reference-nodes]
