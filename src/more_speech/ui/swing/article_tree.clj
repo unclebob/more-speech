@@ -41,11 +41,14 @@
     (with-out-str
       (clojure.pprint/pprint event))))
 
-(defn select-article [tab-name selected-node]
+(defn select-article
+  "This should not be called for back/forward traversal because
+  event/select-event adds to the event history."
+  [tab-name selected-node]
   (let [selected-id (.getUserObject selected-node)
         event-agent (:event-agent @ui-context)]
     (swap! ui-context assoc :selected-tab tab-name)
-    (send event-agent events/select-event selected-id)
+    (send event-agent events/select-event tab-name selected-id)
     (article-panel/load-article-info selected-id)))
 
 (defn node-selected [tab-name e]

@@ -15,13 +15,16 @@
 (s/def ::tag (s/tuple keyword? number?))
 (s/def ::tags (s/coll-of ::tag))
 (s/def ::references (s/coll-of number?))
+(s/def ::relay-url string?)
+(s/def ::relays (s/coll-of ::relay-url))
 (s/def ::event (s/keys :req-un [::id
                                 ::pubkey
                                 ::created-at
                                 ::content
                                 ::sig
                                 ::tags
-                                ::references]))
+                                ::references]
+                       :opt-un [::relays]))
 (defn hexify [n]
   (util/num32->hex-string n))
 
@@ -33,6 +36,32 @@
 (declare process-text-event
          process-name-event)
 
+(s/def ::chronological-text-events (s/coll-of ::id))
+(s/def ::text-event-map (s/map-of :id :event))
+(s/def ::nicknames (s/map-of ::id string?))
+(s/def ::name string?)
+(s/def ::about string?)
+(s/def ::picture string?)
+(s/def ::public-key string?)
+(s/def ::private-key string?)
+(s/def ::keys (s/keys :req-un [::name ::about ::picture ::public-key ::private-key]))
+(s/def ::read-event-ids (s/coll-of ::id :kind set?))
+(s/def ::selected (s/coll-of ::id))
+(s/def ::blocked (s/coll-of ::id))
+(s/def ::tab (s/keys :req-un [::selected ::blocked]))
+(s/def ::tabs (s/map-of keyword? ::tab))
+(s/def ::event-history (s/coll-of (s/tuple keyword? ::id)))
+(s/def ::back-count number?)
+
+(s/def ::event-agent (s/keys :req-un [::chronological-text-events
+                                      ::text-event-map
+                                      ::nicknames
+                                      ::keys
+                                      ::read-event-ids
+                                      ::tabs
+                                      ::event-history
+                                      ::back-count]))
+
 (defn make-event-agent [event-agent-map]
   (agent (merge {:chronological-text-events []
                  :text-event-map {}
@@ -40,13 +69,18 @@
                  :keys {}
                  :read-event-ids #{}
                  :tabs {}
+                 :event-history []
+                 :back-count 0
                  }
                 event-agent-map)))
 
-(defn select-event [event-state id]
+(defn select-event
+  "called when an event has been selected, but not by back/forward traversal."
+  [event-state tab-name id]
   (-> event-state
       (update :read-event-ids conj id)
-      (assoc :selected-event id)))
+      (update :event-history conj [tab-name id])
+      (assoc :selected-event id :back-count 0)))
 
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))

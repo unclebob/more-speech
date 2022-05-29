@@ -3,7 +3,8 @@
             [more-speech.ui.swing.article-tree :refer :all]
             [more-speech.ui.swing.article-tree-util :refer :all]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.ui-context :refer :all])
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.ui.swing.article-panel :as article-panel])
   (:import (javax.swing.tree DefaultMutableTreeNode)))
 
 (describe "header tree"
@@ -293,18 +294,42 @@
         (should-not (node-contains? node 2))))
 
     (it "finds children from beginning to end"
-          (let [node (DefaultMutableTreeNode. nil)
-                child1 (DefaultMutableTreeNode. 1)
-                child2 (DefaultMutableTreeNode. 2)
-                child3 (DefaultMutableTreeNode. 3)
-                _ (.add node child1)
-                _ (.add node child2)
-                _ (.add node child3)]
-            (should (node-contains? node 1))
-            (should (node-contains? node 2))
-            (should (node-contains? node 3))
-            (should-not (node-contains? node 4))))
+      (let [node (DefaultMutableTreeNode. nil)
+            child1 (DefaultMutableTreeNode. 1)
+            child2 (DefaultMutableTreeNode. 2)
+            child3 (DefaultMutableTreeNode. 3)
+            _ (.add node child1)
+            _ (.add node child2)
+            _ (.add node child3)]
+        (should (node-contains? node 1))
+        (should (node-contains? node 2))
+        (should (node-contains? node 3))
+        (should-not (node-contains? node 4)))))
 
-    )
-
+  (context "selecting nodes"
+    (with-stubs)
+    (it "remembers which articles have been read and loads article"
+      (with-redefs
+        [article-panel/load-article-info
+         (stub :load-article-info {:return nil})]
+        (let [event-agent (agent {:read-event-ids #{}
+                                  :selected-event nil
+                                  :event-history []
+                                  :back-count 1})
+              _ (reset! ui-context {:event-agent event-agent})
+              selected-event-id 1
+              selected-node (DefaultMutableTreeNode. selected-event-id)
+              tab-name :bob-tab
+              _ (select-article tab-name selected-node)
+              _ (await event-agent) ;ugh.
+              event-state @event-agent
+              read-event-ids (:read-event-ids event-state)
+              selected-event (:selected-event event-state)
+              event-history (:event-history event-state)
+              back-count (:back-count event-state)]
+          (should-have-invoked :load-article-info {:with [selected-event-id]})
+          (should= read-event-ids #{selected-event-id})
+          (should= selected-event selected-event-id)
+          (should= [[tab-name selected-event-id]] event-history)
+          (should= 0 back-count)))))
   )
