@@ -114,7 +114,8 @@
   (let [send-chan (:send-chan @event-agent)
         urls (keys @relays)
         send-urls (filter #(:write (get @relays %)) urls)
-        send-connections (map #(get-in @relays [% :connection]) send-urls)]
+        send-connections (map #(get-in @relays [% :connection]) send-urls)
+        send-connections (filter some? send-connections)]
     (loop [[type msg] (async/<!! send-chan)]
       (condp = type
         :closed nil
