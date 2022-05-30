@@ -56,16 +56,29 @@
     :editable? false
     :id :article-area))
 
+(declare go-back go-forward)
+
 (defn make-control-panel []
   (let [reply-button (button :text "Reply")
-        create-button (button :text "Create")]
+        create-button (button :text "Create")
+        back-button (button :text "Back")
+        forward-button (button :text "Forward")]
     (listen reply-button :action
             (fn [_]
               (edit-window/make-edit-window :reply)))
-
     (listen create-button :action
             (fn [_] (edit-window/make-edit-window :send)))
-    (flow-panel :items [reply-button create-button])))
+    (listen back-button :action go-back)
+    (listen forward-button :action go-forward)
+    (border-panel :west back-button
+                  :east forward-button
+                  :center (flow-panel :items [reply-button create-button]))))
+
+(defn go-back [_e]
+  (article-tree-util/go-back-by 1))
+
+(defn go-forward [_e]
+  (article-tree-util/go-back-by -1))
 
 (defn id-click [e]
   (article-tree-util/id-click ui-context (config e :user-data)))

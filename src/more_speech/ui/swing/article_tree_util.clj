@@ -1,5 +1,6 @@
 (ns more-speech.ui.swing.article-tree-util
   (:use [seesaw core])
+  (:require [more-speech.ui.swing.ui-context :refer :all])
   (:import (java.util Collections)
            (javax.swing.tree DefaultMutableTreeNode TreePath)))
 
@@ -67,4 +68,36 @@
           (selection! tab-panel "all")
           (select-tree-node tree node))
         )
+      )))
+
+(declare adjust-back-count display-event)
+
+(defn go-back-by [n]
+  (let [event-agent (:event-agent @ui-context)
+        event-history (:event-history @event-agent)]
+    (when-not (empty? event-history)
+      (send event-agent adjust-back-count n)
+      (await event-agent)                                   ;ugh.
+      (let [back-count (:back-count @event-agent)
+            event-position (- (count event-history) back-count 1)
+            [tab-id event-id] (nth event-history event-position)]
+        (display-event tab-id event-id)))))
+
+(defn adjust-back-count [event-data n]
+  (let [event-history (:event-history event-data)
+        back-count (-> (:back-count event-data) (+ n) (max 0) (min (dec (count event-history))))]
+    (assoc event-data :back-count back-count :backing-up true))
+  )
+
+(defn display-event [tab-id event-id]
+  (let [frame (:frame @ui-context)
+        tab-panel (select frame [:#header-tab-panel])
+        tab-selector (keyword (str "#" (name tab-id)))
+        tree (select frame [tab-selector])
+        model (config tree :model)
+        root-node (.getRoot model)
+        node (find-header-node root-node event-id)]
+    (when (some? node)
+      (selection! tab-panel (name tab-id))
+      (select-tree-node tree node)
       )))

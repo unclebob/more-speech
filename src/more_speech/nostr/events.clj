@@ -1,6 +1,7 @@
 (ns more-speech.nostr.events
   (:require [clojure.spec.alpha :as s]
             [clojure.data.json :as json]
+            [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.util :refer [hex-string->num]]
             [more-speech.nostr.elliptic-signature :as ecc]
             [clojure.core.async :as async]
@@ -74,13 +75,14 @@
                  }
                 event-agent-map)))
 
-(defn select-event
-  "called when an event has been selected, but not by back/forward traversal."
-  [event-state tab-name id]
-  (-> event-state
-      (update :read-event-ids conj id)
-      (update :event-history conj [tab-name id])
-      (assoc :selected-event id :back-count 0)))
+(defn select-event [event-state tab-id id]
+  (swap! ui-context assoc :selected-tab tab-id)
+  (if-not (:backing-up event-state)
+    (-> event-state
+        (update :read-event-ids conj id)
+        (update :event-history conj [tab-id id])
+        (assoc :selected-event id :back-count 0))
+    (-> event-state (assoc :selected-id id :backing-up false))))
 
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
