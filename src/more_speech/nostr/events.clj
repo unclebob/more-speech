@@ -51,8 +51,10 @@
 (s/def ::blocked (s/coll-of ::id))
 (s/def ::tab (s/keys :req-un [::selected ::blocked]))
 (s/def ::tabs (s/map-of keyword? ::tab))
+(s/def ::selected-id ::id)
 (s/def ::event-history (s/coll-of (s/tuple keyword? ::id)))
 (s/def ::back-count number?)
+(s/def ::backing-up boolean?)
 
 (s/def ::event-agent (s/keys :req-un [::chronological-text-events
                                       ::text-event-map
@@ -60,8 +62,10 @@
                                       ::keys
                                       ::read-event-ids
                                       ::tabs
+                                      ::selected-id
                                       ::event-history
-                                      ::back-count]))
+                                      ::back-count
+                                      ::backing-up]))
 
 (defn make-event-agent [event-agent-map]
   (agent (merge {:chronological-text-events []
