@@ -9,17 +9,48 @@
   (handle-text-event [_ _event-id])
   )
 
+(describe "process-tag"
+  (it "handles tags with many arguments"
+    (should= [:e 1 2 3 4] (process-tag ["e" 1 2 3 4]))
+    (should= [:e 1 2] (process-tag ["e" 1 2]))
+    ))
+
+(describe "translate-event"
+  (it "translates from strings to clojure values"
+    (let [id (rand-int 1000000)
+          pubkey (rand-int 1000000)
+          sig (rand-int 1000000)
+          created_at (rand-int 10000)
+          content "the content"
+          tags [["e" 1 2 3] ["p" 4 5 6 7]]
+          event {"id" (hexify id)
+                 "pubkey" (hexify pubkey)
+                 "created_at" created_at
+                 "kind" 1
+                 "tags" tags
+                 "content" content
+                 "sig" (->> sig (num->bytes 64) bytes->hex-string)}]
+      (should= {:id id
+                :pubkey pubkey
+                :created-at created_at
+                :kind 1
+                :tags [[:e 1 2 3] [:p 4 5 6 7]]
+                :content content
+                :sig sig}
+               (translate-event event)))
+    ))
+
 (declare now event state)
 (describe "Processing Text events (Kind 1)"
   (with now (int (/ (System/currentTimeMillis) 1000)))
-  (with event {"id" "deadbeef"
-               "pubkey" "f00d"
-               "created_at" @now
-               "kind" 1
-               "tags" [["p" "0001" "someurl"]
-                       ["e" "0002" "anotherurl"]]
-               "content" "the content"
-               "sig" "dddddd"})
+  (with event {:id 0xdeadbeef
+               :pubkey 0xf00d
+               :created-at @now
+               :kind 1
+               :tags [[:p "0001" "someurl"]
+                      [:e "0002" "anotherurl"]]
+               :content "the content"
+               :sig 0xdddddd})
   (with state
         {:text-event-map {}
          :chronological-text-events (make-chronological-text-events)
@@ -48,7 +79,7 @@
     (let [state (assoc-in @state
                           [:text-event-map 2]
                           {:id 2})
-          state (process-references state (translate-text-event @event))
+          state (process-references state @event)
           text-event-map (get-in state [:text-event-map])
           article (get text-event-map 2)]
       (should= [0xdeadbeef] (:references article)))
@@ -138,23 +169,23 @@
                            (hex-string->bytes sig)))))
 
     (it "composes an original message with a subject."
-          (let [private-key (num->bytes 64 314159)
-                event-state {:keys {:private-key (bytes->hex-string private-key)}}
-                public-key (get-pub-key private-key)
-                text "message text"
-                subject "subject"
-                event (compose-text-event event-state subject text)
-                {:keys [pubkey created_at kind tags content id sig]} (second event)
-                now (quot (System/currentTimeMillis) 1000)]
-            (should= "EVENT" (first event))
-            (should= (bytes->hex-string public-key) pubkey)
-            (should (<= 0 (- now created_at) 1))                ;within one second.
-            (should= 1 kind)
-            (should= [[:subject "subject"]] tags)
-            (should= text content)
-            (should (do-verify (hex-string->bytes id)
-                               public-key
-                               (hex-string->bytes sig)))))
+      (let [private-key (num->bytes 64 314159)
+            event-state {:keys {:private-key (bytes->hex-string private-key)}}
+            public-key (get-pub-key private-key)
+            text "message text"
+            subject "subject"
+            event (compose-text-event event-state subject text)
+            {:keys [pubkey created_at kind tags content id sig]} (second event)
+            now (quot (System/currentTimeMillis) 1000)]
+        (should= "EVENT" (first event))
+        (should= (bytes->hex-string public-key) pubkey)
+        (should (<= 0 (- now created_at) 1))                ;within one second.
+        (should= 1 kind)
+        (should= [[:subject "subject"]] tags)
+        (should= text content)
+        (should (do-verify (hex-string->bytes id)
+                           public-key
+                           (hex-string->bytes sig)))))
 
     (it "composes a reply to a root article."
       (let [private-key (num->bytes 64 42)
@@ -288,13 +319,13 @@
       (should= [1 4] mentions)))
 
   (it "finds the root and reply when only a reply is marked."
-      (let [event {:tags [[:e (hexify 1)]
-                          [:e (hexify 2) "" "reply"]
-                          [:e (hexify 4) "" "wow"]]}
-            [root mentions referent] (get-references event)]
-        (should= 2 root)
-        (should= 2 referent)
-        (should= [1 4] mentions)))
+    (let [event {:tags [[:e (hexify 1)]
+                        [:e (hexify 2) "" "reply"]
+                        [:e (hexify 4) "" "wow"]]}
+          [root mentions referent] (get-references event)]
+      (should= 2 root)
+      (should= 2 referent)
+      (should= [1 4] mentions)))
   )
 
 (describe "json"

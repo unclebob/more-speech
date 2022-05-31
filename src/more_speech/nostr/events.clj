@@ -91,10 +91,13 @@
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
+(declare translate-event)
+
 (defn process-event [{:keys [nicknames] :as event-state} event url]
   (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
         [_name _subscription-id inner-event :as _decoded-msg] event
-        {:strs [id pubkey _created_at kind _tags _content sig]} inner-event
+        inner-event (translate-event inner-event)
+        {:keys [id pubkey _created-at kind _tags _content sig]} inner-event
         ;valid? (ecc/do-verify (util/hex-string->bytes id)
         ;                      (util/hex-string->bytes pubkey)
         ;                      (util/hex-string->bytes sig))
@@ -118,7 +121,7 @@
         (do #_(prn "unknown event: " url event)
           event-state)))))
 
-(defn process-name-event [event-state {:strs [_id pubkey _created_at _kind _tags content _sig] :as event}]
+(defn process-name-event [event-state {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
     (let [pubkey (hex-string->num pubkey)
           name (get (json/read-str content) "name" "tilt")]
@@ -130,8 +133,10 @@
       (prn event)
       event-state)))
 
-(defn process-tag [[type arg1 arg2]]
-  [(keyword type) arg1 arg2])
+(defn process-tag [tag]
+  (let [tag-type (first tag)
+        tag-args (rest tag)]
+    (concat [(keyword tag-type)] tag-args)))
 
 (defn process-tags [tags]
   (map process-tag tags))
@@ -188,13 +193,14 @@
             (concat referent-path [:references])
             conj (:id event)))))))
 
-(defn translate-text-event [event]
+(defn translate-event [event]
   (let [id (hex-string->num (get event "id"))
         pubkey (hex-string->num (get event "pubkey"))
         sig (hex-string->num (get event "sig"))]
     {:id id
      :pubkey pubkey
      :created-at (get event "created_at")
+     :kind (get event "kind")
      :content (get event "content")
      :sig sig
      :tags (process-tags (get event "tags"))}))
@@ -211,7 +217,7 @@
           (process-references event)))))
 
 (defn process-text-event [event-state event url]
-  (let [event (translate-text-event event)
+  (let [_ (prn `process-text-event event)
         id (:id event)
         dup? (contains? (:text-event-map event-state) id)
         ui-handler (:event-handler event-state)
