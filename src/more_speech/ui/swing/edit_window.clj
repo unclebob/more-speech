@@ -7,8 +7,8 @@
 
 (defn make-edit-window [kind]
   (let [reply? (= kind :reply)
-        event-agent (:event-agent @ui-context)
-        event-state @event-agent
+        event-context (:event-context @ui-context)
+        event-state @event-context
         subject-label (label "Subject:")
         subject-text (text :id :subject :text "")
         subject-panel (left-right-split subject-label subject-text
@@ -19,7 +19,7 @@
         edit-area (editor-pane :font config/default-font)
         send-button (button :text "Send")
         event-map (:text-event-map event-state)
-        selected-id (if reply? (:selected-event @event-agent) nil)
+        selected-id (if reply? (:selected-event @event-context) nil)
         event (if reply? (get event-map selected-id) nil)]
     (when reply?
       (let [subject (formatters/get-subject (:tags event))

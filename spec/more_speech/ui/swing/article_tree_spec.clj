@@ -312,17 +312,16 @@
       (with-redefs
         [article-panel/load-article-info
          (stub :load-article-info {:return nil})]
-        (let [event-agent (agent {:read-event-ids #{}
+        (let [event-context (atom {:read-event-ids #{}
                                   :selected-event nil
                                   :event-history []
                                   :back-count 1})
-              _ (reset! ui-context {:event-agent event-agent})
+              _ (reset! ui-context {:event-context event-context})
               selected-event-id 1
               selected-node (DefaultMutableTreeNode. selected-event-id)
               tab-name :bob-tab
               _ (select-article tab-name selected-node)
-              _ (await event-agent) ;ugh.
-              event-state @event-agent
+              event-state @event-context
               read-event-ids (:read-event-ids event-state)
               selected-event (:selected-event event-state)
               event-history (:event-history event-state)

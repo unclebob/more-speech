@@ -22,20 +22,19 @@
         read-event-ids (read-string (slurp "private/read-event-ids"))
         nicknames (read-string (slurp "private/nicknames"))
         tabs (read-string (slurp "private/tabs"))
-        event-agent (events/make-event-agent {:keys keys
+        event-context (events/make-event-context {:keys keys
                                               :send-chan send-chan
                                               :nicknames nicknames
                                               :read-event-ids read-event-ids
                                               :tabs tabs
                                               })
-        _ (swap! ui-context assoc :event-agent event-agent)
+        _ (swap! ui-context assoc :event-context event-context)
         handler (swing/setup-main-window)
         ]
-    (send event-agent set-event-handler handler)
-    (await event-agent) ; wait for the agent to complete.
-    (protocol/get-events event-agent)
-    (spit "private/nicknames" (:nicknames @event-agent))
-    (spit "private/read-event-ids" (:read-event-ids @event-agent)))
+    (swap! event-context set-event-handler handler)
+    (protocol/get-events event-context)
+    (spit "private/nicknames" (:nicknames @event-context))
+    (spit "private/read-event-ids" (:read-event-ids @event-context)))
   (System/exit 1)
   )
 

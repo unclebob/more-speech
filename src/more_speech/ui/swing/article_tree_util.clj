@@ -73,12 +73,11 @@
 (declare adjust-back-count display-event)
 
 (defn go-back-by [n]
-  (let [event-agent (:event-agent @ui-context)
-        event-history (:event-history @event-agent)]
+  (let [event-context (:event-context @ui-context)
+        event-history (:event-history @event-context)]
     (when-not (empty? event-history)
-      (send event-agent adjust-back-count n)
-      (await event-agent)                                   ;ugh.
-      (let [back-count (:back-count @event-agent)
+      (swap! event-context adjust-back-count n)
+      (let [back-count (:back-count @event-context)
             event-position (- (count event-history) back-count 1)
             [tab-id event-id] (nth event-history event-position)]
         (display-event tab-id event-id)))))

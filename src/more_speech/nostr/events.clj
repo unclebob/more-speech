@@ -56,7 +56,7 @@
 (s/def ::back-count number?)
 (s/def ::backing-up boolean?)
 
-(s/def ::event-agent (s/keys :req-un [::chronological-text-events
+(s/def ::event-context (s/keys :req-un [::chronological-text-events
                                       ::text-event-map
                                       ::nicknames
                                       ::keys
@@ -67,8 +67,8 @@
                                       ::back-count
                                       ::backing-up]))
 
-(defn make-event-agent [event-agent-map]
-  (agent (merge {:chronological-text-events []
+(defn make-event-context [event-context-map]
+  (atom (merge {:chronological-text-events []
                  :text-event-map {}
                  :nicknames {}
                  :keys {}
@@ -77,7 +77,7 @@
                  :event-history []
                  :back-count 0
                  }
-                event-agent-map)))
+                event-context-map)))
 
 (defn select-event [event-state tab-id id]
   (swap! ui-context assoc :selected-tab tab-id)
@@ -95,9 +95,7 @@
 
 (defn process-event [{:keys [nicknames] :as event-state} event url]
   (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
-        [_name _subscription-id inner-event :as _decoded-msg] event
-        inner-event (translate-event inner-event)
-        {:keys [id pubkey _created-at kind _tags _content sig]} inner-event
+        {:keys [id pubkey _created-at kind _tags _content sig]} event
         ;valid? (ecc/do-verify (util/hex-string->bytes id)
         ;                      (util/hex-string->bytes pubkey)
         ;                      (util/hex-string->bytes sig))
@@ -108,13 +106,13 @@
         (prn 'signature-verification-failed event)
         event-state)
       (condp = kind
-        0 (process-name-event event-state inner-event)
+        0 (process-name-event event-state event)
         3 (do
             ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             event-state)
         1 (do
             ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) (subs content 0 (min 50 (count content))))
-            (process-text-event event-state inner-event url))
+            (process-text-event event-state event url))
         4 (do
             ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
             event-state)
@@ -123,8 +121,7 @@
 
 (defn process-name-event [event-state {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
-    (let [pubkey (hex-string->num pubkey)
-          name (get (json/read-str content) "name" "tilt")]
+    (let [name (get (json/read-str content) "name" "tilt")]
       (-> event-state
           (update-in [:nicknames] assoc pubkey name)
           ))
@@ -217,15 +214,7 @@
           (process-references event)))))
 
 (defn process-text-event [event-state event url]
-  (let [_ (prn `process-text-event event)
-        id (:id event)
-        dup? (contains? (:text-event-map event-state) id)
-        ui-handler (:event-handler event-state)
-        event-state (add-event event-state event url)]
-    (when (not dup?)
-      (handle-text-event ui-handler event))
-    event-state)
-  )
+  (add-event event-state event url))
 
 (defn chronological-event-comparator [[i1 t1] [i2 t2]]
   (if (= i1 i2)

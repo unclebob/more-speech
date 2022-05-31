@@ -35,18 +35,26 @@
 (defn unsubscribe [^WebSocket conn id]
   (send-to conn ["CLOSE" id]))
 
-(defn handle-text [{:keys [buffer event-agent url]} data last]
+
+(defn handle-text [{:keys [buffer event-context url]} data last]
   (.append buffer (.toString data))
   (when last
     (try
-      (let [event (json/read-str (.toString buffer))]
-        (send event-agent events/process-event event url))
+      (let [envelope (json/read-str (.toString buffer))
+            [_name _subscription-id inner-event :as _decoded-msg] envelope
+            event (events/translate-event inner-event)
+            id (:id event)
+            ui-handler (:event-handler @event-context)
+            dup? (contains? (:text-event-map @event-context) id)]
+        (swap! event-context events/process-event event url)
+        (when (and (not dup?) (= (:kind event) 1))
+          (events/handle-text-event ui-handler event)))
       (catch Exception e
         (prn 'onText url (.getMessage e))
         (prn (.toString buffer))))
     (.delete buffer 0 (.length buffer))))
 
-(defrecord listener [buffer event-agent url]
+(defrecord listener [buffer event-context url]
   WebSocket$Listener
   (onOpen [_this _webSocket]
     (prn 'open url))
@@ -69,11 +77,11 @@
     (prn 'websocket-listener-error url error))
   )
 
-(defn connect-to-relay ^WebSocket [url event-agent]
+(defn connect-to-relay ^WebSocket [url event-context]
   (try
     (let [client (HttpClient/newHttpClient)
           cl (.newWebSocketBuilder client)
-          cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) event-agent url))
+          cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) event-context url))
           ws (.get cws)
           ]
       ws)
@@ -89,9 +97,9 @@
     (catch Exception e
       (prn 'on-send-close-error (:reason e)))))
 
-(defn connect-to-relays [event-agent]
+(defn connect-to-relays [event-context]
   (doseq [url (keys @relays)]
-    (let [connection (connect-to-relay url event-agent)]
+    (let [connection (connect-to-relay url event-context)]
       (swap! relays assoc-in [url :connection] connection))))
 
 (defn subscribe-to-relays [id]
@@ -110,8 +118,8 @@
           (subscribe conn id date)
           (swap! relays assoc-in [url :subscribed] true))))))
 
-(defn process-send-channel [event-agent]
-  (let [send-chan (:send-chan @event-agent)
+(defn process-send-channel [event-context]
+  (let [send-chan (:send-chan @event-context)
         urls (keys @relays)
         send-urls (filter #(:write (get @relays %)) urls)
         send-connections (map #(get-in @relays [% :connection]) send-urls)
@@ -131,14 +139,14 @@
         (prn 'closing url)
         (close-connection conn id)))))
 
-(defn get-events [event-agent]
+(defn get-events [event-context]
   (let [id "more-speech"
-        event-handler (:event-handler @event-agent)]
-    (connect-to-relays event-agent)
+        event-handler (:event-handler @event-context)]
+    (connect-to-relays event-context)
     (subscribe-to-relays id)
     (events/update-relay-panel event-handler)
-    (future (events/compose-and-send-metadata-event @event-agent))
-    (process-send-channel event-agent)
+    (future (events/compose-and-send-metadata-event @event-context))
+    (process-send-channel event-context)
     (unsubscribe-from-relays id))
   (Thread/sleep 100)
   (prn 'done)

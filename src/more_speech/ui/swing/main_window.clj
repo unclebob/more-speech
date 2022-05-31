@@ -24,8 +24,8 @@
 (declare timer-action)
 
 (defn make-tabs []
-  (let [event-agent (:event-agent @ui-context)
-        tabs (:tabs @event-agent)]
+  (let [event-context (:event-context @ui-context)
+        tabs (:tabs @event-context)]
     (loop [tab-names (keys tabs)
            header-tree-tabs []]
       (if (empty? tab-names)
@@ -73,8 +73,8 @@
     (listen main-frame :window-closing
             (fn [_]
               (.stop timer)
-              (let [event-agent (:event-agent @ui-context)
-                    send-chan (:send-chan @event-agent)]
+              (let [event-context (:event-context @ui-context)
+                    send-chan (:send-chan @event-context)]
                 (async/>!! send-chan [:closed]))
               (.dispose main-frame)))
     (show! main-frame)

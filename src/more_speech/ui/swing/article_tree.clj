@@ -28,8 +28,8 @@
           path (.getPathForLocation tree (.getX e) (.getY e))
           node (.getLastPathComponent path)
           event-id (.getUserObject ^DefaultMutableTreeNode node)
-          event-agent (:event-agent @ui-context)
-          event-map (:text-event-map @event-agent)
+          event-context (:event-context @ui-context)
+          event-map (:text-event-map @event-context)
           event (get event-map event-id)
           p (popup :items [(action :name "Get info..."
                                    :handler (partial get-info event))])]
@@ -44,9 +44,8 @@
 (defn select-article
   [tab-name selected-node]
   (let [selected-id (.getUserObject selected-node)
-        event-agent (:event-agent @ui-context)]
-    (send event-agent events/select-event tab-name selected-id)
-    (await event-agent) ;yuk.
+        event-context (:event-context @ui-context)]
+    (swap! event-context events/select-event tab-name selected-id)
     (article-panel/load-article-info selected-id)))
 
 (defn node-selected [tab-name e]
@@ -59,14 +58,14 @@
 (defn render-event [widget info]
   (if (seqable? (:value info))
     (text! widget "Articles")
-    (let [event-agent (:event-agent @ui-context)
-          event-state @event-agent
+    (let [event-context (:event-context @ui-context)
+          event-state @event-context
           nicknames (:nicknames event-state)
           event-map (:text-event-map event-state)
           node (:value info)
           event-id (.getUserObject node)
           event (get event-map event-id)
-          read? (contains? (:read-event-ids @event-agent) event-id)
+          read? (contains? (:read-event-ids @event-context) event-id)
           font (if read? config/default-font config/bold-font)]
       (config! widget :font font)
       (text! widget (formatters/format-header nicknames event)))))
@@ -92,7 +91,7 @@
 
 (defn add-event [event]
   (let [frame (:frame @ui-context)
-        event-state @(:event-agent @ui-context)
+        event-state @(:event-context @ui-context)
         event-map (:text-event-map event-state)
         event-id (:id event)
         tabs (:tabs event-state)]

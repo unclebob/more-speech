@@ -28,7 +28,7 @@
         (let [event-data {:event-history [[:t1 1]
                                           [:t2 2]]
                           :back-count 0}
-              ui-context-data {:event-agent (agent event-data)}
+              ui-context-data {:event-context (atom event-data)}
               _ (reset! ui-context ui-context-data)]
           (go-back-by 1)
           (should-have-invoked :display-event {:with [:t1 1]}))
