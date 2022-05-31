@@ -35,6 +35,7 @@
 (defn unsubscribe [^WebSocket conn id]
   (send-to conn ["CLOSE" id]))
 
+(def handle-text-lock (Object.))
 
 (defn handle-text [{:keys [buffer event-context url]} data last]
   (.append buffer (.toString data))
@@ -44,11 +45,13 @@
             [_name _subscription-id inner-event :as _decoded-msg] envelope
             event (events/translate-event inner-event)
             id (:id event)
-            ui-handler (:event-handler @event-context)
-            dup? (contains? (:text-event-map @event-context) id)]
-        (swap! event-context events/process-event event url)
-        (when (and (not dup?) (= (:kind event) 1))
-          (events/handle-text-event ui-handler event)))
+            ui-handler (:event-handler @event-context)]
+        (locking handle-text-lock                           ;prevent duplicates from other relays from sneaking through.
+          (let [dup? (contains? (:text-event-map @event-context) id)]
+            (swap! event-context events/process-event event url)
+            (when (and (not dup?) (= (:kind event) 1))
+              ;handle-text-event is asynchronous.
+              (events/handle-text-event ui-handler event)))))
       (catch Exception e
         (prn 'onText url (.getMessage e))
         (prn (.toString buffer))))
