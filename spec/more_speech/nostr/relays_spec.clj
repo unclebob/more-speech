@@ -33,3 +33,12 @@
 
   )
 
+(describe "relays-for-writing"
+  (it "trims off the dynamic components"
+    (reset! relays {"url1" {:read true :write true :junk "junk"}
+                     "url2" {:read false :write false :junk "junk2"}})
+    (should= {"url1" {:read true :write true}
+              "url2" {:read false :write false}}
+             (relays-for-writing))))
+
+

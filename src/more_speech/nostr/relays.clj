@@ -10,21 +10,6 @@
 (s/def ::relay (s/keys :req-un [::read ::write ::subscribed ::connection]))
 (s/def ::relays (s/map-of string? ::relay))
 
-
-;(def old-relays ["wss://nostr-pub.wellorder.net"
-;                 ;"wss://expensive-relay.fiatjaf.com"
-;                 "wss://wlvs.space"
-;                 "wss://nostr.rocks"
-;                 ;"wss://nostr-relay.herokuapp.com"
-;                 "wss://freedom-relay.herokuapp.com/ws"
-;                 ;"wss://nodestr-relay.dolu.dev/ws"
-;                 ;"wss://nostrrr.bublina.eu.org"
-;                 ;"wss://nostr-relay.freeberty.ne"
-;                 "ws://nostr.rocks:7448"
-;                 "ws://nostr-pub.wellorder.net:7000"
-;                 ])
-
-
 (def relays (atom nil))
 
 (defn set-relay-defaults [relays]
@@ -47,3 +32,31 @@
 
 (defn load-relays-from-file [file-name]
   (load-relays (slurp file-name)))
+
+
+(defn relays-for-writing []
+  (loop [urls (keys @relays)
+         relays-to-write {}]
+    (if (empty? urls)
+      relays-to-write
+      (let [url (first urls)
+            relay (get @relays url)
+            read (:read relay)
+            write (:write relay)]
+        (recur (rest urls)
+               (assoc relays-to-write url {:read read :write write}))))))
+
+(defn add-relay [url]
+  (when (and (not (empty? url))
+             (not (contains? @relays url)))
+    (prn 'adding-relay url)
+    (swap! relays assoc url {:read false :write false})))
+
+(defn add-recommended-relays-in-tags [event]
+  (loop [tags (:tags event)]
+    (if (empty? tags)
+      nil
+      (let [[tag-type _ url] (first tags)]
+        (when (or (= tag-type :e) (= tag-type :p))
+          (add-relay url)
+          (recur (rest tags)))))))

@@ -5,7 +5,8 @@
             [more-speech.nostr.util :refer [hex-string->num]]
             [more-speech.nostr.elliptic-signature :as ecc]
             [clojure.core.async :as async]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [more-speech.nostr.relays :as relays])
   (:import (java.nio.charset StandardCharsets)))
 
 (s/def ::id number?)
@@ -34,9 +35,6 @@
   (update-relay-panel [handler])
   )
 
-(declare process-text-event
-         process-name-event)
-
 (s/def ::chronological-text-events (s/coll-of ::id))
 (s/def ::text-event-map (s/map-of :id :event))
 (s/def ::nicknames (s/map-of ::id string?))
@@ -57,27 +55,27 @@
 (s/def ::backing-up boolean?)
 
 (s/def ::event-context (s/keys :req-un [::chronological-text-events
-                                      ::text-event-map
-                                      ::nicknames
-                                      ::keys
-                                      ::read-event-ids
-                                      ::tabs
-                                      ::selected-id
-                                      ::event-history
-                                      ::back-count
-                                      ::backing-up]))
+                                        ::text-event-map
+                                        ::nicknames
+                                        ::keys
+                                        ::read-event-ids
+                                        ::tabs
+                                        ::selected-id
+                                        ::event-history
+                                        ::back-count
+                                        ::backing-up]))
 
 (defn make-event-context [event-context-map]
   (atom (merge {:chronological-text-events []
-                 :text-event-map {}
-                 :nicknames {}
-                 :keys {}
-                 :read-event-ids #{}
-                 :tabs {}
-                 :event-history []
-                 :back-count 0
-                 }
-                event-context-map)))
+                :text-event-map {}
+                :nicknames {}
+                :keys {}
+                :read-event-ids #{}
+                :tabs {}
+                :event-history []
+                :back-count 0
+                }
+               event-context-map)))
 
 (defn select-event [event-state tab-id id]
   (swap! ui-context assoc :selected-tab tab-id)
@@ -91,7 +89,10 @@
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
-(declare translate-event)
+(declare translate-event
+         process-text-event
+         process-name-event
+         process-server-recommendation)
 
 (defn process-event [{:keys [nicknames] :as event-state} event url]
   (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
@@ -107,15 +108,8 @@
         event-state)
       (condp = kind
         0 (process-name-event event-state event)
-        3 (do
-            ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
-            event-state)
-        1 (do
-            ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) (subs content 0 (min 50 (count content))))
-            (process-text-event event-state event url))
-        4 (do
-            ;(printf "%s: %s %s %s\n" kind (f/format-time created_at) (name-of pubkey) content)
-            event-state)
+        1 (process-text-event event-state event url)
+        2 (process-server-recommendation event-state event)
         (do #_(prn "unknown event: " url event)
           event-state)))))
 
@@ -214,7 +208,13 @@
           (process-references event)))))
 
 (defn process-text-event [event-state event url]
-  (add-event event-state event url))
+  (let [event-state (add-event event-state event url)]
+    (relays/add-recommended-relays-in-tags event)
+    event-state))
+
+(defn process-server-recommendation [event-state event]
+  (relays/add-relay (:content event))
+  event-state)
 
 (defn chronological-event-comparator [[i1 t1] [i2 t2]]
   (if (= i1 i2)

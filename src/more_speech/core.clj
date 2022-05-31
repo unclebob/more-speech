@@ -23,23 +23,30 @@
         nicknames (read-string (slurp "private/nicknames"))
         tabs (read-string (slurp "private/tabs"))
         event-context (events/make-event-context {:keys keys
-                                              :send-chan send-chan
-                                              :nicknames nicknames
-                                              :read-event-ids read-event-ids
-                                              :tabs tabs
-                                              })
+                                                  :send-chan send-chan
+                                                  :nicknames nicknames
+                                                  :read-event-ids read-event-ids
+                                                  :tabs tabs
+                                                  })
         _ (swap! ui-context assoc :event-context event-context)
         handler (swing/setup-main-window)
         ]
     (swap! event-context set-event-handler handler)
     (protocol/get-events event-context)
-    (spit "private/nicknames" (:nicknames @event-context))
-    (spit "private/read-event-ids" (:read-event-ids @event-context)))
-  (System/exit 1)
-  )
+    (spit "private/nicknames"
+          (with-out-str
+            (clojure.pprint/pprint (:nicknames @event-context))))
+    (spit "private/read-event-ids"
+          (with-out-str
+            (clojure.pprint/pprint (:read-event-ids @event-context))))
+    (spit "private/relays"
+          (with-out-str
+            (clojure.pprint/pprint (relays/relays-for-writing))))
+    (System/exit 1)))
 
-(defn set-event-handler [event-state handler]
-  (assoc event-state :event-handler handler))
+  (defn set-event-handler [event-state handler]
+    (assoc event-state :event-handler handler))
+
 
 
 
