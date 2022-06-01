@@ -35,27 +35,29 @@
 (defn unsubscribe [^WebSocket conn id]
   (send-to conn ["CLOSE" id]))
 
-(def handle-text-lock (Object.))
+(declare record-and-display-event)
+(def event-agent (agent nil))
 
 (defn handle-text [{:keys [buffer event-context url]} data last]
   (.append buffer (.toString data))
   (when last
     (try
-      (let [envelope (json/read-str (.toString buffer))
-            [_name _subscription-id inner-event :as _decoded-msg] envelope
-            event (events/translate-event inner-event)
-            id (:id event)
-            ui-handler (:event-handler @event-context)]
-        (locking handle-text-lock                           ;prevent duplicates from other relays from sneaking through.
-          (let [dup? (contains? (:text-event-map @event-context) id)]
-            (swap! event-context events/process-event event url)
-            (when (and (not dup?) (= (:kind event) 1))
-              ;handle-text-event is asynchronous.
-              (events/handle-text-event ui-handler event)))))
+      (let [envelope (json/read-str (.toString buffer))]
+        (send event-agent record-and-display-event event-context envelope url))
       (catch Exception e
         (prn 'onText url (.getMessage e))
         (prn (.toString buffer))))
     (.delete buffer 0 (.length buffer))))
+
+(defn record-and-display-event [_agent event-context envelope url]
+  (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
+        event (events/translate-event inner-event)
+        id (:id event)
+        ui-handler (:event-handler @event-context)
+        dup? (contains? (:text-event-map @event-context) id)]
+    (swap! event-context events/process-event event url)
+    (when (and (not dup?) (= (:kind event) 1))
+      (events/handle-text-event ui-handler event))))
 
 (defrecord listener [buffer event-context url]
   WebSocket$Listener

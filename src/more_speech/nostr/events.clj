@@ -110,6 +110,7 @@
         0 (process-name-event event-state event)
         1 (process-text-event event-state event url)
         2 (process-server-recommendation event-state event)
+        7 (do (prn 'process-event 'like event) event-state)
         (do #_(prn "unknown event: " url event)
           event-state)))))
 
