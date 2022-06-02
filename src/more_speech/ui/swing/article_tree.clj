@@ -109,26 +109,27 @@
               (.insertNodeInto model child root insertion-point)
               (.makeVisible tree (TreePath. (.getPath child)))
               (swap! ui-context update-in [:node-map event-id] conj child)
-              (resolve-any-orphans ui-context event-id)
-              (add-references ui-context event)
               ))
-          (recur (rest tab-names)))))))
+          (recur (rest tab-names)))))
+    (add-references event)
+    (resolve-any-orphans event-id)))
 
-(defn resolve-any-orphans [ui-context parent-id]
-  (let [parent-node (first (get-in @ui-context [:node-map parent-id]))
-        orphans (get-in @ui-context [:orphaned-references parent-id])]
-    (if (empty? orphans)
+(defn resolve-any-orphans [parent-id]
+  (let [parent-nodes (get-in @ui-context [:node-map parent-id])
+        orphan-set (get-in @ui-context [:orphaned-references parent-id])]
+    (if (empty? orphan-set)
       nil
       (do
-        (loop [orphans orphans]
-          (if (empty? orphans)
+        (loop [orphan-set orphan-set]
+          (if (empty? orphan-set)
             nil
-            (let [orphan-id (first orphans)
-                  orphan-node (DefaultMutableTreeNode. orphan-id)]
-              (.add ^DefaultMutableTreeNode parent-node orphan-node)
-              (swap! ui-context update-in [:node-map orphan-id] conj orphan-node)
-              (recur (rest orphans)))))
-        (swap! ui-context assoc-in [:orphaned-references parent-id] nil))))
+            (let [orphan-id (first orphan-set)]
+              (doseq [parent-node parent-nodes]
+                (let [orphan-node (DefaultMutableTreeNode. orphan-id)]
+                  (.add ^DefaultMutableTreeNode parent-node orphan-node)
+                  (swap! ui-context update-in [:node-map orphan-id] conj orphan-node)))
+              (recur (rest orphan-set)))))
+        (swap! ui-context assoc-in [:orphaned-references parent-id] #{}))))
   )
 
 ;; at the moment an event can appear in several places in the tree.
@@ -138,7 +139,7 @@
 
 (declare add-orphaned-reference add-this-node-to-reference-nodes)
 
-(defn add-references [ui-context event]
+(defn add-references [event]
   (let [[_ _ referent] (events/get-references event)
         id (:id event)]
     (if (nil? referent)
@@ -151,7 +152,11 @@
 
 
 (defn add-orphaned-reference [referent id]
-  (swap! ui-context update-in [:orphaned-references referent] conj id))
+  (swap! ui-context
+         (fn [ui-context]
+           (if (empty? (get-in ui-context [:orphaned-references referent]))
+             (assoc-in ui-context [:orphaned-references referent] #{id})
+             (update-in ui-context [:orphaned-references referent] conj id)))))
 
 (defn node-contains? [node id]
   (loop [child-indeces (range (.getChildCount node))]

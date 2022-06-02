@@ -97,14 +97,14 @@
 (defn process-event [{:keys [nicknames] :as event-state} event url]
   (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
         {:keys [id pubkey _created-at kind _tags _content sig]} event
-        ;valid? (ecc/do-verify (util/hex-string->bytes id)
-        ;                      (util/hex-string->bytes pubkey)
-        ;                      (util/hex-string->bytes sig))
-        valid? true
+        valid? (ecc/do-verify (util/num->bytes 32 id)
+                              (util/num->bytes 32 pubkey)
+                              (util/num->bytes 64 sig))
+        ;valid? true
         ]
     (if (not valid?)
       (do
-        (prn 'signature-verification-failed event)
+        (prn 'signature-verification-failed url event)
         event-state)
       (condp = kind
         0 (process-name-event event-state event)

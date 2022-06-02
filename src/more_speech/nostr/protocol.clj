@@ -3,7 +3,8 @@
             [clojure.core.async :as async]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :refer [relays]]
-            [java-time :as t])
+            [java-time :as t]
+            [more-speech.nostr.util :as util])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
@@ -52,12 +53,21 @@
 (defn record-and-display-event [_agent event-context envelope url]
   (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
         event (events/translate-event inner-event)
+        computed-id (util/bytes->num (events/make-id {:pubkey (get inner-event "pubkey")
+                                                      :created_at (get inner-event "created_at")
+                                                      :kind (get inner-event "kind")
+                                                      :tags (get inner-event "tags")
+                                                      :content (get inner-event "content")}))
         id (:id event)
         ui-handler (:event-handler @event-context)
         dup? (contains? (:text-event-map @event-context) id)]
-    (swap! event-context events/process-event event url)
-    (when (and (not dup?) (= (:kind event) 1))
-      (events/handle-text-event ui-handler event))))
+    (if (= id computed-id)
+      (do
+        (swap! event-context events/process-event event url)
+        (when (and (not dup?) (= (:kind event) 1))
+          (events/handle-text-event ui-handler event)))
+      (prn 'id-mismatch url envelope)
+      )))
 
 (defrecord listener [buffer event-context url]
   WebSocket$Listener
@@ -110,7 +120,7 @@
 (defn subscribe-to-relays [id]
   (let [
         date (-> (t/local-date-time)
-                 (t/minus (t/days 10))
+                 (t/minus (t/days 2))
                  (t/adjust (t/local-time 0)))
         date (.toEpochSecond date ZoneOffset/UTC)
         ]

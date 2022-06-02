@@ -99,7 +99,7 @@
             node-map {id []}
             ui-context (atom {:node-map node-map})
             event {:id id :tags []}]
-        (add-references ui-context event)
+        (add-references event)
         (should= [] (get-in @ui-context [:node-map id])))
       )
 
@@ -111,7 +111,7 @@
                       id []}
             _ (reset! ui-context {:node-map node-map})
             event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
-            _ (add-references ui-context event)
+            _ (add-references event)
             nodes (get-in @ui-context [:node-map id])]
         (should= 1 (count nodes))
         (should= id (.getUserObject (first nodes)))
@@ -126,10 +126,10 @@
             node-map {id []}
             _ (reset! ui-context {:node-map node-map})
             event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
-            _ (add-references ui-context event)
+            _ (add-references event)
             nodes (get-in @ui-context [:node-map id])]
         (should= 0 (count nodes))
-        (should= {parent-id [id]} (:orphaned-references @ui-context))
+        (should= {parent-id #{1N}} (:orphaned-references @ui-context))
         )
       )
     )
@@ -139,9 +139,9 @@
       (let [event-id 1N
             node-map {}
             orphaned-references {}
-            ui-context (atom {:node-map node-map
-                              :orphaned-references orphaned-references})]
-        (resolve-any-orphans ui-context event-id)
+            _ (reset! ui-context {:node-map node-map
+                                 :orphaned-references orphaned-references})]
+        (resolve-any-orphans event-id)
         (should= {} (:node-map @ui-context))
         (should= {} (:orphaned-references @ui-context)))
       )
@@ -149,20 +149,24 @@
     (it "resolves a parent event with a single orphan"
       (let [parent-id 1N
             orphan-id 2N
-            node-map {parent-id [(DefaultMutableTreeNode. parent-id)]
-                      orphan-id []}
-            orphaned-references {parent-id [orphan-id]}
-            ui-context (atom {:node-map node-map
+            parent-node (DefaultMutableTreeNode. parent-id)
+            original-orphan-node (DefaultMutableTreeNode. orphan-id)
+            node-map {orphan-id [original-orphan-node]
+                      parent-id [parent-node]}
+            orphaned-references {parent-id #{orphan-id}}
+            _ (reset! ui-context {:node-map node-map
                               :orphaned-references orphaned-references})
-            _ (resolve-any-orphans ui-context parent-id)
-            parent-nodes (get-in @ui-context [:node-map parent-id])
-            parent-node (first parent-nodes)
+            _ (resolve-any-orphans parent-id)
+            orphan-nodes (get-in @ui-context [:node-map orphan-id])
+            new-orphan-node (second orphan-nodes)
             ]
-        (should= 1 (count parent-nodes))
+        (should= 2 (count orphan-nodes))
         (should= 1 (.getChildCount parent-node))
-        (should= orphan-id (.getUserObject (.getChildAt parent-node 0)))
-        (should= [(.getChildAt parent-node 0)] (get-in @ui-context [:node-map orphan-id]))
-        (should= nil (get-in ui-context [:orphaned-references parent-id]))
+        (should= orphan-id (-> parent-node
+                               ^DefaultMutableTreeNode (.getChildAt 0)
+                               .getUserObject))
+        (should= orphan-id (.getUserObject new-orphan-node))
+        (should= #{} (get-in @ui-context [:orphaned-references parent-id]))
         )
       )
     )
@@ -313,9 +317,9 @@
         [article-panel/load-article-info
          (stub :load-article-info {:return nil})]
         (let [event-context (atom {:read-event-ids #{}
-                                  :selected-event nil
-                                  :event-history []
-                                  :back-count 1})
+                                   :selected-event nil
+                                   :event-history []
+                                   :back-count 1})
               _ (reset! ui-context {:event-context event-context})
               selected-event-id 1
               selected-node (DefaultMutableTreeNode. selected-event-id)
