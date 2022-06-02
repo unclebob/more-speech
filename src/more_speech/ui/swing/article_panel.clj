@@ -19,7 +19,7 @@
         reply-to-label (label :id :reply-to-label)
         id-label (text :id :id-label :editable? false :font config/small-font)
         citing-label (text :id :citing-label :editable? false :font config/small-font)
-        subject-label (label :id :subject-label)
+        subject-label (label :id :subject-label :font config/small-font)
         root-label (text :id :root-label :editable? false :font config/small-font)
         relays-popup (popup :enabled? false)
         relays-label (label :id :relays-label :user-data relays-popup)]

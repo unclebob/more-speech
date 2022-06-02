@@ -11,7 +11,7 @@
 (defrecord seesawHandler []
   events/event-handler
   (handle-text-event [_handler event]
-    (invoke-later (article-tree/add-event event)))
+    (invoke-now (article-tree/add-event event)))
   (update-relay-panel [_handler]
     (invoke-later (relay-panel/update-relay-panel ui-context))))
 

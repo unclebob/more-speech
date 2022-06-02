@@ -70,7 +70,7 @@
     nil
     (let [tag (first tags)]
       (if (= (first tag) :subject)
-        (second tag)
+        (abbreviate (second tag) 90)
         (recur (rest tags))
         ))
 

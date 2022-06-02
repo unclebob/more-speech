@@ -4,7 +4,8 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :refer [relays]]
             [java-time :as t]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [more-speech.ui.config :as config])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
@@ -65,8 +66,9 @@
       (do
         (swap! event-context events/process-event event url)
         (when (and (not dup?) (= (:kind event) 1))
-          (events/handle-text-event ui-handler event)))
-      (prn 'id-mismatch url envelope)
+          (events/handle-text-event ui-handler event)
+          ))
+      (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)
       )))
 
 (defrecord listener [buffer event-context url]
@@ -120,7 +122,7 @@
 (defn subscribe-to-relays [id]
   (let [
         date (-> (t/local-date-time)
-                 (t/minus (t/days 2))
+                 (t/minus (t/days config/subscribe-days-ago))
                  (t/adjust (t/local-time 0)))
         date (.toEpochSecond date ZoneOffset/UTC)
         ]

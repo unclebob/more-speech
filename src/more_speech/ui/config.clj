@@ -5,3 +5,5 @@
 (def small-font "COURIER_PLAIN-9")
 
 (def article-width 120)
+
+(def subscribe-days-ago 4)
