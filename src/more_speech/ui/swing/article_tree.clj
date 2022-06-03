@@ -15,7 +15,7 @@
   (let [header-tree (tree :renderer render-event
                           :root-visible? false
                           :expands-selected-paths? true
-                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Empty")))]
+                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Root")))]
     (listen header-tree :selection (partial node-selected tab-name))
     (listen header-tree :mouse-pressed mouse-pressed)
     header-tree))
@@ -159,15 +159,15 @@
              (update-in ui-context [:orphaned-references referent] conj id)))))
 
 (defn node-contains? [node id]
-  (loop [child-indeces (range (.getChildCount node))]
-    (if (empty? child-indeces)
+  (loop [child-indices (range (.getChildCount node))]
+    (if (empty? child-indices)
       false
-      (let [child-index (first child-indeces)
+      (let [child-index (first child-indices)
             child (.getChildAt node child-index)
             child-id (.getUserObject child)]
         (if (= child-id id)
           true
-          (recur (rest child-indeces)))))
+          (recur (rest child-indices)))))
     ))
 
 (defn add-this-node-to-reference-nodes [reference-nodes this-id]

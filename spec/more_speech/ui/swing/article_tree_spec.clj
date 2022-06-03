@@ -1,4 +1,5 @@
 (ns more-speech.ui.swing.article-tree-spec
+  (:use [seesaw core font tree])
   (:require [speclj.core :refer :all]
             [more-speech.ui.swing.article-tree :refer :all]
             [more-speech.ui.swing.article-tree-util :refer :all]
@@ -6,6 +7,8 @@
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.ui.swing.article-panel :as article-panel])
   (:import (javax.swing.tree DefaultMutableTreeNode)))
+
+(defn hexify [n] (util/num32->hex-string n))
 
 (describe "header tree"
   (context "finding chronological insertion point"
@@ -140,7 +143,7 @@
             node-map {}
             orphaned-references {}
             _ (reset! ui-context {:node-map node-map
-                                 :orphaned-references orphaned-references})]
+                                  :orphaned-references orphaned-references})]
         (resolve-any-orphans event-id)
         (should= {} (:node-map @ui-context))
         (should= {} (:orphaned-references @ui-context)))
@@ -155,7 +158,7 @@
                       parent-id [parent-node]}
             orphaned-references {parent-id #{orphan-id}}
             _ (reset! ui-context {:node-map node-map
-                              :orphaned-references orphaned-references})
+                                  :orphaned-references orphaned-references})
             _ (resolve-any-orphans parent-id)
             orphan-nodes (get-in @ui-context [:node-map orphan-id])
             new-orphan-node (second orphan-nodes)
@@ -336,3 +339,180 @@
           (should= [[tab-name selected-event-id]] event-history)
           (should= 0 back-count)))))
   )
+
+(declare depict-tree
+         make-event-map
+         add-events)
+
+(describe "adding events"
+  (with-stubs)
+
+  (it "adds one event"
+    (let [tab-id :tab
+          filter {:selected []
+                  :blocked []}
+          header-tree (make-header-tree tab-id)
+          _ (config! header-tree :id tab-id :user-data filter)
+          frame (frame :content header-tree)
+          event-id 99
+          event {:id event-id}
+          event-state {:tabs {tab-id nil}}
+          event-context (atom event-state)]
+      (reset! ui-context {:frame frame
+                          :event-context event-context})
+      (add-event event)
+      (should= ["Root" [event-id]] (depict-tree header-tree))))
+
+  (it "adds two events"
+    (with-redefs [render-event (stub :render-event)]
+      (let [tab-id :tab
+            filter {:selected []
+                    :blocked []}
+            header-tree (make-header-tree tab-id)
+            _ (config! header-tree :id tab-id :user-data filter)
+            frame (frame :content header-tree)
+            event-list [{:id 99 :created-at 2} {:id 88 :created-at 1}]
+            event-map (make-event-map event-list)
+            event-state {:tabs {tab-id nil}
+                         :text-event-map event-map}
+            event-context (atom event-state)]
+        (reset! ui-context {:frame frame
+                            :event-context event-context})
+        (add-events event-list)
+        (should= ["Root" [99] [88]] (depict-tree header-tree)))))
+
+  (it "adds four events and keeps them in reverse chronologial order"
+    (with-redefs [render-event (stub :render-event)]
+      (let [tab-id :tab
+            filter {:selected []
+                    :blocked []}
+            header-tree (make-header-tree tab-id)
+            _ (config! header-tree :id tab-id :user-data filter)
+            frame (frame :content header-tree)
+            event-list [{:id 99 :created-at 1}
+                        {:id 88 :created-at 2}
+                        {:id 77 :created-at 3}
+                        {:id 66 :created-at 4}]
+            event-map (make-event-map event-list)
+            event-state {:tabs {tab-id nil}
+                         :text-event-map event-map}
+            event-context (atom event-state)]
+        (reset! ui-context {:frame frame
+                            :event-context event-context})
+        (add-events event-list)
+        (should= ["Root" [66] [77] [88] [99]] (depict-tree header-tree)))))
+
+  (it "adds an event, and a reply when received in order."
+    (with-redefs [render-event (stub :render-event)]
+      (let [tab-id :tab
+            filter {:selected []
+                    :blocked []}
+            header-tree (make-header-tree tab-id)
+            _ (config! header-tree :id tab-id :user-data filter)
+            frame (frame :content header-tree)
+            event-list [{:id 99 :created-at 1}
+                        {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                        ]
+            event-map (make-event-map event-list)
+            event-state {:tabs {tab-id nil}
+                         :text-event-map event-map}
+            event-context (atom event-state)]
+        (reset! ui-context {:frame frame
+                            :event-context event-context})
+        (add-events event-list)
+        (should= ["Root" [88] [99 [88]]] (depict-tree header-tree)))))
+
+  (it "adds an event, and a reply when received out of order."
+      (with-redefs [render-event (stub :render-event)]
+        (let [tab-id :tab
+              filter {:selected []
+                      :blocked []}
+              header-tree (make-header-tree tab-id)
+              _ (config! header-tree :id tab-id :user-data filter)
+              frame (frame :content header-tree)
+              event-list [{:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                          {:id 99 :created-at 1}]
+              event-map (make-event-map event-list)
+              event-state {:tabs {tab-id nil}
+                           :text-event-map event-map}
+              event-context (atom event-state)]
+          (reset! ui-context {:frame frame
+                              :event-context event-context})
+          (add-events event-list)
+          (should= ["Root" [88] [99 [88]]] (depict-tree header-tree)))))
+
+  (it "adds a chain of replies in order."
+      (with-redefs [render-event (stub :render-event)]
+        (let [tab-id :tab
+              filter {:selected []
+                      :blocked []}
+              header-tree (make-header-tree tab-id)
+              _ (config! header-tree :id tab-id :user-data filter)
+              frame (frame :content header-tree)
+              event-list [{:id 99 :created-at 1}
+                          {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                          {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
+                          {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
+                          {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}
+                          ]
+              event-map (make-event-map event-list)
+              event-state {:tabs {tab-id nil}
+                           :text-event-map event-map}
+              event-context (atom event-state)]
+          (reset! ui-context {:frame frame
+                              :event-context event-context})
+          (add-events event-list)
+          (should= ["Root"  [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]] (depict-tree header-tree)))))
+
+  (it "adds a chain of replies in reverse order."
+        (with-redefs [render-event (stub :render-event)]
+          (let [tab-id :tab
+                filter {:selected []
+                        :blocked []}
+                header-tree (make-header-tree tab-id)
+                _ (config! header-tree :id tab-id :user-data filter)
+                frame (frame :content header-tree)
+                event-list [{:id 99 :created-at 1}
+                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                            {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
+                            {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
+                            {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}
+                            ]
+                event-list (reverse event-list)
+                event-map (make-event-map event-list)
+                event-state {:tabs {tab-id nil}
+                             :text-event-map event-map}
+                event-context (atom event-state)]
+            (reset! ui-context {:frame frame
+                                :event-context event-context})
+            (add-events event-list)
+            (should= ["Root"  [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]] (depict-tree header-tree)))))
+  )
+
+(declare depict-node)
+
+(defn depict-tree [tree]
+  (let [model (config tree :model)
+        root (.getRoot model)]
+    (depict-node model root)))
+
+(defn depict-node [model node]
+  (loop [ns (range (.getChildCount node))
+         node-depiction [(.getUserObject node)]]
+    (if (empty? ns)
+      node-depiction
+      (let [n (first ns)
+            child (.getChild model node n)]
+        (recur (rest ns) (conj node-depiction (depict-node model child)))))))
+
+(defn make-event-map [event-list]
+  (loop [event-list event-list
+         event-map {}]
+    (if (empty? event-list)
+      event-map
+      (let [event (first event-list)]
+        (recur (rest event-list) (assoc event-map (:id event) event))))))
+
+(defn add-events [event-list]
+  (doseq [event event-list]
+    (add-event event)))
