@@ -441,7 +441,7 @@
           (add-events event-list)
           (should= ["Root" [88] [99 [88]]] (depict-tree header-tree)))))
 
-  (it "adds a chain of replies in order."
+  (it "adds a complex chain of replies in order."
       (with-redefs [render-event (stub :render-event)]
         (let [tab-id :tab
               filter {:selected []
@@ -464,7 +464,49 @@
           (add-events event-list)
           (should= ["Root"  [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]] (depict-tree header-tree)))))
 
-  (it "adds a chain of replies in reverse order."
+  (it "adds a chain of three replies in order."
+        (with-redefs [render-event (stub :render-event)]
+          (let [tab-id :tab
+                filter {:selected []
+                        :blocked []}
+                header-tree (make-header-tree tab-id)
+                _ (config! header-tree :id tab-id :user-data filter)
+                frame (frame :content header-tree)
+                event-list [{:id 99 :created-at 1}
+                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                            {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
+                            ]
+                event-map (make-event-map event-list)
+                event-state {:tabs {tab-id nil}
+                             :text-event-map event-map}
+                event-context (atom event-state)]
+            (reset! ui-context {:frame frame
+                                :event-context event-context})
+            (add-events event-list)
+            (should= ["Root" [77] [88 [77]] [99 [88 [77]]]] (depict-tree header-tree)))))
+
+  (it "adds a chain of three replies in reverse order."
+        (with-redefs [render-event (stub :render-event)]
+          (let [tab-id :tab
+                filter {:selected []
+                        :blocked []}
+                header-tree (make-header-tree tab-id)
+                _ (config! header-tree :id tab-id :user-data filter)
+                frame (frame :content header-tree)
+                event-list [{:id 99 :created-at 1}
+                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                            {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}]
+                event-list (reverse event-list)
+                event-map (make-event-map event-list)
+                event-state {:tabs {tab-id nil}
+                             :text-event-map event-map}
+                event-context (atom event-state)]
+            (reset! ui-context {:frame frame
+                                :event-context event-context})
+            (add-events event-list)
+            (should= ["Root" [77] [88 [77]] [99 [88 [77]]]] (depict-tree header-tree)))))
+
+  (it "adds a complex chain of replies in reverse order."
         (with-redefs [render-event (stub :render-event)]
           (let [tab-id :tab
                 filter {:selected []
@@ -486,7 +528,7 @@
             (reset! ui-context {:frame frame
                                 :event-context event-context})
             (add-events event-list)
-            (should= ["Root"  [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]] (depict-tree header-tree)))))
+            (should= ["Root" [55] [66] [77 [66]] [88 [55] [77 [66]]] [99 [88 [55] [77 [66]]]]] (depict-tree header-tree)))))
   )
 
 (declare depict-node)
@@ -494,16 +536,16 @@
 (defn depict-tree [tree]
   (let [model (config tree :model)
         root (.getRoot model)]
-    (depict-node model root)))
+    (depict-node root)))
 
-(defn depict-node [model node]
+(defn depict-node [node]
   (loop [ns (range (.getChildCount node))
          node-depiction [(.getUserObject node)]]
     (if (empty? ns)
       node-depiction
       (let [n (first ns)
-            child (.getChild model node n)]
-        (recur (rest ns) (conj node-depiction (depict-node model child)))))))
+            child (.getChildAt node n)]
+        (recur (rest ns) (conj node-depiction (depict-node child)))))))
 
 (defn make-event-map [event-list]
   (loop [event-list event-list
@@ -516,3 +558,34 @@
 (defn add-events [event-list]
   (doseq [event event-list]
     (add-event event)))
+
+(describe "copy-node copies a node and all its children"
+  (it "copies one node"
+    (let [node (DefaultMutableTreeNode. 1)
+          copied-node (copy-node node)]
+      (should= [1] (depict-node copied-node))))
+
+  (it "copies a node with one child"
+    (let [node (DefaultMutableTreeNode. 1)
+          child (DefaultMutableTreeNode. 2)
+          _ (.add node child)
+          copied-node (copy-node node)]
+      (should= [1 [2]] (depict-node copied-node))))
+
+  (it "copies a node with two children"
+      (let [node (DefaultMutableTreeNode. 1)
+            _ (.add node (DefaultMutableTreeNode. 2))
+            _ (.add node (DefaultMutableTreeNode. 3))
+            copied-node (copy-node node)]
+        (should= [1 [2] [3]] (depict-node copied-node))))
+
+  (it "copies a node with two children and grandchildren"
+        (let [node (DefaultMutableTreeNode. 1)
+              child1 (DefaultMutableTreeNode. 2)
+              _ (.add node child1)
+              child2 (DefaultMutableTreeNode. 3)
+              _ (.add node child2)
+              _ (.add child2 (DefaultMutableTreeNode. 4))
+              copied-node (copy-node node)]
+          (should= [1 [2] [3 [4]]] (depict-node copied-node))))
+  )

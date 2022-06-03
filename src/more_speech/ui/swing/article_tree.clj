@@ -114,6 +114,8 @@
     (add-references event)
     (resolve-any-orphans event-id)))
 
+(declare build-orphan-node)
+
 (defn resolve-any-orphans [parent-id]
   (let [parent-nodes (get-in @ui-context [:node-map parent-id])
         orphan-set (get-in @ui-context [:orphaned-references parent-id])]
@@ -125,12 +127,27 @@
             nil
             (let [orphan-id (first orphan-set)]
               (doseq [parent-node parent-nodes]
-                (let [orphan-node (DefaultMutableTreeNode. orphan-id)]
+                (let [orphan-node (build-orphan-node orphan-id)]
                   (.add ^DefaultMutableTreeNode parent-node orphan-node)
                   (swap! ui-context update-in [:node-map orphan-id] conj orphan-node)))
               (recur (rest orphan-set)))))
-        (swap! ui-context assoc-in [:orphaned-references parent-id] #{}))))
-  )
+        (swap! ui-context assoc-in [:orphaned-references parent-id] #{})))))
+
+(declare copy-node)
+
+(defn build-orphan-node [orphan-id]
+  (let [node-map (:node-map @ui-context)
+        orphan-nodes (get node-map orphan-id)]
+    (copy-node (first orphan-nodes))))
+
+(defn copy-node [node]
+  (loop [copied-node (DefaultMutableTreeNode. (.getUserObject node))
+         children (enumeration-seq (.children node))]
+    (if (empty? children)
+      copied-node
+      (let [child (copy-node (first children))]
+        (.add copied-node child)
+        (recur copied-node (rest children))))))
 
 ;; at the moment an event can appear in several places in the tree.
 ;; it can be in the reply chain of an event, and it can stand alone.
