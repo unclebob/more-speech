@@ -50,8 +50,9 @@
                  :created-at 1
                  :content ""
                  :tags []}
+          timestamp (format-time (event :created-at))
           header (format-header nicknames event)]
-      (should= "  11111111111111111... 12/31/69 18:00:01 \n" header)))
+      (should= (str "  11111111111111111... " timestamp " \n") header)))
 
   (it "formats a simple message"
       (let [nicknames {}
@@ -59,8 +60,9 @@
                    :created-at 1
                    :content "the message"
                    :tags []}
+            timestamp (format-time (event :created-at))
             header (format-header nicknames event)]
-        (should= "  11111111111111111... 12/31/69 18:00:01 the message\n" header)))
+        (should= (str "  11111111111111111... " timestamp " the message\n") header)))
 
   (it "formats a long message with line ends."
         (let [nicknames {}
@@ -71,8 +73,9 @@ our fathers brought forth upon this continent
 a new nation concieved in liberty and dedicated to
 the proposition that all men are created equal."
                      :tags []}
+              timestamp (format-time (event :created-at))
               header (format-header nicknames event)]
-          (should= "  11111111111111111... 12/31/69 18:00:01 Four score and seven years ago~our fathers brought forth upon this continent~...\n" header)))
+          (should= (str "  11111111111111111... " timestamp " Four score and seven years ago~our fathers brought forth upon this continent~...\n") header)))
 
   (it "formats a message with a subject"
         (let [nicknames {}
@@ -80,8 +83,9 @@ the proposition that all men are created equal."
                      :created-at 1
                      :content "the message"
                      :tags [[:subject "the subject"]]}
+              timestamp (format-time (event :created-at))
               header (format-header nicknames event)]
-          (should= "  11111111111111111... 12/31/69 18:00:01 the subject|the message\n" header)))
+          (should= (str "  11111111111111111... " timestamp " the subject|the message\n") header)))
   )
 
 (describe "subject and discussion tags"
