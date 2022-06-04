@@ -100,7 +100,9 @@
         subject-label (select main-frame [:#subject-label])]
     (swing-util/clear-popup relays-popup)
     (config! relays-popup :items (:relays event))
-    (text! article-area (formatters/reformat-article (:content event) config/article-width))
+    (text! article-area (formatters/reformat-article
+                          (formatters/replace-references event)
+                          config/article-width))
     (text! (select main-frame [:#author-name-label])
            (format-user (:pubkey event)))
     (text! (select main-frame [:#author-id-label])

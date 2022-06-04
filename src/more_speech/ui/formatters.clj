@@ -2,7 +2,8 @@
   (:require [clojure.string :as string]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.events :as events]
-            [more-speech.ui.config :as config])
+            [more-speech.ui.config :as config]
+            [more-speech.ui.swing.ui-context :refer :all])
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
@@ -46,12 +47,14 @@
     ""
     (abbreviate (get nicknames user-id (util/num32->hex-string user-id)) 20)))
 
-(declare get-subject)
+(declare get-subject
+         replace-references)
 
-(defn format-header [nicknames {:keys [pubkey created-at content tags] :as event}]
+(defn format-header [nicknames {:keys [pubkey created-at tags] :as event}]
   (if (nil? event)
     "nil"
-    (let [name (format-user-id nicknames pubkey)
+    (let [content (replace-references event)
+          name (format-user-id nicknames pubkey)
           time (format-time created-at)
           subject (get-subject tags)
           [reply-id _ _] (events/get-references event)
@@ -75,4 +78,32 @@
         ))
 
     )
+  )
+
+(declare lookup-reference)
+
+(defn replace-references [event]
+  (let [padded-content (str " " (:content event) " ")
+        nicknames (:nicknames @(:event-context @ui-context))
+        pattern #"\#\[\d+\]"
+        references (re-seq pattern padded-content)
+        segments (string/split padded-content pattern)
+        referents (mapv (partial lookup-reference nicknames event) references)
+        referents (conj referents " ")
+        ]
+    (string/trim (apply str (interleave segments referents)))))
+
+(defn lookup-reference [nicknames event reference]
+  (let [ref-string (re-find #"\d+" reference)
+        index (Integer/parseInt ref-string)
+        tags (:tags event)]
+    (if (>= index (count tags))
+      reference
+      (let [id-string (-> tags (nth index) second)
+            id (util/hex-string->num id-string)
+            name (get nicknames id)
+            name (if (nil? name)
+                   (str "id:" (abbreviate id-string 8))
+                   name)]
+        (str "@" name))))
   )
