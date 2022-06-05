@@ -1,9 +1,9 @@
 (ns more-speech.ui.formatters
   (:require [clojure.string :as string]
             [more-speech.nostr.util :as util]
-            [more-speech.nostr.events :as events]
             [more-speech.ui.config :as config]
-            [more-speech.ui.swing.ui-context :refer :all])
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.nostr.events :as events])
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
@@ -66,7 +66,8 @@
       (format "%s %20s %s %s\n" reply-mark name time content))))
 
 (defn format-reply [event]
-  (prepend> (reformat-article (:content event) config/article-width)))
+  (let [content (replace-references event)]
+    (prepend> (reformat-article content config/article-width))))
 
 (defn get-subject [tags]
   (if (empty? tags)
@@ -105,5 +106,5 @@
             name (if (nil? name)
                    (str "id:" (abbreviate id-string 8))
                    name)]
-        (str "@" name))))
-  )
+        (str "@" name)))))
+

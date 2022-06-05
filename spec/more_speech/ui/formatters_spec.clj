@@ -184,6 +184,6 @@ the proposition that all men are created equal."
             event-context (atom {:nicknames nicknames})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p "deadbeef"]]}]
-        (should= "#[1]" (replace-references event))))
+        (should= "#[1]" (replace-references event))))))
 
-    ))
+

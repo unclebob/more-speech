@@ -2,7 +2,8 @@
   (:require [speclj.core :refer :all]
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
-            [more-speech.nostr.util :refer :all]))
+            [more-speech.nostr.util :refer :all]
+            [more-speech.ui.swing.ui-context :refer :all]))
 
 (defrecord event-handler-dummy []
   event-handler
@@ -337,4 +338,46 @@
 
   )
 
+(describe "Emplacing references"
+  (context "replace @user with #[n] where n is the index of the 'p' tag."
+    (it "emplaces nothing if there is no @user in the content"
+      (let [tags []]
+        (should= ["content" []] (emplace-references "content" tags))))
 
+    (it "emplaces @username in newly created message"
+      (let [tags []
+            user-id 99
+            nicknames {user-id "username"}
+            event-context (atom {:nicknames nicknames})
+            _ (reset! ui-context {:event-context event-context})
+            content "hello @username."]
+        (should= ["hello #[0]." [[:p (hexify user-id)]]] (emplace-references content tags))))
+
+    (it "emplaces two usernames in a message with some tags"
+      (let [tags (seq [[:e "blah"]])
+            user-id-1 99
+            user-id-2 88
+            nicknames {user-id-1 "user-1"
+                       user-id-2 "user-2"}
+            event-context (atom {:nicknames nicknames})
+            _ (reset! ui-context {:event-context event-context})
+            content "hello @user-1 and @user-2."]
+        (should= ["hello #[1] and #[2]." [[:e "blah"]
+                                          [:p (hexify user-id-1)]
+                                          [:p (hexify user-id-2)]]]
+                 (emplace-references content tags))))
+
+    (it "does not emplace a username that is not a nickname"
+          (let [tags [[:e "blah"]]
+                user-id-1 99
+                user-id-2 88
+                nicknames {user-id-1 "user-1"
+                           user-id-2 "user-2"}
+                event-context (atom {:nicknames nicknames})
+                _ (reset! ui-context {:event-context event-context})
+                content "hello @user-3."]
+            (should= ["hello @user-3." [[:e "blah"]]]
+                     (emplace-references content tags))))
+    )
+
+  )

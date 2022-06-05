@@ -6,7 +6,8 @@
             [more-speech.nostr.elliptic-signature :as ecc]
             [clojure.core.async :as async]
             [more-speech.nostr.util :as util]
-            [more-speech.nostr.relays :as relays])
+            [more-speech.nostr.relays :as relays]
+            [clojure.string :as string])
   (:import (java.nio.charset StandardCharsets)))
 
 (s/def ::id number?)
@@ -267,7 +268,8 @@
 (declare make-event-reference-tags
          make-people-reference-tags
          make-subject-tag
-         get-reply-root)
+         get-reply-root
+         emplace-references)
 
 (defn compose-text-event
   ([event-state subject text]
@@ -281,7 +283,7 @@
          tags (concat (make-event-reference-tags reply-to-or-nil root)
                       (make-people-reference-tags event-state pubkey reply-to-or-nil)
                       (make-subject-tag subject))
-         content text
+         [content tags] (emplace-references text tags)
          body {:kind 1
                :tags tags
                :content content}]
@@ -341,3 +343,51 @@
 (defn compose-and-send-metadata-event [event-state]
   (send-event event-state (compose-metadata-event event-state)))
 
+(declare make-emplacements make-emplacement)
+
+(defn emplace-references [content tags]
+  (let [padded-content (str " " content " ")
+        pattern #"\@[\w\-]+"
+        references (re-seq pattern padded-content)
+        segments (string/split padded-content pattern)
+        [emplacements tags] (make-emplacements references tags)]
+    [(string/trim (apply str (interleave segments (conj emplacements ""))))
+     tags]
+    ))
+
+(defn make-emplacements [references tags]
+  (loop [references references
+         emplacements []
+         tags tags]
+    (if (empty? references)
+      [emplacements tags]
+      (let [reference (first references)
+            [emplacement tags] (make-emplacement reference tags)]
+        (recur (rest references)
+               (conj emplacements emplacement)
+               tags)))))
+
+(declare find-user-id)
+
+(defn make-emplacement [reference tags]
+  (let [tags (vec tags) ;conj adds to end.
+        tag-index (count tags)
+        user-name (subs reference 1)
+        user-id (find-user-id user-name)]
+    (if (nil? user-id)
+      [reference tags]
+      (let [tag [:p (util/num32->hex-string user-id)]
+            emplacement (str "#[" tag-index "]")]
+        [emplacement (conj tags tag)]
+        ))))
+
+(defn find-user-id [user-name]
+  (let [nicknames (:nicknames @(:event-context @ui-context))]
+    (loop [pairs (vec nicknames)]
+      (if (empty? pairs)
+        nil
+        (let [pair (first pairs)]
+          (if (= user-name (second pair))
+            (first pair)
+            (recur (rest pairs)))))))
+  )
