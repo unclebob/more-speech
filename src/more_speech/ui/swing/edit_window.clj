@@ -1,6 +1,6 @@
 (ns more-speech.ui.swing.edit-window
   (:require [more-speech.nostr.events :as events]
-            [more-speech.ui.config :as config]
+            [more-speech.config :as config]
             [more-speech.ui.formatters :as formatters]
             [more-speech.ui.swing.ui-context :refer :all])
   (:use [seesaw core]))

@@ -5,7 +5,7 @@
             [more-speech.nostr.relays :refer [relays]]
             [java-time :as t]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.config :as config])
+            [more-speech.config :as config])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)

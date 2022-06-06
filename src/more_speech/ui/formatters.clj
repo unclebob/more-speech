@@ -1,7 +1,7 @@
 (ns more-speech.ui.formatters
   (:require [clojure.string :as string]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.config :as config]
+            [more-speech.config :as config]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.events :as events])
   (:import (java.util Date)

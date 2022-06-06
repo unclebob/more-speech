@@ -2,12 +2,15 @@
 ;; Nice debug site: https://nostr-army-knife.netlify.app
 
 (ns more-speech.core
+  (:gen-class)
   (:require [clojure.core.async :as async]
+            [more-speech.config :as config]
             [more-speech.nostr.protocol :as protocol]
             [more-speech.ui.swing.main-window :as swing]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :as relays]
-            [more-speech.ui.swing.ui-context :refer :all])
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.migrator :as migrator])
   )
 
 (def send-chan (async/chan))
@@ -17,11 +20,12 @@
          set-event-handler)
 
 (defn ^:export -main [& _args]
-  (let [keys (read-string (slurp "private/keys"))
-        _ (relays/load-relays-from-file "private/relays")
-        read-event-ids (read-string (slurp "private/read-event-ids"))
-        nicknames (read-string (slurp "private/nicknames"))
-        tabs (read-string (slurp "private/tabs"))
+  (migrator/migrate-to 1)
+  (let [keys (read-string (slurp @config/keys-filename))
+        _ (relays/load-relays-from-file @config/relays-filename)
+        read-event-ids (read-string (slurp @config/read-event-ids-filename))
+        nicknames (read-string (slurp @config/nicknames-filename))
+        tabs (read-string (slurp @config/tabs-filename))
         event-context (events/make-event-context {:keys keys
                                                   :send-chan send-chan
                                                   :nicknames nicknames
@@ -33,13 +37,13 @@
         ]
     (swap! event-context set-event-handler handler)
     (protocol/get-events event-context)
-    (spit "private/nicknames"
+    (spit @config/nicknames-filename
           (with-out-str
             (clojure.pprint/pprint (:nicknames @event-context))))
-    (spit "private/read-event-ids"
+    (spit @config/read-event-ids-filename
           (with-out-str
             (clojure.pprint/pprint (:read-event-ids @event-context))))
-    (spit "private/relays"
+    (spit @config/relays-filename
           (with-out-str
             (clojure.pprint/pprint (relays/relays-for-writing))))
     (System/exit 1)))

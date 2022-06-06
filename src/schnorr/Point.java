@@ -14,6 +14,7 @@ public class Point  {
             new BigInteger("483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8", 16)
     );
 
+    private static final BigInteger BI_TWO = BigInteger.valueOf(2);
     private final Pair<BigInteger,BigInteger> pair;
 
     public Point(BigInteger x , BigInteger y) {
@@ -87,12 +88,12 @@ public class Point  {
 
         BigInteger lam;
         if(P1.equals(P2)) {
-            BigInteger base = P2.getY().multiply(BigInteger.TWO);
-            lam = (BigInteger.valueOf(3L).multiply(P1.getX()).multiply(P1.getX()).multiply(base.modPow(p.subtract(BigInteger.TWO), p))).mod(p);
+            BigInteger base = P2.getY().multiply(BI_TWO);
+            lam = (BigInteger.valueOf(3L).multiply(P1.getX()).multiply(P1.getX()).multiply(base.modPow(p.subtract(BI_TWO), p))).mod(p);
         }
         else {
             BigInteger base = P2.getX().subtract(P1.getX());
-            lam = ((P2.getY().subtract(P1.getY())).multiply(base.modPow(p.subtract(BigInteger.TWO), p))).mod(p);
+            lam = ((P2.getY().subtract(P1.getY())).multiply(base.modPow(p.subtract(BI_TWO), p))).mod(p);
         }
 
         BigInteger x3 = (lam.multiply(lam).subtract(P1.getX()).subtract(P2.getX())).mod(p);
@@ -122,11 +123,11 @@ public class Point  {
     }
 
     public static boolean hasEvenY(Point P) {
-        return P.getY().mod(BigInteger.TWO).compareTo(BigInteger.ZERO) == 0;
+        return P.getY().mod(BI_TWO).compareTo(BigInteger.ZERO) == 0;
     }
 
     public static boolean isSquare(BigInteger x) {
-        return x.modPow(p.subtract(BigInteger.ONE).mod(BigInteger.TWO), p).longValue() == 1L;
+        return x.modPow(p.subtract(BigInteger.ONE).mod(BI_TWO), p).longValue() == 1L;
     }
 
     public boolean hasSquareY() {
@@ -179,7 +180,7 @@ public class Point  {
         BigInteger y_sq = x.modPow(BigInteger.valueOf(3L), p).add(BigInteger.valueOf(7L)).mod(p);
         BigInteger y = y_sq.modPow(p.add(BigInteger.ONE).divide(BigInteger.valueOf(4L)), p);
 
-        if(y.modPow(BigInteger.TWO, p).compareTo(y_sq) != 0) {
+        if(y.modPow(BI_TWO, p).compareTo(y_sq) != 0) {
             return null;
         }
         else {
