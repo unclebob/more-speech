@@ -282,7 +282,8 @@
          root (get-reply-root event-state reply-to-or-nil)
          tags (concat (make-event-reference-tags reply-to-or-nil root)
                       (make-people-reference-tags event-state pubkey reply-to-or-nil)
-                      (make-subject-tag subject))
+                      (make-subject-tag subject)
+                      [[:client "more-speech"]])
          [content tags] (emplace-references text tags)
          body {:kind 1
                :tags tags
