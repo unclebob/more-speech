@@ -21,11 +21,11 @@
   (invoke-now (make-main-window))
   (->seesawHandler))
 
-(declare timer-action)
+(declare timer-action get-tabs-with-all)
 
 (defn make-tabs []
   (let [event-context (:event-context @ui-context)
-        tabs (:tabs @event-context)]
+        tabs (get-tabs-with-all event-context)]
     (loop [tab-names (keys tabs)
            header-tree-tabs []]
       (if (empty? tab-names)
@@ -37,9 +37,13 @@
                          :id tab-name)
               tab-data {:title (name tab-name)
                         :content (scrollable header-tree)}]
-          (recur (rest tab-names) (conj header-tree-tabs tab-data)))
-        )))
-  )
+          (recur (rest tab-names) (conj header-tree-tabs tab-data)))))))
+
+(defn get-tabs-with-all [event-context]
+  (let [tabs (:tabs @event-context)]
+    (when-not (contains? tabs :all)
+      (swap! event-context assoc-in [:tabs :all] {:selected [] :blocked []}))
+    (:tabs @event-context)))
 
 (defn select-tab [e]
   (let [tab-name (:title (selection e))
