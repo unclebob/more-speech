@@ -163,7 +163,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [] tags)
+        (should= [[:client "more-speech"]]tags)
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -182,7 +182,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:subject "subject"]] tags)
+        (should= [[:subject "subject"] [:client "more-speech"]] tags)
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -205,7 +205,9 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:e root-id-hex "" "reply"] [:p (hexify root-author)]] tags)
+        (should= [[:e root-id-hex "" "reply"]
+                  [:p (hexify root-author)]
+                  [:client "more-speech"]] tags)
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -234,8 +236,11 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:e root-id-hex "" "root"] [:e root-child-id-hex "" "reply"]
-                  [:p (hexify root-child-author)] [:p (hexify root-author)]] tags)
+        (should= [[:e root-id-hex "" "root"]
+                  [:e root-child-id-hex "" "reply"]
+                  [:p (hexify root-child-author)]
+                  [:p (hexify root-author)]
+                  [:client "more-speech"]] tags)
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -253,7 +258,9 @@
             event (compose-text-event event-state "" "message" root-id)
             {:keys [tags]} (second event)]
 
-        (should= [[:e root-id-hex "" "reply"] [:p (hexify root-author)]] tags)))
+        (should= [[:e root-id-hex "" "reply"]
+                  [:p (hexify root-author)]
+                  [:client "more-speech"]] tags)))
 
     (it "composes a message with a slash."
       (let [private-key (num->bytes 64 42)
@@ -267,7 +274,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [] tags)
+        (should= [[:client "more-speech"]] tags)
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key

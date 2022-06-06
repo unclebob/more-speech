@@ -11,5 +11,4 @@ pom.xml.asc
 *.iml
 *.log
 private
-
-
+/tmp/
