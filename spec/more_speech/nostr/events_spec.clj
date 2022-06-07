@@ -3,7 +3,8 @@
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]))
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.config :as config]))
 
 (defrecord event-handler-dummy []
   event-handler
@@ -384,7 +385,25 @@
                 _ (reset! ui-context {:event-context event-context})
                 content "hello @user-3."]
             (should= ["hello @user-3." [[:e "blah"]]]
-                     (emplace-references content tags))))
+                     (emplace-references content tags))))))
+
+(describe "fixing names"
+  (it "should not fix a good name"
+    (should= "name" (fix-name "name")))
+
+  (it "should removed bad characters from a name."
+    (should= "badname" (fix-name "bad name"))
+    (should= "badname" (fix-name "bad.name")))
+
+  (it "should trim names to max length"
+    (let [bad-name (apply str (repeat (inc config/user-name-max-length) \x))
+          expected-name (apply str (repeat config/user-name-max-length \x))]
+      (should= expected-name (fix-name bad-name)))
     )
 
+  (it "should create a random name for nils and empties"
+    (with-redefs [rand-int (fn [_n] 12)]
+      (should= "dud-12" (fix-name ""))
+      )
+    )
   )

@@ -94,4 +94,26 @@
       (prn (read-string (slurp @config/keys-filename)))
       )
     )
+
+  (context "migration 2 - fix names"
+    (it "fixes names"
+      (with-redefs [rand-int (fn [_n] 12)]
+        (let [bad-nicknames {1 "good-name"
+                             2 "bad name"
+                             3 "long-name0123456"
+                             4 ""
+                             5 nil
+                             6 "洛奇安"}]
+          (spit @config/nicknames-filename bad-nicknames)
+          (migration-2-fix-names)
+          (let [nicknames (read-string (slurp @config/nicknames-filename))]
+            (should= {1 "good-name"
+                      2 "badname"
+                      3 "long-name012345"
+                      4 "dud-12"
+                      5 "dud-12"
+                      6 "dudx-12"}
+                     nicknames))
+          )))
+    )
   )

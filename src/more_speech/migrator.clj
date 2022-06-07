@@ -4,7 +4,8 @@
             [more-speech.config :refer [migration-filename]]
             [more-speech.config :as config]
             [more-speech.nostr.util :as util]
-            [more-speech.nostr.elliptic-signature :as ecc])
+            [more-speech.nostr.elliptic-signature :as ecc]
+            [more-speech.nostr.events :as events])
   (:import (java.security SecureRandom)))
 
 (defn file-exists? [fname]
@@ -53,8 +54,15 @@
                                   }}))
   )
 
+(defn migration-2-fix-names []
+  (let [nicknames (read-string (slurp @config/nicknames-filename))
+        fixed-nicknames (apply hash-map (flatten (map (fn [v] (vector(first v) (events/fix-name (second v)))) nicknames)))]
+    (spit @config/nicknames-filename fixed-nicknames)
+    ))
 
-(def migrations (atom {1 initial-migration}))
+
+(def migrations (atom {1 initial-migration
+                       2 migration-2-fix-names}))
 
 (defn set-migration-level [n]
   (spit @migration-filename {:migration-level n}))

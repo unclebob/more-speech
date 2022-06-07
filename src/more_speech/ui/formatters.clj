@@ -3,7 +3,8 @@
             [more-speech.nostr.util :as util]
             [more-speech.config :as config]
             [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.nostr.events :as events])
+            [more-speech.nostr.events :as events]
+            )
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 

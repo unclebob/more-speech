@@ -7,7 +7,8 @@
             [clojure.core.async :as async]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.relays :as relays]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [more-speech.config :as config])
   (:import (java.nio.charset StandardCharsets)))
 
 (s/def ::id number?)
@@ -115,9 +116,11 @@
         (do #_(prn "unknown event: " url event)
           event-state)))))
 
+(declare fix-name)
 (defn process-name-event [event-state {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
-    (let [name (get (json/read-str content) "name" "tilt")]
+    (let [name (get (json/read-str content) "name" "tilt")
+          name (fix-name name)]
       (-> event-state
           (update-in [:nicknames] assoc pubkey name)
           ))
@@ -348,7 +351,7 @@
 
 (defn emplace-references [content tags]
   (let [padded-content (str " " content " ")
-        pattern #"\@[\w\-]+"
+        pattern config/user-name-pattern
         references (re-seq pattern padded-content)
         segments (string/split padded-content pattern)
         [emplacements tags] (make-emplacements references tags)]
@@ -371,7 +374,7 @@
 (declare find-user-id)
 
 (defn make-emplacement [reference tags]
-  (let [tags (vec tags) ;conj adds to end.
+  (let [tags (vec tags)                                     ;conj adds to end.
         tag-index (count tags)
         user-name (subs reference 1)
         user-id (find-user-id user-name)]
@@ -390,5 +393,18 @@
         (let [pair (first pairs)]
           (if (= user-name (second pair))
             (first pair)
-            (recur (rest pairs)))))))
-  )
+            (recur (rest pairs))))))))
+
+(defn fix-name [name]
+  (if (empty? name)
+    (str "dud-" (rand-int 100000))
+    (let [fixed-name (apply str
+                            (filter
+                              #(re-matches config/user-name-chars (str %))
+                              name))
+          fixed-name (if (> (count fixed-name) config/user-name-max-length)
+                       (subs fixed-name 0 config/user-name-max-length)
+                       fixed-name)]
+      (if (empty? fixed-name)
+        (str "dudx-" (rand-int 100000))
+        fixed-name))))

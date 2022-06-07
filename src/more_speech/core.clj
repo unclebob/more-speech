@@ -20,7 +20,7 @@
          set-event-handler)
 
 (defn ^:export -main [& _args]
-  (migrator/migrate-to 1)
+  (migrator/migrate-to config/migration-level)
   (let [keys (read-string (slurp @config/keys-filename))
         _ (relays/load-relays-from-file @config/relays-filename)
         read-event-ids (read-string (slurp @config/read-event-ids-filename))
