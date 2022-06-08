@@ -45,6 +45,9 @@
 
   (it "should not break this line. (bug-fix)"
     (should= "I found you!" (reformat-article "I found you!" 50)))
+
+  (it "always breaks at a reply prefix '>'"
+    (should= ">this is\n>a reply." (reformat-article ">this is\n>a reply." 50)))
   )
 
 (describe "format header"

@@ -26,11 +26,14 @@
     (string/join "\n" lines)))
 
 (defn reformat-article [article width]
-  (let [blank-line (.lastIndexOf article "\n\n" width)
+  (let [first-line-end (.indexOf article "\n")
+        reply-line? (and (> first-line-end 0) (= \> (first article)))
+        blank-line (.lastIndexOf article "\n\n" width)
         indentation (.indexOf article "\n ")
         breakable-space (.lastIndexOf article " " width)
         [break-point break-string skip]
         (cond
+          reply-line? [first-line-end "\n" 1]
           (< -1 indentation width) [indentation "\n " 2]
           (>= blank-line 0) [blank-line "\n\n" 2]
           (<= (count article) width) [(count article) "" 0]
