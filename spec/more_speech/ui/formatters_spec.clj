@@ -13,43 +13,6 @@
 
   )
 
-(describe "reformat article body to fit width."
-  (it "should not wrap nothing"
-    (should= "" (reformat-article "" 1)))
-
-  (it "should not wrap something shorter than the width."
-    (should= "xxx" (reformat-article "xxx" 10)))
-
-  (it "should wrap something longer than the width."
-    (should= "xx\nxx" (reformat-article "xxxx" 2)))
-
-  (it "should repeatedly wrap long strings."
-    (should= "xx\nxx\nxx" (reformat-article "xxxxxx" 2)))
-
-  (it "should break spaces"
-    (should= "x\nx" (reformat-article "x x" 1))
-    (should= "x\nx" (reformat-article "x x" 2))
-    (should= "xx\nxx" (reformat-article "xx xx" 4)))
-
-  (it "should ignore existing single line breaks."
-    (should= "x x" (reformat-article "x\nx" 5)))
-
-  (it "should preserve existing double line breaks."
-    (should= "x\n\nx" (reformat-article "x\n\nx" 7)))
-
-  (it "should preserve leading spaces."
-    (should= "x\n xxx" (reformat-article "x\n xxx" 6)))
-
-  (it "should give priority to leading spaces"
-    (should= "x\n x\n\nx" (reformat-article "x\n x\n\nx" 20)))
-
-  (it "should not break this line. (bug-fix)"
-    (should= "I found you!" (reformat-article "I found you!" 50)))
-
-  (it "always breaks at a reply prefix '>'"
-    (should= ">this is\n>a reply." (reformat-article ">this is\n>a reply." 50)))
-  )
-
 (describe "format header"
   (it "formats an empty message"
     (let [nicknames {}
@@ -190,3 +153,70 @@ the proposition that all men are created equal."
         (should= "#[1]" (replace-references event))))))
 
 
+(describe "Escape HTML entities"
+  (it "returns the same string in the absence of any HTML entities"
+      (let [content "Hi from more-speech"
+            escaped-content (html-escape content)]
+        (should= "Hi from more-speech" escaped-content)))
+  (it "escapes `&`"
+      (let [content "bread & butter"
+            escaped-content (html-escape content)]
+        (should= "bread &amp; butter" escaped-content)))
+  (it "escapes `<`"
+      (let [content "< less than"
+            escaped-content (html-escape content)]
+        (should= "&lt; less than" escaped-content)))
+  (it "escapes `>`"
+      (let [content "> greater than"
+            escaped-content (html-escape content)]
+        (should= "&gt; greater than" escaped-content)))
+  (it "escapes `\"`"
+      (let [content "\"bread\""
+            escaped-content (html-escape content)]
+        (should= "&quot;bread&quot;" escaped-content)))
+  (it "escapes `'`"
+      (let [content "'bread'"
+            escaped-content (html-escape content)]
+        (should= "&#x27;bread&#x27;" escaped-content)))
+  (it "escapes `/`"
+      (let [content "/bread/"
+            escaped-content (html-escape content)]
+        (should= "&#x2F;bread&#x2F;" escaped-content))))
+
+(describe "Linkify URL"
+  (it "should wrap a hyperlink around the url string"
+      (should= "<a href=\"https://nostr.com\">https://nostr.com</a>" (linkify "https://nostr.com")))
+  )
+
+(describe "Format replies"
+  (it "always breaks at a reply prefix '>'"
+      (should= ">this is\n>a reply." (format-replies ">this is >a reply.")))
+  )
+
+(describe "Newlines as <br>"
+  (it "should replace newlines with br tag"
+      (should= "xx<br>xx" (break-newlines "xx\nxx"))))
+
+(describe "Segment article content"
+  (it "returns empty list if content is empty"
+      (should= '() (segment-text-url "")))
+  (it "returns a single :text element if no url in content"
+      (should= '([:text "no url"]) (segment-text-url "no url")))
+  (it "returns a single :url element if whole content is a url"
+      (should= '([:url "http://nostr.com"]) (segment-text-url "http://nostr.com")))
+  (it "returns a list of :text and :url elements when content contains multiple text and url segments"
+      (should= '([:text "Check this "][:url "http://nostr.com"][:text " It's cool"])
+               (segment-text-url "Check this http://nostr.com It's cool")))
+  )
+
+(describe "Format article"
+  (it "should escape HTML entities"
+      (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article "<b>text</b>")))
+  (it "should linkify url"
+      (should= "<a href=\"https://nostr.com\">https://nostr.com</a>" (reformat-article "https://nostr.com")))
+  (it "should escape HTML entities and linkify url"
+      (should= "&lt;b&gt;Clojure&lt;&#x2F;b&gt;: <a href=\"https://clojure.org/\">https://clojure.org/</a>"
+           (reformat-article "<b>Clojure</b>: https://clojure.org/")))
+  (it "should format replies and escape HTML entities properly"
+      (should= "&gt;this is<br>&gt;a reply" (reformat-article ">this is >a reply")))
+  )

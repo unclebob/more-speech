@@ -50,11 +50,17 @@
 (defn bold-label [s]
   (label :text s :font config/bold-font))
 
+(def editor-pane-stylesheet
+  "<style>
+    body {font-family: courier; font-style: normal; font-size: 14; font-weight: lighter;}
+    a {color: inherit; text-decoration: none;}</style>")
+
 (defn make-article-area []
   (editor-pane
-    :font config/default-font
+    :content-type "text/html"
     :editable? false
-    :id :article-area))
+    :id :article-area
+    :text editor-pane-stylesheet))
 
 (declare go-back go-forward)
 
@@ -101,8 +107,7 @@
     (swing-util/clear-popup relays-popup)
     (config! relays-popup :items (:relays event))
     (text! article-area (formatters/reformat-article
-                          (formatters/replace-references event)
-                          config/article-width))
+                          (formatters/replace-references event)))
     (text! (select main-frame [:#author-name-label])
            (format-user (:pubkey event)))
     (text! (select main-frame [:#author-id-label])
