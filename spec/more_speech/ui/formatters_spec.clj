@@ -189,4 +189,3 @@ the proposition that all men are created equal."
             event {:content content :tags [[:p "deadbeef"]]}]
         (should= "#[1]" (replace-references event))))))
 
-

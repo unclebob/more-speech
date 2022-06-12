@@ -70,8 +70,15 @@
       (format "%s %20s %s %s\n" reply-mark name time content))))
 
 (defn format-reply [event]
-  (let [content (replace-references event)]
-    (prepend> (reformat-article content config/article-width))))
+  (let [nicknames (:nicknames @(:event-context @ui-context))
+        content (replace-references event)
+        content (prepend> (reformat-article content config/article-width))
+        header (format "From: %s at %s on %s\n"
+                       (format-user-id nicknames (:pubkey event))
+                       (format-time (:created-at event))
+                       (first (:relays event))
+                       )]
+    (str header "---------------\n" content)))
 
 (defn get-subject [tags]
   (if (empty? tags)
