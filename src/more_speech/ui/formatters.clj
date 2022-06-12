@@ -73,12 +73,12 @@
   (let [nicknames (:nicknames @(:event-context @ui-context))
         content (replace-references event)
         content (prepend> (reformat-article content config/article-width))
-        header (format "From: %s at %s on %s\n"
+        header (format ">From: %s at %s on %s\n"
                        (format-user-id nicknames (:pubkey event))
                        (format-time (:created-at event))
                        (first (:relays event))
                        )]
-    (str header "---------------\n" content)))
+    (str header ">---------------\n" content)))
 
 (defn get-subject [tags]
   (if (empty? tags)
