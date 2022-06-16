@@ -5,6 +5,8 @@
             [more-speech.ui.swing.ui-context :refer :all])
   (:use [seesaw core]))
 
+(declare format-content)
+
 (defn make-edit-window [kind]
   (let [reply? (= kind :reply)
         event-context (:event-context @ui-context)
@@ -16,7 +18,8 @@
         edit-frame (frame :title (name kind)
                           :size [1000 :by 500]
                           :on-close :dispose)
-        edit-area (editor-pane :font config/default-font)
+        edit-area (styled-text :font config/default-font
+                               :wrap-lines? true)
         send-button (button :text "Send")
         event-map (:text-event-map event-state)
         selected-id (if reply? (:selected-event @event-context) nil)

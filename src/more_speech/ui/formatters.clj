@@ -86,11 +86,7 @@
     (let [tag (first tags)]
       (if (= (first tag) :subject)
         (abbreviate (second tag) 90)
-        (recur (rest tags))
-        ))
-
-    )
-  )
+        (recur (rest tags))))))
 
 (declare lookup-reference)
 
@@ -118,4 +114,3 @@
                    (str "id:" (abbreviate id-string 8))
                    name)]
         (str "@" name)))))
-
