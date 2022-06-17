@@ -6,9 +6,9 @@
 
 (def article-width 120)
 
-(def subscribe-days-ago 4) ;get n days worth of events from the relays.
+(def subscribe-days-ago 10) ;get n days worth of events from the relays.
 
-(def migration-level 2)
+(def migration-level 3)
 ;---configuration files
 (def private-directory (atom "private"))
 (def migration-filename (atom "private/migration"))
@@ -17,6 +17,8 @@
 (def relays-filename (atom "private/relays"))
 (def read-event-ids-filename (atom "private/read-event-ids"))
 (def tabs-filename (atom "private/tabs"))
+(def messages-directory (atom "private/messages"))
+(def messages-filename (atom "private/messages/message-file"))
 
 (def user-name-pattern #"\@[\w\-]+")
 (def user-name-chars #"[\w\-]+")

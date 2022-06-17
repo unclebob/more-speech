@@ -94,7 +94,8 @@
 (declare translate-event
          process-text-event
          process-name-event
-         process-server-recommendation)
+         process-server-recommendation
+         process-like)
 
 (defn process-event [{:keys [nicknames] :as event-state} event url]
   (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
@@ -112,9 +113,12 @@
         0 (process-name-event event-state event)
         1 (process-text-event event-state event url)
         2 (process-server-recommendation event-state event)
-        7 (do (prn 'process-event 'like event) event-state)
+        7 (process-like event-state event)
         (do #_(prn "unknown event: " url event)
           event-state)))))
+
+(defn process-like [event-state _event]
+  event-state)
 
 (declare fix-name)
 (defn process-name-event [event-state {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]

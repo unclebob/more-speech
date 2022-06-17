@@ -12,6 +12,8 @@
   (reset! config/relays-filename "tmp/relays")
   (reset! config/read-event-ids-filename "tmp/read-event-ids")
   (reset! config/tabs-filename "tmp/tabs")
+  (reset! config/messages-directory "tmp/messages")
+  (reset! config/messages-filename "tmp/messages/message-file")
   (.mkdir (io/file "tmp"))
   )
 
@@ -22,6 +24,8 @@
   (delete-file "tmp/relays")
   (delete-file "tmp/read-event-ids")
   (delete-file "tmp/tabs")
+  (delete-file "tmp/messages/message-file")
+  (delete-file "tmp/messages")
   )
 
 
@@ -113,7 +117,15 @@
                       4 "dud-12"
                       5 "dud-12"
                       6 "dudx-12"}
-                     nicknames))
-          )))
+                     nicknames))))))
+
+  (context "migration 3"
+    (it "adds messages directory and empty message-file"
+      (migration-3-add-messages-directory)
+      (should (file-exists? @config/messages-directory))
+      (should (is-directory? @config/messages-directory))
+      (should (file-exists? @config/messages-filename))
+      (should= {} (read-string (slurp @config/messages-filename)))
+      )
     )
   )

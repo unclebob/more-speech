@@ -81,12 +81,9 @@
   (onBinary [_this _webSocket _data _last]
     (prn 'binary))
   (onPing [_this webSocket message]
-    (prn 'ping url)
     (.sendPong webSocket message)
-    (.request webSocket 1)
-    (prn 'sent-pong))
+    (.request webSocket 1))
   (onPong [_this webSocket _message]
-    (prn 'pong url)
     (.request webSocket 1))
   (onClose [_this _webSocket statusCode reason]
     (prn 'close url statusCode reason))
@@ -119,13 +116,8 @@
     (let [connection (connect-to-relay url event-context)]
       (swap! relays assoc-in [url :connection] connection))))
 
-(defn subscribe-to-relays [id]
-  (let [
-        date (-> (t/local-date-time)
-                 (t/minus (t/days config/subscribe-days-ago))
-                 (t/adjust (t/local-time 0)))
-        date (.toEpochSecond date ZoneOffset/UTC)
-        ]
+(defn subscribe-to-relays [id subscription-time]
+  (let [date (- subscription-time 100)]
     (prn 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
       (let [conn (get-in @relays [url :connection])
@@ -156,11 +148,11 @@
         (prn 'closing url)
         (close-connection conn id)))))
 
-(defn get-events [event-context]
+(defn get-events [event-context subscription-time]
   (let [id "more-speech"
         event-handler (:event-handler @event-context)]
     (connect-to-relays event-context)
-    (subscribe-to-relays id)
+    (subscribe-to-relays id subscription-time)
     (events/update-relay-panel event-handler)
     (future (events/compose-and-send-metadata-event @event-context))
     (process-send-channel event-context)
@@ -168,3 +160,10 @@
   (Thread/sleep 100)
   (prn 'done)
   )
+
+(defn calc-subscription-date []
+  (let [date (-> (t/local-date-time)
+                 (t/minus (t/days config/subscribe-days-ago))
+                 (t/adjust (t/local-time 0)))
+        date (.toEpochSecond date ZoneOffset/UTC)]
+    date))

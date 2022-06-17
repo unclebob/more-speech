@@ -11,6 +11,9 @@
 (defn file-exists? [fname]
   (.exists (io/file fname)))
 
+(defn is-directory? [fname]
+  (.isDirectory (io/file fname)))
+
 (defn delete-file [fname]
   (when (file-exists? fname)
     (io/delete-file fname)))
@@ -60,9 +63,20 @@
     (spit @config/nicknames-filename fixed-nicknames)
     ))
 
+(defn migration-3-add-messages-directory []
+  (when-not (file-exists? @config/messages-directory)
+      (.mkdir (io/file @config/messages-directory))
+      (spit @config/messages-filename {}))
+  )
+
+;---------- The Migrations List -------
 
 (def migrations (atom {1 initial-migration
-                       2 migration-2-fix-names}))
+                       2 migration-2-fix-names
+                       3 migration-3-add-messages-directory
+                       }))
+
+;--------------------------------------
 
 (defn set-migration-level [n]
   (spit @migration-filename {:migration-level n}))

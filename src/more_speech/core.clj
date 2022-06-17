@@ -17,7 +17,8 @@
 
 (declare more-speech
          setup-jframe
-         set-event-handler)
+         set-event-handler
+         read-old-events)
 
 (defn ^:export -main [& _args]
   (migrator/migrate-to config/migration-level)
@@ -36,7 +37,8 @@
         handler (swing/setup-main-window)
         ]
     (swap! event-context set-event-handler handler)
-    (protocol/get-events event-context)
+    (let [latest-old-message-time (read-old-events event-context handler)]
+      (protocol/get-events event-context latest-old-message-time))
     (spit @config/nicknames-filename
           (with-out-str
             (clojure.pprint/pprint (:nicknames @event-context))))
@@ -46,11 +48,22 @@
     (spit @config/relays-filename
           (with-out-str
             (clojure.pprint/pprint (relays/relays-for-writing))))
+    (spit @config/messages-filename
+          (with-out-str
+            (clojure.pprint/pprint (:text-event-map @event-context))))
+
     (System/exit 1)))
 
-  (defn set-event-handler [event-state handler]
-    (assoc event-state :event-handler handler))
+(defn set-event-handler [event-state handler]
+  (assoc event-state :event-handler handler))
 
-
+(defn read-old-events [event-context handler]
+  (let [old-events (vals (read-string (slurp @config/messages-filename)))]
+    (doseq [event old-events]
+      (let [url (first (:relays event))]
+        (swap! event-context events/add-event event url)
+        (events/handle-text-event handler event))
+      )
+    (apply max (map :created-at old-events))))
 
 
