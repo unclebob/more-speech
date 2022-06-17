@@ -264,6 +264,15 @@
             filter-results (map #(boolean (should-add-event? filter %)) events)]
         (should= [true false true] filter-results)))
 
+    (it "allows selected pubkeys when mentioned in p tags"
+          (let [events [{:id 1 :pubkey 10}
+                        {:id 2 :pubkey 20 :tags [[:p (hexify 50)]]}
+                        {:id 3 :pubkey 30}]
+                filter {:selected [50]
+                        :blocked []}
+                filter-results (map #(boolean (should-add-event? filter %)) events)]
+            (should= [false true false] filter-results)))
+
     (it "allows events that have a selected id at the root of a thread."
       (let [events [{:id 1 :tags [[:e "10" ""]]}
                     {:id 2 :tags [[:e "11" ""]]}

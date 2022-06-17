@@ -5,7 +5,9 @@
     [more-speech.ui.formatters :as formatters]
     [more-speech.config :as config]
     [more-speech.ui.swing.article-panel :as article-panel]
-    [more-speech.ui.swing.ui-context :refer :all])
+    [more-speech.ui.swing.ui-context :refer :all]
+    [clojure.set :as set]
+    [more-speech.nostr.util :as util])
   (:use [seesaw core font tree])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -72,16 +74,20 @@
 
 (declare add-references resolve-any-orphans)
 
-(defn should-add-event? [filter event]
-  (let [selected (:selected filter)
-        blocked (:blocked filter)
-        [root _mentions _referent] (events/get-references event)]
+(defn should-add-event? [filters event]
+  (let [selected (:selected filters)
+        blocked (:blocked filters)
+        [root _mentions _referent] (events/get-references event)
+        tags (:tags event)
+        ptags (filter #(= :p (first %)) tags)
+        pubkey-citings (map #(util/hex-string->num (second %)) ptags)]
     (and
       (or
         (empty? selected)
         (some #(= % (:pubkey event)) selected)
         (some #(= % (:id event)) selected)
-        (some #(= % root) selected))
+        (some #(= % root) selected)
+        (not-empty (set/intersection (set pubkey-citings) (set selected))))
       (not
         (or
           (some #(= % (:pubkey event)) blocked)
