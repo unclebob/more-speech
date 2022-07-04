@@ -164,7 +164,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:client "more-speech"]]tags)
+        (should= [[:client "more-speech"]] tags)
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -376,16 +376,16 @@
                  (emplace-references content tags))))
 
     (it "does not emplace a username that is not a nickname"
-          (let [tags [[:e "blah"]]
-                user-id-1 99
-                user-id-2 88
-                nicknames {user-id-1 "user-1"
-                           user-id-2 "user-2"}
-                event-context (atom {:nicknames nicknames})
-                _ (reset! ui-context {:event-context event-context})
-                content "hello @user-3."]
-            (should= ["hello @user-3." [[:e "blah"]]]
-                     (emplace-references content tags))))))
+      (let [tags [[:e "blah"]]
+            user-id-1 99
+            user-id-2 88
+            nicknames {user-id-1 "user-1"
+                       user-id-2 "user-2"}
+            event-context (atom {:nicknames nicknames})
+            _ (reset! ui-context {:event-context event-context})
+            content "hello @user-3."]
+        (should= ["hello @user-3." [[:e "blah"]]]
+                 (emplace-references content tags))))))
 
 (describe "fixing names"
   (it "should not fix a good name"
@@ -407,3 +407,14 @@
       )
     )
   )
+
+(describe "process-name-event"
+  (it "loads profiles"
+    (let [event-state (process-name-event
+                        {:nicknames {}
+                         :profiles {}}
+                        {:pubkey 1
+                         :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})]
+      (should= {1 "bob"} (:nicknames event-state))
+      (should= {1 {:name "bob" :about "about" :picture "picture"}}
+               (:profiles event-state)))))

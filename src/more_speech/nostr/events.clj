@@ -43,6 +43,8 @@
 (s/def ::name string?)
 (s/def ::about string?)
 (s/def ::picture string?)
+(s/def ::profile (s/keys :req-un [::name ::about ::picture]))
+(s/def ::profiles (s/map-of ::id ::profile))
 (s/def ::public-key string?)
 (s/def ::private-key string?)
 (s/def ::keys (s/keys :req-un [::name ::about ::picture ::public-key ::private-key]))
@@ -59,6 +61,7 @@
 (s/def ::event-context (s/keys :req-un [::chronological-text-events
                                         ::text-event-map
                                         ::nicknames
+                                        ::profiles
                                         ::keys
                                         ::read-event-ids
                                         ::tabs
@@ -71,6 +74,7 @@
   (atom (merge {:chronological-text-events []
                 :text-event-map {}
                 :nicknames {}
+                :profiles {}
                 :keys {}
                 :read-event-ids #{}
                 :tabs {}
@@ -103,7 +107,6 @@
         valid? (ecc/do-verify (util/num->bytes 32 id)
                               (util/num->bytes 32 pubkey)
                               (util/num->bytes 64 sig))
-        ;valid? true
         ]
     (if (not valid?)
       (do
@@ -123,10 +126,16 @@
 (declare fix-name)
 (defn process-name-event [event-state {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
-    (let [name (get (json/read-str content) "name" "tilt")
+    (let [profile (json/read-str content)
+          name (get profile "name" "tilt")
+          about (get profile "about" "")
+          picture (get profile "picture" "")
           name (fix-name name)]
       (-> event-state
           (update-in [:nicknames] assoc pubkey name)
+          (update-in [:profiles] assoc pubkey {:name name
+                                               :about about
+                                               :picture picture})
           ))
     (catch Exception e
       (prn 'json-exception-process-name-event-ignored (.getMessage e))

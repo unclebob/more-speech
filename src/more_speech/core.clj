@@ -26,10 +26,12 @@
         _ (relays/load-relays-from-file @config/relays-filename)
         read-event-ids (read-string (slurp @config/read-event-ids-filename))
         nicknames (read-string (slurp @config/nicknames-filename))
+        profiles (read-string (slurp @config/profiles-filename))
         tabs (read-string (slurp @config/tabs-filename))
         event-context (events/make-event-context {:keys keys
                                                   :send-chan send-chan
                                                   :nicknames nicknames
+                                                  :profiles profiles
                                                   :read-event-ids read-event-ids
                                                   :tabs tabs
                                                   })
@@ -42,6 +44,9 @@
     (spit @config/nicknames-filename
           (with-out-str
             (clojure.pprint/pprint (:nicknames @event-context))))
+    (spit @config/profiles-filename
+          (with-out-str
+            (clojure.pprint/pprint (:profiles @event-context))))
     (spit @config/read-event-ids-filename
           (with-out-str
             (clojure.pprint/pprint (:read-event-ids @event-context))))

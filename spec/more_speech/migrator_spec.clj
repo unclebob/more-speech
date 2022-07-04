@@ -8,6 +8,7 @@
   (reset! config/private-directory "tmp")
   (reset! config/migration-filename "tmp/migration")
   (reset! config/nicknames-filename "tmp/nicknames")
+  (reset! config/profiles-filename "tmp/profiles")
   (reset! config/keys-filename "tmp/keys")
   (reset! config/relays-filename "tmp/relays")
   (reset! config/read-event-ids-filename "tmp/read-event-ids")
@@ -20,6 +21,7 @@
 (defn delete-all-tmp-files []
   (delete-file "tmp/migration")
   (delete-file "tmp/nicknames")
+  (delete-file "tmp/profiles")
   (delete-file "tmp/keys")
   (delete-file "tmp/relays")
   (delete-file "tmp/read-event-ids")
