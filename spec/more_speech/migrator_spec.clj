@@ -28,7 +28,6 @@
   (delete-file "tmp/messages")
   )
 
-
 (describe "The Migrator"
   (with-stubs)
   (before-all (change-to-tmp-files))
@@ -128,4 +127,17 @@
       (should= {} (read-string (slurp @config/messages-filename)))
       )
     )
+
+  (context "migration 4"
+    (it "Adds profiles file and copies nicknames into empty profiles."
+      (let [nicknames {1 "bob"
+                       2 "bill"
+                       }]
+        (spit @config/nicknames-filename nicknames))
+      (migration-4-add-profiles-and-load-with-nicknames)
+      (should (file-exists? @config/profiles-filename))
+      (let [profiles (read-string (slurp @config/profiles-filename))]
+        (should= {1 {:name "bob"}
+                  2 {:name "bill"}} profiles))
+      ))
   )

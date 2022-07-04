@@ -57,11 +57,15 @@
                                   }}))
   )
 
+;--- Migration 2 ---
+
 (defn migration-2-fix-names []
   (let [nicknames (read-string (slurp @config/nicknames-filename))
         fixed-nicknames (apply hash-map (flatten (map (fn [v] (vector(first v) (events/fix-name (second v)))) nicknames)))]
     (spit @config/nicknames-filename fixed-nicknames)
     ))
+
+;--- Migration 3 ---
 
 (defn migration-3-add-messages-directory []
   (when-not (file-exists? @config/messages-directory)
@@ -69,11 +73,20 @@
       (spit @config/messages-filename {}))
   )
 
+;--- Migration 4 ---
+
+(defn migration-4-add-profiles-and-load-with-nicknames []
+  (let [nicknames (read-string (slurp @config/nicknames-filename))
+        profiles (apply hash-map (mapcat (fn [[k v]] (vector k {:name v})) nicknames))]
+    (spit @config/profiles-filename profiles))
+  )
+
 ;---------- The Migrations List -------
 
 (def migrations (atom {1 initial-migration
                        2 migration-2-fix-names
                        3 migration-3-add-messages-directory
+                       4 migration-4-add-profiles-and-load-with-nicknames
                        }))
 
 ;--------------------------------------
