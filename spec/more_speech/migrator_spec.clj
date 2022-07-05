@@ -7,7 +7,7 @@
 (defn change-to-tmp-files []
   (reset! config/private-directory "tmp")
   (reset! config/migration-filename "tmp/migration")
-  (reset! config/nicknames-filename "tmp/nicknames")
+  (reset! config/nicknames-filename "tmp/nicknames") ;grandfathered
   (reset! config/profiles-filename "tmp/profiles")
   (reset! config/keys-filename "tmp/keys")
   (reset! config/relays-filename "tmp/relays")
@@ -20,7 +20,7 @@
 
 (defn delete-all-tmp-files []
   (delete-file "tmp/migration")
-  (delete-file "tmp/nicknames")
+  (delete-file "tmp/nicknames") ;grandfathered.
   (delete-file "tmp/profiles")
   (delete-file "tmp/keys")
   (delete-file "tmp/relays")
@@ -140,6 +140,11 @@
       (should (file-exists? @config/profiles-filename))
       (let [profiles (read-string (slurp @config/profiles-filename))]
         (should= {1 {:name "bob"}
-                  2 {:name "bill"}} profiles))
-      ))
+                  2 {:name "bill"}} profiles))))
+
+  (context "migration 5"
+    (it "Removes the nicknames file."
+      (spit @config/nicknames-filename {1 "user-1"})
+      (migration-5-remove-nicknames)
+      (should-not (file-exists? @config/nicknames-filename))))
   )

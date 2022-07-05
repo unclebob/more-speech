@@ -58,12 +58,15 @@
   (assoc event-state :event-handler handler))
 
 (defn read-old-events [event-context handler]
-  (let [old-events (vals (read-string (slurp @config/messages-filename)))]
+  (let [old-events (vals (read-string (slurp @config/messages-filename)))
+        creation-times (map :created-at old-events)]
     (doseq [event old-events]
       (let [url (first (:relays event))]
         (swap! event-context events/add-event event url)
         (events/handle-text-event handler event))
       )
-    (apply max (map :created-at old-events))))
+    (if (empty? creation-times)
+      (-> (System/currentTimeMillis) (quot 1000) (- 86400))
+      (apply max creation-times))))
 
 

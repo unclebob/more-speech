@@ -81,12 +81,16 @@
     (spit @config/profiles-filename profiles))
   )
 
+(defn migration-5-remove-nicknames []
+  (delete-file @config/nicknames-filename))
+
 ;---------- The Migrations List -------
 
 (def migrations (atom {1 initial-migration
                        2 migration-2-fix-names
                        3 migration-3-add-messages-directory
                        4 migration-4-add-profiles-and-load-with-nicknames
+                       5 migration-5-remove-nicknames
                        }))
 
 ;--------------------------------------
