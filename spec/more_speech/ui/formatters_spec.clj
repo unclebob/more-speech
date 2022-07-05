@@ -185,7 +185,7 @@ the proposition that all men are created equal."
                                            [:p (hexify 1)]]}]
         (should= "the @x and @y reference" (replace-references event))))
 
-    (it "Replaces a p reference with an abbreviated id if not a nickname"
+    (it "Replaces a p reference with an abbreviated id if not a profile name"
       (let [content "#[0]"
             profiles {0 {:name "x"}}
             event-context (atom {:profiles profiles})

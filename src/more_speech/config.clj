@@ -12,7 +12,7 @@
 ;---configuration files
 (def private-directory (atom "private"))
 (def migration-filename (atom "private/migration"))
-(def nicknames-filename (atom "private/nicknames"))
+(def nicknames-filename (atom "private/nicknames")) ;grandfathered.
 (def profiles-filename (atom "private/profiles"))
 (def keys-filename (atom "private/keys"))
 (def relays-filename (atom "private/relays"))

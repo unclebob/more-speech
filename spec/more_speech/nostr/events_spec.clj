@@ -375,7 +375,7 @@
                                           [:p (hexify user-id-2)]]]
                  (emplace-references content tags))))
 
-    (it "does not emplace a username that is not a nickname"
+    (it "does not emplace a username that is not a in the profile"
       (let [tags [[:e "blah"]]
             user-id-1 99
             user-id-2 88
@@ -418,7 +418,7 @@
                (:profiles event-state)))))
 
 (describe "find-user-id"
-  (it "finds the id from a nickname"
+  (it "finds the id from a profile name"
     (let [event-state {:profiles {1 {:name "bob"}}}]
       (reset! ui-context {:event-context (atom event-state)})
       (should= 1 (find-user-id "bob"))

@@ -39,7 +39,6 @@
 
 (s/def ::chronological-text-events (s/coll-of ::id))
 (s/def ::text-event-map (s/map-of :id :event))
-(s/def ::nicknames (s/map-of ::id string?))
 (s/def ::name string?)
 (s/def ::about string?)
 (s/def ::picture string?)
@@ -60,7 +59,6 @@
 
 (s/def ::event-context (s/keys :req-un [::chronological-text-events
                                         ::text-event-map
-                                        ::nicknames
                                         ::profiles
                                         ::keys
                                         ::read-event-ids
@@ -73,7 +71,6 @@
 (defn make-event-context [event-context-map]
   (atom (merge {:chronological-text-events []
                 :text-event-map {}
-                :nicknames {}
                 :profiles {}
                 :keys {}
                 :read-event-ids #{}
@@ -101,8 +98,8 @@
          process-server-recommendation
          process-like)
 
-(defn process-event [{:keys [nicknames] :as event-state} event url]
-  (let [_name-of (fn [pubkey] (get nicknames pubkey pubkey))
+(defn process-event [{:keys [profiles] :as event-state} event url]
+  (let [_name-of (fn [pubkey] (get-in profiles [pubkey :name] pubkey))
         {:keys [id pubkey _created-at kind _tags _content sig]} event
         valid? (ecc/do-verify (util/num->bytes 32 id)
                               (util/num->bytes 32 pubkey)
@@ -132,7 +129,6 @@
           picture (get profile "picture" "")
           name (fix-name name)]
       (-> event-state
-          (update-in [:nicknames] assoc pubkey name)
           (update-in [:profiles] assoc pubkey {:name name
                                                :about about
                                                :picture picture})
