@@ -52,32 +52,44 @@
 
 (describe "format header"
   (it "formats an empty message"
-    (let [nicknames {}
-          event-context (atom {:nicknames nicknames})
+    (let [profiles {}
+          event-context (atom {:profiles profiles})
           _ (reset! ui-context {:event-context event-context})
           event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
                  :content ""
                  :tags []}
           timestamp (format-time (event :created-at))
-          header (format-header nicknames event)]
+          header (format-header event)]
       (should= (str "  11111111111111111... " timestamp " \n") header)))
 
   (it "formats a simple message"
-    (let [nicknames {}
-          event-context (atom {:nicknames nicknames})
+    (let [profiles {}
+          event-context (atom {:profiles profiles})
           _ (reset! ui-context {:event-context event-context})
           event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
                  :content "the message"
                  :tags []}
           timestamp (format-time (event :created-at))
-          header (format-header nicknames event)]
+          header (format-header event)]
       (should= (str "  11111111111111111... " timestamp " the message\n") header)))
 
+  (it "formats a simple message with a user profile"
+      (let [profiles {1 {:name "user-1"}}
+            event-context (atom {:profiles profiles})
+            _ (reset! ui-context {:event-context event-context})
+            event {:pubkey 1
+                   :created-at 1
+                   :content "the message"
+                   :tags []}
+            timestamp (format-time (event :created-at))
+            header (format-header event)]
+        (should= (str "                user-1 " timestamp " the message\n") header)))
+
   (it "formats a long message with line ends."
-    (let [nicknames {}
-          event-context (atom {:nicknames nicknames})
+    (let [profiles {}
+          event-context (atom {:profiles profiles})
           _ (reset! ui-context {:event-context event-context})
           event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
@@ -87,19 +99,19 @@ a new nation concieved in liberty and dedicated to
 the proposition that all men are created equal."
                  :tags []}
           timestamp (format-time (event :created-at))
-          header (format-header nicknames event)]
+          header (format-header event)]
       (should= (str "  11111111111111111... " timestamp " Four score and seven years ago~our fathers brought forth upon this continent~...\n") header)))
 
   (it "formats a message with a subject"
-    (let [nicknames {}
-          event-context (atom {:nicknames nicknames})
+    (let [profiles {}
+          event-context (atom {:profiles profiles})
           _ (reset! ui-context {:event-context event-context})
           event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
                  :content "the message"
                  :tags [[:subject "the subject"]]}
           timestamp (format-time (event :created-at))
-          header (format-header nicknames event)]
+          header (format-header event)]
       (should= (str "  11111111111111111... " timestamp " the subject|the message\n") header)))
   )
 
@@ -188,5 +200,19 @@ the proposition that all men are created equal."
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p "deadbeef"]]}]
         (should= "#[1]" (replace-references event))))))
+
+(describe "format-reply"
+  (it "formats a reply to an event"
+    (let [profiles {1 {:name "user-1"}
+                    2 {:name "user-2"}}
+          nicknames {1 "user-1" 2 "user-2"}
+          _ (reset! ui-context {:event-context (atom {:profiles profiles :nicknames nicknames})})
+          created-at (make-date "07/05/2022")
+          relays ["relay-1"]
+          tags [["p" (hexify 1)]]
+          event {:pubkey 1 :created-at created-at :relays relays :tags tags :content "Hello #[0]."}]
+      (should=
+        ">From: user-1 at 07/05/22 24:00:00 on relay-1\n>---------------\n>Hello @user-1."
+        (format-reply event)))))
 
 

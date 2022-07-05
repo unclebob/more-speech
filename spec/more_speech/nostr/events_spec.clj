@@ -379,9 +379,9 @@
       (let [tags [[:e "blah"]]
             user-id-1 99
             user-id-2 88
-            nicknames {user-id-1 "user-1"
-                       user-id-2 "user-2"}
-            event-context (atom {:nicknames nicknames})
+            profiles {user-id-1 {:name "user-1"}
+                       user-id-2 {:name "user-2"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             content "hello @user-3."]
         (should= ["hello @user-3." [[:e "blah"]]]
@@ -411,18 +411,15 @@
 (describe "process-name-event"
   (it "loads profiles"
     (let [event-state (process-name-event
-                        {:nicknames {}
-                         :profiles {}}
+                        {:profiles {}}
                         {:pubkey 1
                          :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})]
-      (should= {1 "bob"} (:nicknames event-state))
       (should= {1 {:name "bob" :about "about" :picture "picture"}}
                (:profiles event-state)))))
 
 (describe "find-user-id"
   (it "finds the id from a nickname"
-    (let [event-state {:profiles {1 {:name "bob"}}
-                       :nicknames {1 "bob"}}]
+    (let [event-state {:profiles {1 {:name "bob"}}}]
       (reset! ui-context {:event-context (atom event-state)})
       (should= 1 (find-user-id "bob"))
       (should= nil (find-user-id "bill")))))

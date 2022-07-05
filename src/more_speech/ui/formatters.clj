@@ -14,6 +14,10 @@
     (.format (SimpleDateFormat. "MM/dd/yy kk:mm:ss") date))
   )
 
+(defn make-date [date-string]
+  (let [date (.parse (SimpleDateFormat. "MM/dd/yyyy") date-string)]
+    (quot (.getTime date) 1000)))
+
 (defn abbreviate [s n]
   (let [dots "..."]
     (if (<= (count s) n)
@@ -46,19 +50,20 @@
         head
         (str head break-string (reformat-article tail width))))))
 
-(defn format-user-id [nicknames user-id]
-  (if (nil? user-id)
-    ""
-    (abbreviate (get nicknames user-id (util/num32->hex-string user-id)) 20)))
+(defn format-user-id [user-id]
+  (let [profiles (:profiles @(:event-context @ui-context))]
+    (if (nil? user-id)
+      ""
+      (abbreviate (get-in profiles [user-id :name] (util/num32->hex-string user-id)) 20))))
 
 (declare get-subject
          replace-references)
 
-(defn format-header [nicknames {:keys [pubkey created-at tags] :as event}]
+(defn format-header [{:keys [pubkey created-at tags] :as event}]
   (if (nil? event)
     "nil"
     (let [content (replace-references event)
-          name (format-user-id nicknames pubkey)
+          name (format-user-id pubkey)
           time (format-time created-at)
           subject (get-subject tags)
           [reply-id _ _] (events/get-references event)
@@ -70,11 +75,10 @@
       (format "%s %20s %s %s\n" reply-mark name time content))))
 
 (defn format-reply [event]
-  (let [nicknames (:nicknames @(:event-context @ui-context))
-        content (replace-references event)
+  (let [content (replace-references event)
         content (prepend> (reformat-article content config/article-width))
         header (format ">From: %s at %s on %s\n"
-                       (format-user-id nicknames (:pubkey event))
+                       (format-user-id (:pubkey event))
                        (format-time (:created-at event))
                        (first (:relays event))
                        )]

@@ -62,7 +62,6 @@
     (text! widget "Articles")
     (let [event-context (:event-context @ui-context)
           event-state @event-context
-          nicknames (:nicknames event-state)
           event-map (:text-event-map event-state)
           node (:value info)
           event-id (.getUserObject node)
@@ -70,7 +69,7 @@
           read? (contains? (:read-event-ids @event-context) event-id)
           font (if read? config/default-font config/bold-font)]
       (config! widget :font font)
-      (text! widget (formatters/format-header nicknames event)))))
+      (text! widget (formatters/format-header event)))))
 
 (declare add-references resolve-any-orphans)
 

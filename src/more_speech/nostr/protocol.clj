@@ -26,10 +26,6 @@
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date))
   )
 
-(defn make-date [date-string]
-  (let [date (.parse (SimpleDateFormat. "MM/dd/yyyy") date-string)]
-    (quot (.getTime date) 1000)))
-
 (defn subscribe
   ([conn id]
    (subscribe conn id (int (- (/ (System/currentTimeMillis) 1000) 86400))))

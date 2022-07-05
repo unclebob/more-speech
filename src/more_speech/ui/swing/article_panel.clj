@@ -86,8 +86,6 @@
 (defn load-article-info [selected-id]
   (let [event-state @(:event-context @ui-context)
         main-frame (:frame @ui-context)
-        nicknames (:nicknames event-state)
-        format-user (partial formatters/format-user-id nicknames)
         text-map (:text-event-map event-state)
         event (get text-map selected-id)
         [root-id _ referent] (events/get-references event)
@@ -104,7 +102,7 @@
                           (formatters/replace-references event)
                           config/article-width))
     (text! (select main-frame [:#author-name-label])
-           (format-user (:pubkey event)))
+           (formatters/format-user-id (:pubkey event)))
     (text! (select main-frame [:#author-id-label])
            (util/num32->hex-string (:pubkey event)))
     (text! (select main-frame [:#created-time-label])
@@ -114,7 +112,7 @@
              :text (util/num32->hex-string (:id event)))
     (if (some? referent)
       (let [replied-event (get text-map referent)]
-        (text! reply-to (format-user (:pubkey replied-event)))
+        (text! reply-to (formatters/format-user-id (:pubkey replied-event)))
         (config! citing
                  :user-data referent
                  :text (util/num32->hex-string referent)))
