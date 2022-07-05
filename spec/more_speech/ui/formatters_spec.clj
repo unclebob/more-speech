@@ -76,16 +76,16 @@
       (should= (str "  11111111111111111... " timestamp " the message\n") header)))
 
   (it "formats a simple message with a user profile"
-      (let [profiles {1 {:name "user-1"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
-            event {:pubkey 1
-                   :created-at 1
-                   :content "the message"
-                   :tags []}
-            timestamp (format-time (event :created-at))
-            header (format-header event)]
-        (should= (str "                user-1 " timestamp " the message\n") header)))
+    (let [profiles {1 {:name "user-1"}}
+          event-context (atom {:profiles profiles})
+          _ (reset! ui-context {:event-context event-context})
+          event {:pubkey 1
+                 :created-at 1
+                 :content "the message"
+                 :tags []}
+          timestamp (format-time (event :created-at))
+          header (format-header event)]
+      (should= (str "                user-1 " timestamp " the message\n") header)))
 
   (it "formats a long message with line ends."
     (let [profiles {}
@@ -136,8 +136,8 @@ the proposition that all men are created equal."
 (describe "Replacing References"
   (context "using #[n] and p tags"
     (it "replaces nothing if nothing to replace"
-      (let [nicknames {0 "x"}
-            event-context (atom {:nicknames nicknames})
+      (let [profiles {0 {:name "x"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             content "content"
             event {:content content}]
@@ -178,7 +178,7 @@ the proposition that all men are created equal."
     (it "replaces a two p references"
       (let [content "the #[0] and #[1] reference"
             profiles {0 {:name "x"}
-                       1 {:name "y"}}
+                      1 {:name "y"}}
             event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]
@@ -187,16 +187,16 @@ the proposition that all men are created equal."
 
     (it "Replaces a p reference with an abbreviated id if not a nickname"
       (let [content "#[0]"
-            nicknames {0 "x"}
-            event-context (atom {:nicknames nicknames})
+            profiles {0 {:name "x"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p "deadbeef"]]}]
         (should= "@id:deadbeef" (replace-references event))))
 
     (it "does not replace reference if there is no p tag"
       (let [content "#[1]"
-            nicknames {0 "x"}
-            event-context (atom {:nicknames nicknames})
+            profiles {0 {:name "x"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p "deadbeef"]]}]
         (should= "#[1]" (replace-references event))))))
@@ -205,8 +205,7 @@ the proposition that all men are created equal."
   (it "formats a reply to an event"
     (let [profiles {1 {:name "user-1"}
                     2 {:name "user-2"}}
-          nicknames {1 "user-1" 2 "user-2"}
-          _ (reset! ui-context {:event-context (atom {:profiles profiles :nicknames nicknames})})
+          _ (reset! ui-context {:event-context (atom {:profiles profiles})})
           created-at (make-date "07/05/2022")
           relays ["relay-1"]
           tags [["p" (hexify 1)]]
