@@ -399,12 +399,12 @@
         ))))
 
 (defn find-user-id [user-name]
-  (let [nicknames (:nicknames @(:event-context @ui-context))]
-    (loop [pairs (vec nicknames)]
+  (let [profiles (:profiles @(:event-context @ui-context))]
+    (loop [pairs (vec profiles)]
       (if (empty? pairs)
         nil
         (let [pair (first pairs)]
-          (if (= user-name (second pair))
+          (if (= user-name (:name (second pair)))
             (first pair)
             (recur (rest pairs))))))))
 

@@ -13,9 +13,12 @@
            (java.time ZoneOffset)))
 
 (defn send-to [^WebSocket conn msg]
-  (let [msg (events/to-json msg)]
-    (println "sending:" msg)
-    (.sendText conn msg true)))
+  (try
+    (let [msg (events/to-json msg)]
+      (println "sending:" msg)
+      (.sendText conn msg true))
+    (catch Exception e
+      (prn 'send-to (.getMessage e)))))
 
 (defn format-time [time]
   (let [time (* time 1000)

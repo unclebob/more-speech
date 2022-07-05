@@ -355,8 +355,8 @@
     (it "emplaces @username in newly created message"
       (let [tags []
             user-id 99
-            nicknames {user-id "username"}
-            event-context (atom {:nicknames nicknames})
+            profiles {user-id {:name "username"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             content "hello @username."]
         (should= ["hello #[0]." [[:p (hexify user-id)]]] (emplace-references content tags))))
@@ -365,9 +365,9 @@
       (let [tags (seq [[:e "blah"]])
             user-id-1 99
             user-id-2 88
-            nicknames {user-id-1 "user-1"
-                       user-id-2 "user-2"}
-            event-context (atom {:nicknames nicknames})
+            profiles {user-id-1 {:name "user-1"}
+                       user-id-2 {:name "user-2"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             content "hello @user-1 and @user-2."]
         (should= ["hello #[1] and #[2]." [[:e "blah"]
@@ -418,3 +418,11 @@
       (should= {1 "bob"} (:nicknames event-state))
       (should= {1 {:name "bob" :about "about" :picture "picture"}}
                (:profiles event-state)))))
+
+(describe "find-user-id"
+  (it "finds the id from a nickname"
+    (let [event-state {:profiles {1 {:name "bob"}}
+                       :nicknames {1 "bob"}}]
+      (reset! ui-context {:event-context (atom event-state)})
+      (should= 1 (find-user-id "bob"))
+      (should= nil (find-user-id "bill")))))
