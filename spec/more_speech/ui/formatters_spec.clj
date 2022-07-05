@@ -145,41 +145,41 @@ the proposition that all men are created equal."
 
     (it "replaces a single p reference"
       (let [content "the #[0] reference"
-            nicknames {0 "x"}
-            event-context (atom {:nicknames nicknames})
+            profiles {0 {:name "x"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]]}]
         (should= "the @x reference" (replace-references event))))
 
     (it "replaces a single p reference at the start"
       (let [content "#[0] reference"
-            nicknames {0 "x"}
-            event-context (atom {:nicknames nicknames})
+            profiles {0 {:name "x"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]]}]
         (should= "@x reference" (replace-references event))))
 
     (it "replaces a single p reference at the end"
       (let [content "the #[0]"
-            nicknames {0 "x"}
-            event-context (atom {:nicknames nicknames})
+            profiles {0 {:name "x"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]]}]
         (should= "the @x" (replace-references event))))
 
     (it "replaces a single p reference alone"
       (let [content "#[0]"
-            nicknames {0 "x"}
-            event-context (atom {:nicknames nicknames})
+            profiles {0 {:name "x"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]]}]
         (should= "@x" (replace-references event))))
 
     (it "replaces a two p references"
       (let [content "the #[0] and #[1] reference"
-            nicknames {0 "x"
-                       1 "y"}
-            event-context (atom {:nicknames nicknames})
+            profiles {0 {:name "x"}
+                       1 {:name "y"}}
+            event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]
                                            [:p (hexify 1)]]}]

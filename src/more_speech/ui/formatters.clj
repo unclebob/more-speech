@@ -96,24 +96,24 @@
 
 (defn replace-references [event]
   (let [padded-content (str " " (:content event) " ")
-        nicknames (:nicknames @(:event-context @ui-context))
         pattern #"\#\[\d+\]"
         references (re-seq pattern padded-content)
         segments (string/split padded-content pattern)
-        referents (mapv (partial lookup-reference nicknames event) references)
+        referents (mapv (partial lookup-reference event) references)
         referents (conj referents " ")
         ]
     (string/trim (apply str (interleave segments referents)))))
 
-(defn lookup-reference [nicknames event reference]
-  (let [ref-string (re-find #"\d+" reference)
+(defn lookup-reference [event reference]
+  (let [profiles (:profiles @(:event-context @ui-context))
+        ref-string (re-find #"\d+" reference)
         index (Integer/parseInt ref-string)
         tags (:tags event)]
     (if (>= index (count tags))
       reference
       (let [id-string (-> tags (nth index) second)
             id (util/hex-string->num id-string)
-            name (get nicknames id)
+            name (get-in profiles [id :name])
             name (if (nil? name)
                    (str "id:" (abbreviate id-string 8))
                    name)]
