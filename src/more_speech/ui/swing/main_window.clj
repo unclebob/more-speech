@@ -21,7 +21,9 @@
   (invoke-now (make-main-window))
   (->seesawHandler))
 
-(declare timer-action get-tabs-with-all)
+(declare timer-action
+         get-tabs-with-all
+         tab-menu)
 
 (defn make-tabs []
   (let [event-context (:event-context @ui-context)
@@ -35,9 +37,33 @@
               _ (config! header-tree
                          :user-data (get tabs tab-name)
                          :id tab-name)
-              tab-data {:title (name tab-name)
+              tab-label (label :text (name tab-name) :user-data tab-name)
+              _ (listen tab-label :mouse-pressed tab-menu)
+              tab-data {:title tab-label
                         :content (scrollable header-tree)}]
           (recur (rest tab-names) (conj header-tree-tabs tab-data)))))))
+
+(declare change-tab-name
+         delete-tab)
+
+(defn tab-menu [e]
+  (prn 'tab-menu)
+  (when (.isPopupTrigger e)
+    (prn 'tab-manu 'isPopupTrigger)
+    (let [tab-label (.getComponent e)
+          tab-name (config tab-label :user-data)
+          p (popup :items [(action :name "Change name..."
+                                   :handler (partial change-tab-name tab-name))
+                           (action :name "Delete"
+                                   :handler (partial delete-tab tab-name))])]
+      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))
+  )
+
+(defn change-tab-name [tab-name _e]
+  (prn 'change-tab-name tab-name))
+
+(defn delete-tab [tab-name _e]
+  (prn 'delete-tab tab-name))
 
 (defn get-tabs-with-all [event-context]
   (let [tabs (:tabs @event-context)]
