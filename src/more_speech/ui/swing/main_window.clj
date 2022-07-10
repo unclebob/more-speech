@@ -1,5 +1,6 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
+            [clojure.java.browse :as browse]
             [more-speech.nostr.events :as events]
             [more-speech.ui.swing.article-tree :as article-tree]
             [more-speech.ui.swing.article-panel :as article-panel]
@@ -7,7 +8,8 @@
             [more-speech.ui.swing.util :as util]
             [more-speech.ui.swing.ui-context :refer :all])
   (:use [seesaw core])
-  (:import (javax.swing Timer)))
+  (:import (javax.swing Timer)
+           (javax.swing.event HyperlinkEvent$EventType)))
 
 (defrecord seesawHandler []
   events/event-handler
@@ -76,10 +78,15 @@
       (swap! event-context assoc-in [:tabs :all] {:selected [] :blocked []}))
     (:tabs @event-context)))
 
+(defn open-link [e]
+  (if (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
+         (browse/browse-url (.getURL e))))
+
 (defn make-main-window []
   (let [main-frame (frame :title "More Speech" :size [1500 :by 1000])
         _ (swap! ui-context assoc :frame main-frame)
         article-area (article-panel/make-article-area)
+        _ (listen article-area :hyperlink open-link)
         header-tab-panel (tabbed-panel :tabs (make-tabs) :id :header-tab-panel)
         relay-panel (relay-panel/make-relay-panel)
         header-panel (left-right-split (scrollable relay-panel)
