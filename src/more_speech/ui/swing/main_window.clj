@@ -52,10 +52,13 @@
     (prn 'tab-manu 'isPopupTrigger)
     (let [tab-label (.getComponent e)
           tab-name (config tab-label :user-data)
+          isAll? (= :all tab-name)
           p (popup :items [(action :name "Change name..."
-                                   :handler (partial change-tab-name tab-name))
+                                   :handler (partial change-tab-name tab-name)
+                                   :enabled? (not isAll?))
                            (action :name "Delete"
-                                   :handler (partial delete-tab tab-name))])]
+                                   :handler (partial delete-tab tab-name)
+                                   :enabled? (not isAll?))])]
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))
   )
 
