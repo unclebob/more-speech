@@ -36,21 +36,24 @@
         _ (swap! ui-context assoc :event-context event-context)
         handler (swing/setup-main-window)
         ]
+
     (swap! event-context set-event-handler handler)
     (let [latest-old-message-time (read-old-events event-context handler)]
       (protocol/get-events event-context latest-old-message-time))
-    (spit @config/profiles-filename
-          (with-out-str
-            (clojure.pprint/pprint (:profiles @event-context))))
-    (spit @config/read-event-ids-filename
-          (with-out-str
-            (clojure.pprint/pprint (:read-event-ids @event-context))))
-    (spit @config/relays-filename
-          (with-out-str
-            (clojure.pprint/pprint (relays/relays-for-writing))))
-    (spit @config/messages-filename
-          (with-out-str
-            (clojure.pprint/pprint (:text-event-map @event-context))))
+
+    (when (not config/test-run?)
+      (spit @config/profiles-filename
+            (with-out-str
+              (clojure.pprint/pprint (:profiles @event-context))))
+      (spit @config/read-event-ids-filename
+            (with-out-str
+              (clojure.pprint/pprint (:read-event-ids @event-context))))
+      (spit @config/relays-filename
+            (with-out-str
+              (clojure.pprint/pprint (relays/relays-for-writing))))
+      (spit @config/messages-filename
+            (with-out-str
+              (clojure.pprint/pprint (:text-event-map @event-context)))))
 
     (System/exit 1)))
 
@@ -60,11 +63,12 @@
 (defn read-old-events [event-context handler]
   (let [old-events (vals (read-string (slurp @config/messages-filename)))
         creation-times (map :created-at old-events)]
-    (doseq [event old-events]
-      (let [url (first (:relays event))]
-        (swap! event-context events/add-event event url)
-        (events/handle-text-event handler event))
-      )
+    (when (not config/test-run?)
+      (doseq [event old-events]
+        (let [url (first (:relays event))]
+          (swap! event-context events/add-event event url)
+          (events/handle-text-event handler event))
+        ))
     (if (empty? creation-times)
       (-> (System/currentTimeMillis) (quot 1000) (- 86400))
       (apply max creation-times))))

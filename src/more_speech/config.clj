@@ -9,6 +9,8 @@
 (def subscribe-days-ago 10) ;get n days worth of events from the relays.
 
 (def migration-level 5)
+
+(def test-run? true)
 ;---configuration files
 (def private-directory (atom "private"))
 (def migration-filename (atom "private/migration"))

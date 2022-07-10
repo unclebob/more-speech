@@ -95,8 +95,9 @@
         tree (select frame [tab-selector])
         model (config tree :model)
         root-node (.getRoot model)
-        node (find-header-node root-node event-id)]
+        node (find-header-node root-node event-id)
+        tab-component (select tab-panel [(keyword (str "#tab-" (name tab-id)))])]
     (when (some? node)
-      (selection! tab-panel (name tab-id))
+      (selection! tab-panel tab-component)
       (select-tree-node tree node)
       )))

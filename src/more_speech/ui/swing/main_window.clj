@@ -37,30 +37,32 @@
               _ (config! header-tree
                          :user-data (get tabs tab-name)
                          :id tab-name)
-              tab-label (label :text (name tab-name) :user-data tab-name)
+              tab-label (label :text (name tab-name)
+                               :user-data tab-name)
               _ (listen tab-label :mouse-pressed tab-menu)
               tab-data {:title tab-label
-                        :content (scrollable header-tree)}]
+                        :content (scrollable header-tree
+                                             :id (keyword (str "tab-" (name tab-name))))}]
           (recur (rest tab-names) (conj header-tree-tabs tab-data)))))))
 
 (declare change-tab-name
-         delete-tab)
+         delete-tab
+         select-tab)
 
 (defn tab-menu [e]
-  (prn 'tab-menu)
-  (when (.isPopupTrigger e)
-    (prn 'tab-manu 'isPopupTrigger)
-    (let [tab-label (.getComponent e)
-          tab-name (config tab-label :user-data)
-          isAll? (= :all tab-name)
-          p (popup :items [(action :name "Change name..."
-                                   :handler (partial change-tab-name tab-name)
-                                   :enabled? (not isAll?))
-                           (action :name "Delete"
-                                   :handler (partial delete-tab tab-name)
-                                   :enabled? (not isAll?))])]
-      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))
-  )
+  (let [tab-label (.getComponent e)
+        tab-name (config tab-label :user-data)
+        isAll? (= :all tab-name)
+        p (popup :items [(action :name "Change name..."
+                                 :handler (partial change-tab-name tab-name)
+                                 :enabled? (not isAll?))
+                         (action :name "Delete"
+                                 :handler (partial delete-tab tab-name)
+                                 :enabled? (not isAll?))])]
+    (if (.isPopupTrigger e)
+      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
+      (select-tab tab-name))
+    ))
 
 (defn change-tab-name [tab-name _e]
   (prn 'change-tab-name tab-name))
@@ -74,14 +76,21 @@
       (swap! event-context assoc-in [:tabs :all] {:selected [] :blocked []}))
     (:tabs @event-context)))
 
-(defn select-tab [e]
-  (let [tab-name (:title (selection e))
-        frame (:frame @ui-context)
-        tree (select frame [(keyword (str "#" tab-name))])
-        selections (selection tree)]
-    (when (some? selections)
-      (article-tree/select-article (keyword tab-name) (last selections)))
-    ))
+;(defn select-tab [e]
+;  (let [tab-name (:title (selection e))
+;        frame (:frame @ui-context)
+;        tree (select frame [(keyword (str "#" tab-name))])
+;        selections (selection tree)]
+;    (when (some? selections)
+;      (article-tree/select-article (keyword tab-name) (last selections)))
+;    ))
+
+(defn select-tab [tab-id]
+  (prn 'select-tab tab-id)
+  (let [frame (:frame @ui-context)
+        tabbed-panel (select frame [:#header-tab-panel])
+        tab-component (select tabbed-panel [(keyword (str "#tab-" (name tab-id)))])]
+    (selection! tabbed-panel tab-component)))
 
 
 (defn make-main-window []
@@ -89,7 +98,7 @@
         _ (swap! ui-context assoc :frame main-frame)
         article-area (article-panel/make-article-area)
         header-tab-panel (tabbed-panel :tabs (make-tabs) :id :header-tab-panel)
-        _ (listen header-tab-panel :selection select-tab)
+        ;_ (listen header-tab-panel :selection select-tab)
         relay-panel (relay-panel/make-relay-panel)
         header-panel (left-right-split (scrollable relay-panel)
                                        header-tab-panel)
