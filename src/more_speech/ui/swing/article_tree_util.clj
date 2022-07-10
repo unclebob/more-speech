@@ -1,6 +1,7 @@
 (ns more-speech.ui.swing.article-tree-util
   (:use [seesaw core])
-  (:require [more-speech.ui.swing.ui-context :refer :all])
+  (:require [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.ui.swing.util :as util])
   (:import (java.util Collections)
            (javax.swing.tree DefaultMutableTreeNode TreePath)))
 
@@ -51,7 +52,6 @@
 
 (defn id-click [ui-context id]
   (let [frame (:frame @ui-context)
-        tab-panel (select frame [:#header-tab-panel])
         selected-tab (:selected-tab @ui-context)
         tab-selector (keyword (str "#" (name selected-tab)))
         tree (select frame [tab-selector])
@@ -65,7 +65,7 @@
             root-node (.getRoot model)
             node (find-header-node root-node id)]
         (when (some? node)
-          (selection! tab-panel "all")
+          (util/select-tab :all)
           (select-tree-node tree node))
         )
       )))
@@ -90,14 +90,12 @@
 
 (defn display-event [tab-id event-id]
   (let [frame (:frame @ui-context)
-        tab-panel (select frame [:#header-tab-panel])
         tab-selector (keyword (str "#" (name tab-id)))
         tree (select frame [tab-selector])
         model (config tree :model)
         root-node (.getRoot model)
-        node (find-header-node root-node event-id)
-        tab-component (select tab-panel [(keyword (str "#tab-" (name tab-id)))])]
+        node (find-header-node root-node event-id)]
     (when (some? node)
-      (selection! tab-panel tab-component)
+      (util/select-tab tab-id)
       (select-tree-node tree node)
       )))

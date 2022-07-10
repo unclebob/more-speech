@@ -4,6 +4,7 @@
             [more-speech.ui.swing.article-tree :as article-tree]
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.relay-panel :as relay-panel]
+            [more-speech.ui.swing.util :as util]
             [more-speech.ui.swing.ui-context :refer :all])
   (:use [seesaw core])
   (:import (javax.swing Timer)))
@@ -46,8 +47,7 @@
           (recur (rest tab-names) (conj header-tree-tabs tab-data)))))))
 
 (declare change-tab-name
-         delete-tab
-         select-tab)
+         delete-tab)
 
 (defn tab-menu [e]
   (let [tab-label (.getComponent e)
@@ -61,7 +61,7 @@
                                  :enabled? (not isAll?))])]
     (if (.isPopupTrigger e)
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
-      (select-tab tab-name))
+      (util/select-tab tab-name))
     ))
 
 (defn change-tab-name [tab-name _e]
@@ -76,29 +76,11 @@
       (swap! event-context assoc-in [:tabs :all] {:selected [] :blocked []}))
     (:tabs @event-context)))
 
-;(defn select-tab [e]
-;  (let [tab-name (:title (selection e))
-;        frame (:frame @ui-context)
-;        tree (select frame [(keyword (str "#" tab-name))])
-;        selections (selection tree)]
-;    (when (some? selections)
-;      (article-tree/select-article (keyword tab-name) (last selections)))
-;    ))
-
-(defn select-tab [tab-id]
-  (prn 'select-tab tab-id)
-  (let [frame (:frame @ui-context)
-        tabbed-panel (select frame [:#header-tab-panel])
-        tab-component (select tabbed-panel [(keyword (str "#tab-" (name tab-id)))])]
-    (selection! tabbed-panel tab-component)))
-
-
 (defn make-main-window []
   (let [main-frame (frame :title "More Speech" :size [1500 :by 1000])
         _ (swap! ui-context assoc :frame main-frame)
         article-area (article-panel/make-article-area)
         header-tab-panel (tabbed-panel :tabs (make-tabs) :id :header-tab-panel)
-        ;_ (listen header-tab-panel :selection select-tab)
         relay-panel (relay-panel/make-relay-panel)
         header-panel (left-right-split (scrollable relay-panel)
                                        header-tab-panel)

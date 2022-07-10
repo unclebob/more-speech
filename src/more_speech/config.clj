@@ -10,7 +10,7 @@
 
 (def migration-level 5)
 
-(def test-run? true)
+(def test-run? false)
 ;---configuration files
 (def private-directory (atom "private"))
 (def migration-filename (atom "private/migration"))
