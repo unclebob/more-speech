@@ -61,7 +61,7 @@
 
 (defn migration-2-fix-names []
   (let [nicknames (read-string (slurp @config/nicknames-filename))
-        fixed-nicknames (apply hash-map (flatten (map (fn [v] (vector(first v) (events/fix-name (second v)))) nicknames)))]
+        fixed-nicknames (apply hash-map (flatten (map (fn [v] (vector (first v) (events/fix-name (second v)))) nicknames)))]
     (spit @config/nicknames-filename fixed-nicknames)
     ))
 
@@ -69,8 +69,8 @@
 
 (defn migration-3-add-messages-directory []
   (when-not (file-exists? @config/messages-directory)
-      (.mkdir (io/file @config/messages-directory))
-      (spit @config/messages-filename {}))
+    (.mkdir (io/file @config/messages-directory))
+    (spit @config/messages-filename {}))
   )
 
 ;--- Migration 4 ---
@@ -81,8 +81,21 @@
     (spit @config/profiles-filename profiles))
   )
 
+;--- Migration 5 ---
+
 (defn migration-5-remove-nicknames []
   (delete-file @config/nicknames-filename))
+
+;--- Migration 6 ---
+
+(defn migration-6-reformat-tabs []
+  (if (file-exists? @config/tabs-filename)
+    (let [tabs-map (read-string (slurp @config/tabs-filename))
+          tabs-list (reduce (fn [l [k v]] (conj l (assoc v :name (name k)))) [] tabs-map)]
+      (spit @config/tabs-list-filename
+            (with-out-str (clojure.pprint/pprint tabs-list))))
+    (spit @config/tabs-list-filename [])))
+
 
 ;---------- The Migrations List -------
 
@@ -91,6 +104,7 @@
                        3 migration-3-add-messages-directory
                        4 migration-4-add-profiles-and-load-with-nicknames
                        5 migration-5-remove-nicknames
+                       6 migration-6-reformat-tabs
                        }))
 
 ;--------------------------------------

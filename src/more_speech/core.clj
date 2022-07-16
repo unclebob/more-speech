@@ -9,6 +9,7 @@
             [more-speech.ui.swing.main-window :as swing]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :as relays]
+            [more-speech.ui.swing.tabs :as tabs]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.migrator :as migrator])
   )
@@ -27,11 +28,14 @@
         read-event-ids (read-string (slurp @config/read-event-ids-filename))
         profiles (read-string (slurp @config/profiles-filename))
         tabs (read-string (slurp @config/tabs-filename))
+        tabs-list (tabs/ensure-tab-list-has-all
+                    (read-string (slurp @config/tabs-list-filename)))
         event-context (events/make-event-context {:keys keys
                                                   :send-chan send-chan
                                                   :profiles profiles
                                                   :read-event-ids read-event-ids
                                                   :tabs tabs
+                                                  :tabs-list tabs-list
                                                   })
         _ (swap! ui-context assoc :event-context event-context)
         handler (swing/setup-main-window)

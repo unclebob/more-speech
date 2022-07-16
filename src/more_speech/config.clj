@@ -8,9 +8,9 @@
 
 (def subscribe-days-ago 10) ;get n days worth of events from the relays.
 
-(def migration-level 5)
+(def migration-level 6)
 
-(def test-run? false)
+(def test-run? true)
 ;---configuration files
 (def private-directory (atom "private"))
 (def migration-filename (atom "private/migration"))
@@ -20,6 +20,7 @@
 (def relays-filename (atom "private/relays"))
 (def read-event-ids-filename (atom "private/read-event-ids"))
 (def tabs-filename (atom "private/tabs"))
+(def tabs-list-filename (atom "private/tabs-list"))
 (def messages-directory (atom "private/messages"))
 (def messages-filename (atom "private/messages/message-file"))
 

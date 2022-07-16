@@ -7,12 +7,13 @@
 (defn change-to-tmp-files []
   (reset! config/private-directory "tmp")
   (reset! config/migration-filename "tmp/migration")
-  (reset! config/nicknames-filename "tmp/nicknames") ;grandfathered
+  (reset! config/nicknames-filename "tmp/nicknames")        ;grandfathered
   (reset! config/profiles-filename "tmp/profiles")
   (reset! config/keys-filename "tmp/keys")
   (reset! config/relays-filename "tmp/relays")
   (reset! config/read-event-ids-filename "tmp/read-event-ids")
   (reset! config/tabs-filename "tmp/tabs")
+  (reset! config/tabs-list-filename "tmp/tabs-list")
   (reset! config/messages-directory "tmp/messages")
   (reset! config/messages-filename "tmp/messages/message-file")
   (.mkdir (io/file "tmp"))
@@ -20,12 +21,13 @@
 
 (defn delete-all-tmp-files []
   (delete-file "tmp/migration")
-  (delete-file "tmp/nicknames") ;grandfathered.
+  (delete-file "tmp/nicknames")                             ;grandfathered.
   (delete-file "tmp/profiles")
   (delete-file "tmp/keys")
   (delete-file "tmp/relays")
   (delete-file "tmp/read-event-ids")
   (delete-file "tmp/tabs")
+  (delete-file "tmp/tabs-list")
   (delete-file "tmp/messages/message-file")
   (delete-file "tmp/messages")
   )
@@ -147,4 +149,29 @@
       (spit @config/nicknames-filename {1 "user-1"})
       (migration-5-remove-nicknames)
       (should-not (file-exists? @config/nicknames-filename))))
+
+  (context "migration 6 reformat tabs file into tabs-list file"
+    (it "reformats the tabs file."
+      (let [tabs-map {:tab1 {:selected [1] :blocked [2]}
+                      :tab2 {:selected [3 4] :blocked [5 6]}}]
+        (spit @config/tabs-filename tabs-map))
+      (should-not (file-exists? @config/tabs-list-filename))
+      (migration-6-reformat-tabs)
+      (should (file-exists? @config/tabs-list-filename))
+      (let [tabs-list (read-string (slurp @config/tabs-list-filename))]
+        (should (vector? tabs-list))
+        (should= #{{:name "tab1" :selected [1] :blocked [2]}
+                   {:name "tab2" :selected [3 4] :blocked [5 6]}}
+                 (set tabs-list))))
+
+    (it "reformats an empty tabs file"
+      (spit @config/tabs-filename {})
+      (migration-6-reformat-tabs)
+      (should= [] (read-string (slurp @config/tabs-list-filename))))
+
+    (it "creates an empty tabs-list if no tabs"
+      (migration-6-reformat-tabs)
+      (should= [] (read-string (slurp @config/tabs-list-filename)))
+      )
+    )
   )
