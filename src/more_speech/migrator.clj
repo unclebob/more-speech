@@ -94,7 +94,8 @@
           tabs-list (reduce (fn [l [k v]] (conj l (assoc v :name (name k)))) [] tabs-map)]
       (spit @config/tabs-list-filename
             (with-out-str (clojure.pprint/pprint tabs-list))))
-    (spit @config/tabs-list-filename [])))
+    (spit @config/tabs-list-filename []))
+  (delete-file @config/tabs-filename))
 
 
 ;---------- The Migrations List -------

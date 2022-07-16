@@ -1,5 +1,6 @@
 (ns more-speech.nostr.relays
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [more-speech.config :as config]))
 
 (defn- connection? [c]
   (= (type c) 'java.net.http.WebSocket))
@@ -27,6 +28,9 @@
                         {}
                         (read-string relay-text))
         loaded-relays (set-relay-defaults loaded-relays)
+        loaded-relays (if config/test-run?
+                        (apply hash-map (first loaded-relays))
+                        loaded-relays)
         ]
     (reset! relays loaded-relays)))
 

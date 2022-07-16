@@ -50,8 +50,8 @@
 (s/def ::read-event-ids (s/coll-of ::id :kind set?))
 (s/def ::selected (s/coll-of ::id))
 (s/def ::blocked (s/coll-of ::id))
-(s/def ::tab (s/keys :req-un [::selected ::blocked]))
-(s/def ::tabs (s/map-of keyword? ::tab))
+(s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
+(s/def ::tabs-list (s/coll-of ::tab))
 (s/def ::selected-id ::id)
 (s/def ::event-history (s/coll-of (s/tuple keyword? ::id)))
 (s/def ::back-count number?)
@@ -62,7 +62,7 @@
                                         ::profiles
                                         ::keys
                                         ::read-event-ids
-                                        ::tabs
+                                        ::tabs-list
                                         ::selected-id
                                         ::event-history
                                         ::back-count
@@ -74,18 +74,18 @@
                 :profiles {}
                 :keys {}
                 :read-event-ids #{}
-                :tabs {}
+                :tabs-list []
                 :event-history []
                 :back-count 0
                 }
                event-context-map)))
 
-(defn select-event [event-state tab-id id]
-  (swap! ui-context assoc :selected-tab tab-id)
+(defn select-event [event-state tab-name id]
+  (swap! ui-context assoc :selected-tab tab-name)
   (if-not (:backing-up event-state)
     (-> event-state
         (update :read-event-ids conj id)
-        (update :event-history conj [tab-id id])
+        (update :event-history conj [tab-name id])
         (assoc :selected-event id :back-count 0))
     (-> event-state (assoc :selected-id id :backing-up false))))
 

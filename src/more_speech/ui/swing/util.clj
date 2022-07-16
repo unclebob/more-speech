@@ -6,8 +6,17 @@
   (while (not (empty? (.getSubElements popup)))
     (.remove popup 0)))
 
-(defn select-tab [tab-id]
+
+(defn get-tab-index [name]
+  (loop [tab-list (:tabs-list @(:event-context @ui-context))
+         index 0]
+    (cond
+      (empty? tab-list) nil
+      (= name (:name (first tab-list))) index
+      :else (recur (rest tab-list) (inc index)))))
+
+(defn select-tab [tab-name]
   (let [frame (:frame @ui-context)
-        tabbed-panel (select frame [:#header-tab-panel])
-        tab-component (select tabbed-panel [(keyword (str "#tab-" (name tab-id)))])]
-    (selection! tabbed-panel tab-component)))
+        tabbed-panel (select frame [:#header-tab-panel])]
+    (selection! tabbed-panel (get-tab-index tab-name))))
+

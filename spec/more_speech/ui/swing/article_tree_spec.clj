@@ -265,13 +265,13 @@
         (should= [true false true] filter-results)))
 
     (it "allows selected pubkeys when mentioned in p tags"
-          (let [events [{:id 1 :pubkey 10}
-                        {:id 2 :pubkey 20 :tags [[:p (hexify 50)]]}
-                        {:id 3 :pubkey 30}]
-                filter {:selected [50]
-                        :blocked []}
-                filter-results (map #(boolean (should-add-event? filter %)) events)]
-            (should= [false true false] filter-results)))
+      (let [events [{:id 1 :pubkey 10}
+                    {:id 2 :pubkey 20 :tags [[:p (hexify 50)]]}
+                    {:id 3 :pubkey 30}]
+            filter {:selected [50]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [false true false] filter-results)))
 
     (it "allows events that have a selected id at the root of a thread."
       (let [events [{:id 1 :tags [[:e "10" ""]]}
@@ -353,191 +353,91 @@
          make-event-map
          add-events)
 
+(defn events->tree [event-list]
+  (with-redefs [render-event (stub :render-event)]
+    (let [tab-id :tab
+          tab {:name tab-id
+               :selected []
+               :blocked []}
+          header-tree (make-header-tree tab-id)
+          _ (config! header-tree :id :0 :user-data tab)
+          frame (frame :content header-tree)
+          event-map (make-event-map event-list)
+          event-state {:tabs-list [tab]
+                       :text-event-map event-map}
+          event-context (atom event-state)]
+      (reset! ui-context {:frame frame
+                          :event-context event-context})
+      (add-events event-list)
+      (depict-tree header-tree))))
+
 (describe "adding events"
   (with-stubs)
 
   (it "adds one event"
-    (let [tab-id :tab
-          filter {:selected []
-                  :blocked []}
-          header-tree (make-header-tree tab-id)
-          _ (config! header-tree :id tab-id :user-data filter)
-          frame (frame :content header-tree)
-          event-id 99
-          event {:id event-id}
-          event-state {:tabs {tab-id nil}}
-          event-context (atom event-state)]
-      (reset! ui-context {:frame frame
-                          :event-context event-context})
-      (add-event event)
-      (should= ["Root" [event-id]] (depict-tree header-tree))))
+    (should= ["Root" [99]]
+             (events->tree
+               [{:id 99}])))
 
   (it "adds two events"
-    (with-redefs [render-event (stub :render-event)]
-      (let [tab-id :tab
-            filter {:selected []
-                    :blocked []}
-            header-tree (make-header-tree tab-id)
-            _ (config! header-tree :id tab-id :user-data filter)
-            frame (frame :content header-tree)
-            event-list [{:id 99 :created-at 2} {:id 88 :created-at 1}]
-            event-map (make-event-map event-list)
-            event-state {:tabs {tab-id nil}
-                         :text-event-map event-map}
-            event-context (atom event-state)]
-        (reset! ui-context {:frame frame
-                            :event-context event-context})
-        (add-events event-list)
-        (should= ["Root" [99] [88]] (depict-tree header-tree)))))
+    (should= ["Root" [99] [88]]
+             (events->tree
+               [{:id 99 :created-at 2}
+                {:id 88 :created-at 1}])))
 
-  (it "adds four events and keeps them in reverse chronologial order"
-    (with-redefs [render-event (stub :render-event)]
-      (let [tab-id :tab
-            filter {:selected []
-                    :blocked []}
-            header-tree (make-header-tree tab-id)
-            _ (config! header-tree :id tab-id :user-data filter)
-            frame (frame :content header-tree)
-            event-list [{:id 99 :created-at 1}
-                        {:id 88 :created-at 2}
-                        {:id 77 :created-at 3}
-                        {:id 66 :created-at 4}]
-            event-map (make-event-map event-list)
-            event-state {:tabs {tab-id nil}
-                         :text-event-map event-map}
-            event-context (atom event-state)]
-        (reset! ui-context {:frame frame
-                            :event-context event-context})
-        (add-events event-list)
-        (should= ["Root" [66] [77] [88] [99]] (depict-tree header-tree)))))
+  (it "adds four events and keeps them in reverse chronological order"
+    (should= ["Root" [66] [77] [88] [99]]
+             (events->tree
+               [{:id 99 :created-at 1}
+                {:id 88 :created-at 2}
+                {:id 77 :created-at 3}
+                {:id 66 :created-at 4}])))
 
   (it "adds an event, and a reply when received in order."
-    (with-redefs [render-event (stub :render-event)]
-      (let [tab-id :tab
-            filter {:selected []
-                    :blocked []}
-            header-tree (make-header-tree tab-id)
-            _ (config! header-tree :id tab-id :user-data filter)
-            frame (frame :content header-tree)
-            event-list [{:id 99 :created-at 1}
-                        {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                        ]
-            event-map (make-event-map event-list)
-            event-state {:tabs {tab-id nil}
-                         :text-event-map event-map}
-            event-context (atom event-state)]
-        (reset! ui-context {:frame frame
-                            :event-context event-context})
-        (add-events event-list)
-        (should= ["Root" [88] [99 [88]]] (depict-tree header-tree)))))
+    (should= ["Root" [88] [99 [88]]]
+             (events->tree
+               [{:id 99 :created-at 1}
+                {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}])))
 
   (it "adds an event, and a reply when received out of order."
-      (with-redefs [render-event (stub :render-event)]
-        (let [tab-id :tab
-              filter {:selected []
-                      :blocked []}
-              header-tree (make-header-tree tab-id)
-              _ (config! header-tree :id tab-id :user-data filter)
-              frame (frame :content header-tree)
-              event-list [{:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                          {:id 99 :created-at 1}]
-              event-map (make-event-map event-list)
-              event-state {:tabs {tab-id nil}
-                           :text-event-map event-map}
-              event-context (atom event-state)]
-          (reset! ui-context {:frame frame
-                              :event-context event-context})
-          (add-events event-list)
-          (should= ["Root" [88] [99 [88]]] (depict-tree header-tree)))))
+    (should= ["Root" [88] [99 [88]]]
+             (events->tree
+               [{:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                {:id 99 :created-at 1}])))
 
   (it "adds a complex chain of replies in order."
-      (with-redefs [render-event (stub :render-event)]
-        (let [tab-id :tab
-              filter {:selected []
-                      :blocked []}
-              header-tree (make-header-tree tab-id)
-              _ (config! header-tree :id tab-id :user-data filter)
-              frame (frame :content header-tree)
-              event-list [{:id 99 :created-at 1}
-                          {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                          {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
-                          {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
-                          {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}
-                          ]
-              event-map (make-event-map event-list)
-              event-state {:tabs {tab-id nil}
-                           :text-event-map event-map}
-              event-context (atom event-state)]
-          (reset! ui-context {:frame frame
-                              :event-context event-context})
-          (add-events event-list)
-          (should= ["Root"  [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]] (depict-tree header-tree)))))
+    (should= ["Root" [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]]
+             (events->tree
+               [{:id 99 :created-at 1}
+                {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
+                {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
+                {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in order."
-        (with-redefs [render-event (stub :render-event)]
-          (let [tab-id :tab
-                filter {:selected []
-                        :blocked []}
-                header-tree (make-header-tree tab-id)
-                _ (config! header-tree :id tab-id :user-data filter)
-                frame (frame :content header-tree)
-                event-list [{:id 99 :created-at 1}
-                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                            {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
-                            ]
-                event-map (make-event-map event-list)
-                event-state {:tabs {tab-id nil}
-                             :text-event-map event-map}
-                event-context (atom event-state)]
-            (reset! ui-context {:frame frame
-                                :event-context event-context})
-            (add-events event-list)
-            (should= ["Root" [77] [88 [77]] [99 [88 [77]]]] (depict-tree header-tree)))))
+    (should= ["Root" [77] [88 [77]] [99 [88 [77]]]]
+             (events->tree
+               [{:id 99 :created-at 1}
+                {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in reverse order."
-        (with-redefs [render-event (stub :render-event)]
-          (let [tab-id :tab
-                filter {:selected []
-                        :blocked []}
-                header-tree (make-header-tree tab-id)
-                _ (config! header-tree :id tab-id :user-data filter)
-                frame (frame :content header-tree)
-                event-list [{:id 99 :created-at 1}
-                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                            {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}]
-                event-list (reverse event-list)
-                event-map (make-event-map event-list)
-                event-state {:tabs {tab-id nil}
-                             :text-event-map event-map}
-                event-context (atom event-state)]
-            (reset! ui-context {:frame frame
-                                :event-context event-context})
-            (add-events event-list)
-            (should= ["Root" [77] [88 [77]] [99 [88 [77]]]] (depict-tree header-tree)))))
+    (should= ["Root" [77] [88 [77]] [99 [88 [77]]]]
+             (events->tree
+               (reverse
+                 [{:id 99 :created-at 1}
+                  {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                  {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}]))))
 
   (it "adds a complex chain of replies in reverse order."
-        (with-redefs [render-event (stub :render-event)]
-          (let [tab-id :tab
-                filter {:selected []
-                        :blocked []}
-                header-tree (make-header-tree tab-id)
-                _ (config! header-tree :id tab-id :user-data filter)
-                frame (frame :content header-tree)
-                event-list [{:id 99 :created-at 1}
-                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                            {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
-                            {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
-                            {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}
-                            ]
-                event-list (reverse event-list)
-                event-map (make-event-map event-list)
-                event-state {:tabs {tab-id nil}
-                             :text-event-map event-map}
-                event-context (atom event-state)]
-            (reset! ui-context {:frame frame
-                                :event-context event-context})
-            (add-events event-list)
-            (should= ["Root" [55] [66] [77 [66]] [88 [55] [77 [66]]] [99 [88 [55] [77 [66]]]]] (depict-tree header-tree)))))
+    (should= ["Root" [55] [66] [77 [66]] [88 [55] [77 [66]]] [99 [88 [55] [77 [66]]]]]
+             (events->tree
+               (reverse
+                 [{:id 99 :created-at 1}
+                  {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                  {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
+                  {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
+                  {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}]))))
   )
 
 (declare depict-node)
@@ -582,19 +482,19 @@
       (should= [1 [2]] (depict-node copied-node))))
 
   (it "copies a node with two children"
-      (let [node (DefaultMutableTreeNode. 1)
-            _ (.add node (DefaultMutableTreeNode. 2))
-            _ (.add node (DefaultMutableTreeNode. 3))
-            copied-node (copy-node node)]
-        (should= [1 [2] [3]] (depict-node copied-node))))
+    (let [node (DefaultMutableTreeNode. 1)
+          _ (.add node (DefaultMutableTreeNode. 2))
+          _ (.add node (DefaultMutableTreeNode. 3))
+          copied-node (copy-node node)]
+      (should= [1 [2] [3]] (depict-node copied-node))))
 
   (it "copies a node with two children and grandchildren"
-        (let [node (DefaultMutableTreeNode. 1)
-              child1 (DefaultMutableTreeNode. 2)
-              _ (.add node child1)
-              child2 (DefaultMutableTreeNode. 3)
-              _ (.add node child2)
-              _ (.add child2 (DefaultMutableTreeNode. 4))
-              copied-node (copy-node node)]
-          (should= [1 [2] [3 [4]]] (depict-node copied-node))))
+    (let [node (DefaultMutableTreeNode. 1)
+          child1 (DefaultMutableTreeNode. 2)
+          _ (.add node child1)
+          child2 (DefaultMutableTreeNode. 3)
+          _ (.add node child2)
+          _ (.add child2 (DefaultMutableTreeNode. 4))
+          copied-node (copy-node node)]
+      (should= [1 [2] [3 [4]]] (depict-node copied-node))))
   )

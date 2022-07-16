@@ -53,19 +53,19 @@
 (defn id-click [ui-context id]
   (let [frame (:frame @ui-context)
         selected-tab (:selected-tab @ui-context)
-        tab-selector (keyword (str "#" (name selected-tab)))
+        tab-selector (keyword (str "#" (util/get-tab-index selected-tab)))
         tree (select frame [tab-selector])
         model (config tree :model)
         root-node (.getRoot model)
         node (find-header-node root-node id)]
     (if (some? node)
       (select-tree-node tree node)
-      (let [tree (select frame [:#all])
+      (let [tree (select frame [(keyword (str "#" (util/get-tab-index "all")))])
             model (config tree :model)
             root-node (.getRoot model)
             node (find-header-node root-node id)]
         (when (some? node)
-          (util/select-tab :all)
+          (util/select-tab "all")
           (select-tree-node tree node))
         )
       )))
@@ -90,7 +90,7 @@
 
 (defn display-event [tab-id event-id]
   (let [frame (:frame @ui-context)
-        tab-selector (keyword (str "#" (name tab-id)))
+        tab-selector (keyword (str "#" (util/get-tab-index tab-id)))
         tree (select frame [tab-selector])
         model (config tree :model)
         root-node (.getRoot model)

@@ -98,12 +98,12 @@
   (let [frame (:frame @ui-context)
         event-state @(:event-context @ui-context)
         event-map (:text-event-map event-state)
-        event-id (:id event)
-        tabs (:tabs event-state)]
-    (loop [tab-names (keys tabs)]
-      (if (empty? tab-names)
+        event-id (:id event)]
+    (loop [tabs (:tabs-list event-state)
+           index 0]
+      (if (empty? tabs)
         nil
-        (let [tree-id (keyword (str "#" (name (first tab-names))))
+        (let [tree-id (keyword (str "#" index))
               tree (select frame [tree-id])
               filter (config tree :user-data)]
           (when (should-add-event? filter event)
@@ -115,7 +115,7 @@
               (.makeVisible tree (TreePath. (.getPath child)))
               (swap! ui-context update-in [:node-map event-id] conj child)
               ))
-          (recur (rest tab-names)))))
+          (recur (rest tabs) (inc index)))))
     (add-references event)
     (resolve-any-orphans event-id)))
 

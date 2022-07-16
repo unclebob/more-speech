@@ -167,7 +167,8 @@
     (it "reformats an empty tabs file"
       (spit @config/tabs-filename {})
       (migration-6-reformat-tabs)
-      (should= [] (read-string (slurp @config/tabs-list-filename))))
+      (should= [] (read-string (slurp @config/tabs-list-filename)))
+      (should-not (file-exists? @config/tabs-filename)))
 
     (it "creates an empty tabs-list if no tabs"
       (migration-6-reformat-tabs)
