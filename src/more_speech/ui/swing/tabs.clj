@@ -14,15 +14,15 @@
   (let [event-context (:event-context @ui-context)]
     (loop [tabs-list (:tabs-list @event-context)
            header-tree-tabs []
-           index 0]
+           tab-index 0]
       (if (empty? tabs-list)
         header-tree-tabs
         (let [tab (first tabs-list)
               tab-name (:name tab)
-              header-tree (article-tree/make-header-tree tab-name)
+              header-tree (article-tree/make-header-tree tab-index)
               _ (config! header-tree
-                         :user-data tab
-                         :id (keyword (str index)))
+                         :user-data tab-index
+                         :id (keyword (str tab-index)))
               tab-label (label :text tab-name)
               _ (listen tab-label :mouse-pressed tab-menu)
               tab-content (scrollable header-tree)
@@ -30,7 +30,7 @@
                         :content tab-content}]
           (recur (rest tabs-list)
                  (conj header-tree-tabs tab-data)
-                 (inc index)))))))
+                 (inc tab-index)))))))
 
 (defn tab-menu [e]
   (let [tab-label (.getComponent e)

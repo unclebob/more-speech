@@ -15,8 +15,13 @@
       (= name (:name (first tab-list))) index
       :else (recur (rest tab-list) (inc index)))))
 
-(defn select-tab [tab-name]
+(defn select-tab
+  "Select tab by name or index"
+  [tab-selector]
   (let [frame (:frame @ui-context)
-        tabbed-panel (select frame [:#header-tab-panel])]
-    (selection! tabbed-panel (get-tab-index tab-name))))
+        tabbed-panel (select frame [:#header-tab-panel])
+        tab-index (if (number? tab-selector)
+                    tab-selector
+                    (get-tab-index tab-selector))]
+    (selection! tabbed-panel tab-index)))
 

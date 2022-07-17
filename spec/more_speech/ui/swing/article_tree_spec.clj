@@ -335,8 +335,8 @@
               _ (reset! ui-context {:event-context event-context})
               selected-event-id 1
               selected-node (DefaultMutableTreeNode. selected-event-id)
-              tab-name :bob-tab
-              _ (select-article tab-name selected-node)
+              tab-index 0
+              _ (select-article tab-index selected-node)
               event-state @event-context
               read-event-ids (:read-event-ids event-state)
               selected-event (:selected-event event-state)
@@ -345,7 +345,7 @@
           (should-have-invoked :load-article-info {:with [selected-event-id]})
           (should= read-event-ids #{selected-event-id})
           (should= selected-event selected-event-id)
-          (should= [[tab-name selected-event-id]] event-history)
+          (should= [[tab-index selected-event-id]] event-history)
           (should= 0 back-count)))))
   )
 
@@ -360,7 +360,7 @@
                :selected []
                :blocked []}
           header-tree (make-header-tree tab-id)
-          _ (config! header-tree :id :0 :user-data tab)
+          _ (config! header-tree :id :0 :user-data 0)
           frame (frame :content header-tree)
           event-map (make-event-map event-list)
           event-state {:tabs-list [tab]

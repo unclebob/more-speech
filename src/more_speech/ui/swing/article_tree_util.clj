@@ -47,13 +47,14 @@
 
 (defn select-tree-node [tree node]
   (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]
+    (.clearSelection tree)
     (.setSelectionPath tree tree-path)
     (.scrollPathToVisible tree tree-path)))
 
 (defn id-click [ui-context id]
   (let [frame (:frame @ui-context)
-        selected-tab (:selected-tab @ui-context)
-        tab-selector (keyword (str "#" (util/get-tab-index selected-tab)))
+        tab-index (:selected-tab @ui-context)
+        tab-selector (keyword (str "#" tab-index))
         tree (select frame [tab-selector])
         model (config tree :model)
         root-node (.getRoot model)
@@ -79,8 +80,8 @@
       (swap! event-context adjust-back-count n)
       (let [back-count (:back-count @event-context)
             event-position (- (count event-history) back-count 1)
-            [tab-id event-id] (nth event-history event-position)]
-        (display-event tab-id event-id)))))
+            [tab-index event-id] (nth event-history event-position)]
+        (display-event tab-index event-id)))))
 
 (defn adjust-back-count [event-data n]
   (let [event-history (:event-history event-data)
@@ -88,14 +89,14 @@
     (assoc event-data :back-count back-count :backing-up true))
   )
 
-(defn display-event [tab-id event-id]
+(defn display-event [tab-index event-id]
   (let [frame (:frame @ui-context)
-        tab-selector (keyword (str "#" (util/get-tab-index tab-id)))
+        tab-selector (keyword (str "#" tab-index))
         tree (select frame [tab-selector])
         model (config tree :model)
         root-node (.getRoot model)
         node (find-header-node root-node event-id)]
     (when (some? node)
-      (util/select-tab tab-id)
+      (util/select-tab tab-index)
       (select-tree-node tree node)
       )))

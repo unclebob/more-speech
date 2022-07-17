@@ -13,12 +13,12 @@
 
 (declare render-event node-selected mouse-pressed)
 
-(defn make-header-tree [tab-name]
+(defn make-header-tree [tab-index]
   (let [header-tree (tree :renderer render-event
                           :root-visible? false
                           :expands-selected-paths? true
                           :model (DefaultTreeModel. (DefaultMutableTreeNode. "Root")))]
-    (listen header-tree :selection (partial node-selected tab-name))
+    (listen header-tree :selection (partial node-selected tab-index))
     (listen header-tree :mouse-pressed mouse-pressed)
     header-tree))
 
@@ -44,18 +44,18 @@
       (clojure.pprint/pprint event))))
 
 (defn select-article
-  [tab-name selected-node]
+  [tab-index selected-node]
   (let [selected-id (.getUserObject selected-node)
         event-context (:event-context @ui-context)]
-    (swap! event-context events/select-event tab-name selected-id)
+    (swap! event-context events/select-event tab-index selected-id)
     (article-panel/load-article-info selected-id)))
 
-(defn node-selected [tab-name e]
+(defn node-selected [tab-index e]
   (let [selected-node (last (selection e))]
     (when (and
             (some? selected-node)
             (instance? DefaultMutableTreeNode selected-node))
-      (select-article tab-name selected-node))))
+      (select-article tab-index selected-node))))
 
 (defn render-event [widget info]
   (if (seqable? (:value info))
@@ -104,9 +104,8 @@
       (if (empty? tabs)
         nil
         (let [tree-id (keyword (str "#" index))
-              tree (select frame [tree-id])
-              filter (config tree :user-data)]
-          (when (should-add-event? filter event)
+              tree (select frame [tree-id])]
+          (when (should-add-event? (first tabs) event)
             (let [model (config tree :model)
                   root (.getRoot model)
                   insertion-point (find-chronological-insertion-point root event-id event-map)

@@ -53,7 +53,7 @@
 (s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
 (s/def ::tabs-list (s/coll-of ::tab))
 (s/def ::selected-id ::id)
-(s/def ::event-history (s/coll-of (s/tuple keyword? ::id)))
+(s/def ::event-history (s/coll-of (s/tuple number? ::id)))
 (s/def ::back-count number?)
 (s/def ::backing-up boolean?)
 
@@ -80,12 +80,12 @@
                 }
                event-context-map)))
 
-(defn select-event [event-state tab-name id]
-  (swap! ui-context assoc :selected-tab tab-name)
+(defn select-event [event-state tab-index id]
+  (swap! ui-context assoc :selected-tab tab-index)
   (if-not (:backing-up event-state)
     (-> event-state
         (update :read-event-ids conj id)
-        (update :event-history conj [tab-name id])
+        (update :event-history conj [tab-index id])
         (assoc :selected-event id :back-count 0))
     (-> event-state (assoc :selected-id id :backing-up false))))
 
