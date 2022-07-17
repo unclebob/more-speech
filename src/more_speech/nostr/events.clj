@@ -52,7 +52,7 @@
 (s/def ::blocked (s/coll-of ::id))
 (s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
 (s/def ::tabs-list (s/coll-of ::tab))
-(s/def ::selected-id ::id)
+(s/def ::selected-event ::id)
 (s/def ::event-history (s/coll-of (s/tuple number? ::id)))
 (s/def ::back-count number?)
 (s/def ::backing-up boolean?)
@@ -63,7 +63,7 @@
                                         ::keys
                                         ::read-event-ids
                                         ::tabs-list
-                                        ::selected-id
+                                        ::selected-event
                                         ::event-history
                                         ::back-count
                                         ::backing-up]))
@@ -87,7 +87,7 @@
         (update :read-event-ids conj id)
         (update :event-history conj [tab-index id])
         (assoc :selected-event id :back-count 0))
-    (-> event-state (assoc :selected-id id :backing-up false))))
+    (-> event-state (assoc :selected-event id :backing-up false))))
 
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
