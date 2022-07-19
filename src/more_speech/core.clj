@@ -25,13 +25,15 @@
     (swap! event-context assoc :send-chan send-chan)
     (let [latest-old-message-time
           (if (not config/test-run?)
-            (data-storage/read-old-events event-context handler)
+            ;(data-storage/read-old-events event-context handler)
+            (data-storage/read-in-last-n-days config/days-to-read event-context handler)
             (-> (System/currentTimeMillis) (quot 1000) (- 86400)))]
       (protocol/get-events event-context latest-old-message-time))
 
     (when (not config/test-run?)
       (data-storage/write-configuration)
-      (data-storage/write-messages))
+      (data-storage/write-messages)
+      (data-storage/write-messages-by-day))
     (System/exit 1)))
 
 (defn set-event-handler [event-state handler]

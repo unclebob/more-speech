@@ -3,7 +3,10 @@
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :as relays]
-            [more-speech.ui.swing.tabs :as tabs]))
+            [more-speech.ui.swing.tabs :as tabs]
+            [clojure.string :as string])
+  (:import (java.util Date TimeZone)
+           (java.text SimpleDateFormat)))
 
 
 (defn write-configuration []
@@ -38,13 +41,75 @@
     (swap! ui-context assoc :event-context event-context)
     (relays/load-relays-from-file @config/relays-filename)))
 
+(defn load-events [old-events event-context handler]
+  (doseq [event old-events]
+    (let [url (first (:relays event))]
+      (swap! event-context events/add-event event url)
+      (events/handle-text-event handler event))))
+
 (defn read-old-events [event-context handler]
   (let [old-events (vals (read-string (slurp @config/messages-filename)))
         creation-times (map :created-at old-events)]
-    (doseq [event old-events]
-      (let [url (first (:relays event))]
-        (swap! event-context events/add-event event url)
-        (events/handle-text-event handler event)))
+    (load-events old-events event-context handler)
     (if (empty? creation-times)
       (-> (System/currentTimeMillis) (quot 1000) (- 86400))
       (apply max creation-times))))
+
+(defn partition-messages-by-day [message-map]
+  (let [messages (sort-by :created-at (vals message-map))
+        messages (partition-by #(quot (:created-at %) 86400) messages)
+        messages (map #(vector (quot (:created-at (first %)) 86400) %) messages)]
+    messages))
+
+(defn file-name-from-day [day]
+  (let [time (* day 86400000)
+        date (Date. (long time))
+        date-format (SimpleDateFormat. "ddMMMyy")]
+    (.setTimeZone date-format (TimeZone/getTimeZone "UTC"))
+    (str day "-" (.format date-format date))
+    ))
+
+(defn write-messages-by-day
+  ([]
+   (let [event-context (:event-context @ui-context)
+         message-map (:text-event-map @event-context)]
+     (write-messages-by-day message-map)))
+
+  ([message-map]
+   (let [daily-partitions (partition-messages-by-day message-map)]
+     (doseq [day-partition daily-partitions]
+       (let [file-name (file-name-from-day (first day-partition))]
+         (prn 'writing file-name)
+         (spit (str @config/messages-directory "/" file-name)
+               (with-out-str
+                 (clojure.pprint/pprint
+                   (second day-partition)))))))))
+
+(defn time-from-file-name [file-name]
+  (try
+    (let [parts (string/split file-name #"\-")]
+      (* 86400 (Integer/parseInt (first parts))))
+    (catch Exception _e
+      nil))
+  )
+
+(defn is-message-file? [file-name]
+  (re-matches #"\d+\-\d+\w+\d+" file-name))
+
+(defn read-in-last-n-days [n event-context handler]
+  (let [message-directory (clojure.java.io/file @config/messages-directory)
+        files (.listFiles message-directory)
+        file-names (for [file files] (.getName file))
+        file-names (filter is-message-file? file-names)
+        file-names (take-last n (sort file-names))
+        last-file-name (last file-names)
+        last-time (time-from-file-name last-file-name)
+        last-time (if (nil? last-time)
+                    (/ (System/currentTimeMillis) 1000)
+                    last-time)]
+    (doseq [file-name file-names]
+      (prn 'reading file-name)
+      (let [old-events (read-string (slurp (str @config/messages-directory "/" file-name)))]
+        (load-events old-events event-context handler)))
+    last-time))
+

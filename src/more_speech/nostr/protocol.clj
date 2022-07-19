@@ -3,14 +3,11 @@
             [clojure.core.async :as async]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :refer [relays]]
-            [java-time :as t]
-            [more-speech.nostr.util :as util]
-            [more-speech.config :as config])
+            [more-speech.nostr.util :as util])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
-           (java.net URI)
-           (java.time ZoneOffset)))
+           (java.net URI)))
 
 (defn send-to [^WebSocket conn msg]
   (try
@@ -159,10 +156,3 @@
   (Thread/sleep 100)
   (prn 'done)
   )
-
-(defn calc-subscription-date []
-  (let [date (-> (t/local-date-time)
-                 (t/minus (t/days config/subscribe-days-ago))
-                 (t/adjust (t/local-time 0)))
-        date (.toEpochSecond date ZoneOffset/UTC)]
-    date))

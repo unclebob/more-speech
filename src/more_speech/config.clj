@@ -6,7 +6,7 @@
 
 (def article-width 120)
 
-(def subscribe-days-ago 10) ;get n days worth of events from the relays.
+(def days-to-read 10) ;how many daily memssage files to read in.
 
 (def migration-level 6)
 

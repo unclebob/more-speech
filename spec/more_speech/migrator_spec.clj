@@ -19,6 +19,21 @@
   (.mkdir (io/file "tmp"))
   )
 
+(defn revert-from-tmp []
+  (delete-file "tmp")
+  (reset! config/private-directory "private")
+  (reset! config/migration-filename "private/migration")
+  (reset! config/nicknames-filename "private/nicknames")        ;grandfathered
+  (reset! config/profiles-filename "private/profiles")
+  (reset! config/keys-filename "private/keys")
+  (reset! config/relays-filename "private/relays")
+  (reset! config/read-event-ids-filename "private/read-event-ids")
+  (reset! config/tabs-filename "private/tabs")
+  (reset! config/tabs-list-filename "private/tabs-list")
+  (reset! config/messages-directory "private/messages")
+  (reset! config/messages-filename "private/messages/message-file"))
+
+
 (defn delete-all-tmp-files []
   (delete-file "tmp/migration")
   (delete-file "tmp/nicknames")                             ;grandfathered.
@@ -36,7 +51,7 @@
   (with-stubs)
   (before-all (change-to-tmp-files))
   (after (delete-all-tmp-files))
-  (after-all (delete-file "tmp"))
+  (after-all (revert-from-tmp))
 
   (context "the migration framework"
 
