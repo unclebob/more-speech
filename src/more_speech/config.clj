@@ -19,7 +19,7 @@
 (def keys-filename (atom "private/keys"))
 (def relays-filename (atom "private/relays"))
 (def read-event-ids-filename (atom "private/read-event-ids"))
-(def tabs-filename (atom "private/tabs"))
+(def tabs-filename (atom "private/tabs")) ;grandfathered.
 (def tabs-list-filename (atom "private/tabs-list"))
 (def messages-directory (atom "private/messages"))
 (def messages-filename (atom "private/messages/message-file"))
