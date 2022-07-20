@@ -25,7 +25,7 @@
 
 (defn subscribe
   ([conn id]
-   (subscribe conn id (int (- (/ (System/currentTimeMillis) 1000) 86400))))
+   (subscribe conn id (int (- (quot (System/currentTimeMillis) 1000) 86400))))
   ([^WebSocket conn id since]
    (send-to conn ["REQ" id {"since" since}])
    (.request conn 1)))

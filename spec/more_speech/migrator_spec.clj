@@ -17,13 +17,27 @@
   (reset! config/messages-directory "tmp/messages")
   (reset! config/messages-filename "tmp/messages/message-file")
   (.mkdir (io/file "tmp"))
+  (prn 'changed-to-tmp)
   )
 
+
+(defn delete-all-files-in [dir]
+  (let [files (.listFiles (io/file dir))]
+    (doseq [file files]
+      (let [fname (str dir "/" (.getName file))]
+        (delete-file fname))))
+  )
+
+(defn delete-all-tmp-files []
+  (delete-all-files-in "tmp/messages")
+  (delete-all-files-in "tmp"))
+
 (defn revert-from-tmp []
+  (delete-all-tmp-files)
   (delete-file "tmp")
   (reset! config/private-directory "private")
   (reset! config/migration-filename "private/migration")
-  (reset! config/nicknames-filename "private/nicknames")        ;grandfathered
+  (reset! config/nicknames-filename "private/nicknames")    ;grandfathered
   (reset! config/profiles-filename "private/profiles")
   (reset! config/keys-filename "private/keys")
   (reset! config/relays-filename "private/relays")
@@ -32,20 +46,6 @@
   (reset! config/tabs-list-filename "private/tabs-list")
   (reset! config/messages-directory "private/messages")
   (reset! config/messages-filename "private/messages/message-file"))
-
-
-(defn delete-all-tmp-files []
-  (delete-file "tmp/migration")
-  (delete-file "tmp/nicknames")                             ;grandfathered.
-  (delete-file "tmp/profiles")
-  (delete-file "tmp/keys")
-  (delete-file "tmp/relays")
-  (delete-file "tmp/read-event-ids")
-  (delete-file "tmp/tabs")
-  (delete-file "tmp/tabs-list")
-  (delete-file "tmp/messages/message-file")
-  (delete-file "tmp/messages")
-  )
 
 (describe "The Migrator"
   (with-stubs)
@@ -190,4 +190,19 @@
       (should= [] (read-string (slurp @config/tabs-list-filename)))
       )
     )
+
+  (context "migration 7 break message-file into daily files"
+    (it "breaks up message-file and deletes it"
+      (.mkdir (io/file "tmp/messages"))
+      (should (file-exists? @config/messages-directory))
+      (let [messages {1 {:id 1 :created-at 0}
+                      2 {:id 2 :created-at 86400}
+                      }]
+        (spit @config/messages-filename messages))
+      (migration-7-break-messages-into-daily-files)
+      (should (file-exists? (str @config/messages-directory "/" "0-01Jan70")))
+      (should (file-exists? (str @config/messages-directory "/" "1-02Jan70")))
+      (should= [{:id 1 :created-at 0}] (read-string (slurp (str @config/messages-directory "/0-01Jan70"))))
+      (should= [{:id 2 :created-at 86400}] (read-string (slurp (str @config/messages-directory "/1-02Jan70"))))
+      (should-not (file-exists? @config/messages-filename))))
   )

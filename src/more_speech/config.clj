@@ -8,7 +8,7 @@
 
 (def days-to-read 10) ;how many daily memssage files to read in.
 
-(def migration-level 6)
+(def migration-level 7)
 
 (def test-run? false)
 ;---configuration files

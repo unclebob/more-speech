@@ -117,8 +117,8 @@
         last-file-name (last file-names)
         first-time (time-from-file-name first-file-name)
         last-time (time-from-file-name last-file-name)
-        now (/ (System/currentTimeMillis) 1000)
-        last-time (if (nil? last-time) now last-time)
+        now (quot (System/currentTimeMillis) 1000)
+        last-time (if (nil? last-time) (- now 86400) last-time)
         first-time (if (nil? first-time) now first-time)]
     (doseq [file-name file-names]
       (prn 'reading file-name)

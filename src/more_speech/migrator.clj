@@ -5,7 +5,9 @@
             [more-speech.config :as config]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.elliptic-signature :as ecc]
-            [more-speech.nostr.events :as events])
+            [more-speech.nostr.events :as events]
+            [more-speech.data-storage :as data-storage]
+            [more-speech.data-storage :as data-storage])
   (:import (java.security SecureRandom)))
 
 (defn file-exists? [fname]
@@ -97,6 +99,15 @@
     (spit @config/tabs-list-filename []))
   (delete-file @config/tabs-filename))
 
+;--- Migration 7 break messages into daily files ---
+
+(defn migration-7-break-messages-into-daily-files []
+  (let [messages (read-string (slurp @config/messages-filename))
+        partitions (data-storage/partition-messages-by-day messages)]
+    (data-storage/write-messages-by-day partitions)
+    (delete-file @config/messages-filename)
+    )
+  )
 
 ;---------- The Migrations List -------
 
@@ -106,6 +117,7 @@
                        4 migration-4-add-profiles-and-load-with-nicknames
                        5 migration-5-remove-nicknames
                        6 migration-6-reformat-tabs
+                       7 migration-7-break-messages-into-daily-files
                        }))
 
 ;--------------------------------------
