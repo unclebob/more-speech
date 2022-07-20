@@ -47,15 +47,20 @@
         (prn (.toString buffer))))
     (.delete buffer 0 (.length buffer))))
 
+(defn compute-id [event]
+  (util/bytes->num
+    (events/make-id
+      {:pubkey (get event "pubkey")
+       :created_at (get event "created_at")
+       :kind (get event "kind")
+       :tags (get event "tags")
+       :content (get event "content")})))
+
 (defn record-and-display-event [_agent event-context envelope url]
   (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
         event (events/translate-event inner-event)
-        computed-id (util/bytes->num (events/make-id {:pubkey (get inner-event "pubkey")
-                                                      :created_at (get inner-event "created_at")
-                                                      :kind (get inner-event "kind")
-                                                      :tags (get inner-event "tags")
-                                                      :content (get inner-event "content")}))
         id (:id event)
+        computed-id (compute-id inner-event)
         ui-handler (:event-handler @event-context)
         dup? (contains? (:text-event-map @event-context) id)]
     (if (= id computed-id)
@@ -92,9 +97,13 @@
     (let [client (HttpClient/newHttpClient)
           cl (.newWebSocketBuilder client)
           cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) event-context url))
-          ws (.get cws)
-          ]
-      ws)
+          wsf (future (.get cws))
+          ws (deref wsf 1000 :time-out)]
+      (if (= ws :time-out)
+        (do
+          (prn 'connection-time-out url)
+          nil)
+        ws))
     (catch Exception e
       (prn 'connect-to-relay-failed url (:reason e))
       nil))
@@ -109,8 +118,14 @@
 
 (defn connect-to-relays [event-context]
   (doseq [url (keys @relays)]
-    (let [connection (connect-to-relay url event-context)]
-      (swap! relays assoc-in [url :connection] connection))))
+    (let [relay (get @relays url)
+          should-connect? (or (:read relay) (:write relay))
+          connection (if should-connect?
+                       (connect-to-relay url event-context)
+                       nil)]
+      (when (some? connection)
+        (swap! relays assoc-in [url :connection] connection))))
+  (prn 'relay-connection-attempts-complete))
 
 (defn subscribe-to-relays [id subscription-time]
   (let [date (- subscription-time 100)]

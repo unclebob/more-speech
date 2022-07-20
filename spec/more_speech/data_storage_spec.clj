@@ -37,7 +37,8 @@
     (it "should get the time from a file name"
       (should= 0 (time-from-file-name "0-01Jan70"))
       (should= (* 86400 19192) (time-from-file-name "19192-19Jul22"))
-      (should-be-nil (time-from-file-name "bad-file-name"))))
+      (should-be-nil (time-from-file-name "bad-file-name"))
+      (should-be-nil (time-from-file-name nil))))
 
   (context "is-message-file?"
     (it "recognizes message files by name"

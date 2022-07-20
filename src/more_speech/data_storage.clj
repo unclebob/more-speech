@@ -72,11 +72,12 @@
 (defn write-messages-by-day
   ([]
    (let [event-context (:event-context @ui-context)
-         message-map (:text-event-map @event-context)]
-     (write-messages-by-day message-map)))
+         message-map (:text-event-map @event-context)
+         daily-partitions (partition-messages-by-day message-map)]
+     (write-messages-by-day daily-partitions)))
 
-  ([message-map]
-   (let [daily-partitions (partition-messages-by-day message-map)]
+  ([daily-partitions]
+   (let []
      (doseq [day-partition daily-partitions]
        (let [file-name (file-name-from-day (first day-partition))]
          (prn 'writing file-name)
@@ -85,12 +86,22 @@
                  (clojure.pprint/pprint
                    (second day-partition)))))))))
 
+(defn write-changed-days [event-context]
+  (let [days-changed (:days-changed @event-context)
+        first-day-loaded (quot (:earliest-loaded-time @event-context) 86400)
+        days-to-write (set (filter #(>= % first-day-loaded) days-changed))
+        daily-partitions (partition-messages-by-day (:text-event-map @event-context))
+        changed-partitions (filter #(contains? days-to-write (first %)) daily-partitions)]
+    (write-messages-by-day changed-partitions)))
+
 (defn time-from-file-name [file-name]
-  (try
-    (let [parts (string/split file-name #"\-")]
-      (* 86400 (Integer/parseInt (first parts))))
-    (catch Exception _e
-      nil))
+  (if (nil? file-name)
+    nil
+    (try
+      (let [parts (string/split file-name #"\-")]
+        (* 86400 (Integer/parseInt (first parts))))
+      (catch Exception _e
+        nil)))
   )
 
 (defn is-message-file? [file-name]
@@ -102,14 +113,17 @@
         file-names (for [file files] (.getName file))
         file-names (filter is-message-file? file-names)
         file-names (take-last n (sort file-names))
+        first-file-name (first file-names)
         last-file-name (last file-names)
+        first-time (time-from-file-name first-file-name)
         last-time (time-from-file-name last-file-name)
-        last-time (if (nil? last-time)
-                    (/ (System/currentTimeMillis) 1000)
-                    last-time)]
+        now (/ (System/currentTimeMillis) 1000)
+        last-time (if (nil? last-time) now last-time)
+        first-time (if (nil? first-time) now first-time)]
     (doseq [file-name file-names]
       (prn 'reading file-name)
       (let [old-events (read-string (slurp (str @config/messages-directory "/" file-name)))]
         (load-events old-events event-context handler)))
+    (swap! event-context assoc :days-changed #{} :earliest-loaded-time first-time)
     last-time))
 

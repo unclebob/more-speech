@@ -219,6 +219,7 @@
           (assoc-in [:text-event-map id] event)
           (assoc-in [:text-event-map id :relays] [url])
           (update-in [:chronological-text-events] conj [id time])
+          (update :days-changed conj (quot time 86400))
           (process-references event)))))
 
 (defn process-text-event [event-state event url]
