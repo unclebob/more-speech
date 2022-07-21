@@ -6,7 +6,7 @@
 
 (def article-width 120)
 
-(def days-to-read 10) ;how many daily memssage files to read in.
+(def days-to-read 10) ;how many daily message files to read in.
 
 (def migration-level 7)
 

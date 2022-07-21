@@ -3,7 +3,8 @@
             [clojure.core.async :as async]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :refer [relays]]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [clojure.stacktrace :as st])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
@@ -57,19 +58,24 @@
        :content (get event "content")})))
 
 (defn record-and-display-event [_agent event-context envelope url]
-  (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
-        event (events/translate-event inner-event)
-        id (:id event)
-        computed-id (compute-id inner-event)
-        ui-handler (:event-handler @event-context)
-        dup? (contains? (:text-event-map @event-context) id)]
-    (if (= id computed-id)
-      (do
-        (swap! event-context events/process-event event url)
-        (when (and (not dup?) (= (:kind event) 1))
-          (events/handle-text-event ui-handler event)
-          ))
-      (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)
+  (try
+    (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
+          event (events/translate-event inner-event)
+          id (:id event)
+          computed-id (compute-id inner-event)
+          ui-handler (:event-handler @event-context)
+          dup? (contains? (:text-event-map @event-context) id)]
+      (if (= id computed-id)
+        (do
+          (swap! event-context events/process-event event url)
+          (when (and (not dup?) (= (:kind event) 1))
+            (events/handle-text-event ui-handler event)
+            ))
+        (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)
+        ))
+    (catch Exception e
+      (do (prn `record-and-display-event url (.getMessage e))
+          (st/print-stack-trace e))
       )))
 
 (defrecord listener [buffer event-context url]
@@ -161,7 +167,8 @@
 
 (defn get-events [event-context subscription-time]
   (let [id "more-speech"
-        event-handler (:event-handler @event-context)]
+        event-handler (:event-handler @event-context)
+        _ (prn 'get-events 'event-handler event-handler)]
     (connect-to-relays event-context)
     (subscribe-to-relays id subscription-time)
     (events/update-relay-panel event-handler)

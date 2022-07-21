@@ -147,12 +147,13 @@
   (map process-tag tags))
 
 (defn get-unmarked-references [e-tags]
-  (let [refs (map second e-tags)
-        refs (map hex-string->num refs)
-        root (if (empty? refs) nil (first refs))
-        referent (last refs)
-        mentions (drop-last (rest refs))]
-    [root mentions referent]))
+    (let [refs (map second e-tags)
+          refs (map hex-string->num refs)
+          root (if (empty? refs) nil (first refs))
+          referent (last refs)
+          mentions (drop-last (rest refs))]
+      [root mentions referent])
+    )
 
 (defn get-marked-references [e-tags]
   (loop [tags e-tags
@@ -179,12 +180,16 @@
   mentions is a list of cited ids.
   (See NIP-10)"
   [event]
-  (let [tags (:tags event)
-        e-tags (filter #(= :e (first %)) tags)
-        markers (set (map #(nth % 3) (filter #(>= (count %) 4) e-tags)))]
-    (if (contains? markers "reply")
-      (get-marked-references e-tags)
-      (get-unmarked-references e-tags))))
+  (try
+    (let [tags (:tags event)
+          e-tags (filter #(= :e (first %)) tags)
+          markers (set (map #(nth % 3) (filter #(>= (count %) 4) e-tags)))]
+      (if (contains? markers "reply")
+        (get-marked-references e-tags)
+        (get-unmarked-references e-tags)))
+    (catch Exception e
+      (prn 'get-references 'bad-tags-in-event (.getMessage e) event)
+      [nil nil nil])))
 
 (defn process-references [state event]
   (let [[_ _ referent] (get-references event)]
