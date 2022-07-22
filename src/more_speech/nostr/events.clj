@@ -301,7 +301,7 @@
          tags (concat (make-event-reference-tags reply-to-or-nil root)
                       (make-people-reference-tags event-state pubkey reply-to-or-nil)
                       (make-subject-tag subject)
-                      [[:client "more-speech"]])
+                      [[:client (str "more-speech - " config/version)]])
          [content tags] (emplace-references text tags)
          body {:kind 1
                :tags tags

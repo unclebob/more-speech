@@ -6,7 +6,8 @@
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.relay-panel :as relay-panel]
             [more-speech.ui.swing.tabs :as tabs]
-            [more-speech.ui.swing.ui-context :refer :all])
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.config :as config])
   (:use [seesaw core])
   (:import (javax.swing Timer)
            (javax.swing.event HyperlinkEvent$EventType)))
@@ -31,7 +32,9 @@
          (browse/browse-url (.getURL e))))
 
 (defn make-main-window []
-  (let [main-frame (frame :title "More Speech" :size [1500 :by 1000])
+  (let [event-context @(:event-context @ui-context)
+        title (str "More-Speech:" (:name (:keys event-context)) " - " config/version)
+        main-frame (frame :title title :size [1500 :by 1000])
         _ (swap! ui-context assoc :frame main-frame)
         article-area (article-panel/make-article-area)
         _ (listen article-area :hyperlink open-link)

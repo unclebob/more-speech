@@ -124,6 +124,12 @@
     )
   )
 
+(defn have-client-tag? [tags]
+  (let [[[tag-id tag-content]] tags]
+    (and
+      (= tag-id :client)
+      (re-matches #"more\-speech \- \d+" tag-content))))
+
 (describe "Composing outgoing events"
   (context "composing metadata (kind:0) messages"
     (it "composes using the keys data structure"
@@ -164,7 +170,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:client "more-speech"]] tags)
+        (should (have-client-tag? tags))
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -183,7 +189,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:subject "subject"] [:client "more-speech"]] tags)
+        (should= [[:subject "subject"]] (drop-last tags))
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -207,8 +213,7 @@
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
         (should= [[:e root-id-hex "" "reply"]
-                  [:p (hexify root-author)]
-                  [:client "more-speech"]] tags)
+                  [:p (hexify root-author)]] (drop-last tags))
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -240,8 +245,7 @@
         (should= [[:e root-id-hex "" "root"]
                   [:e root-child-id-hex "" "reply"]
                   [:p (hexify root-child-author)]
-                  [:p (hexify root-author)]
-                  [:client "more-speech"]] tags)
+                  [:p (hexify root-author)]] (drop-last tags))
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -260,8 +264,7 @@
             {:keys [tags]} (second event)]
 
         (should= [[:e root-id-hex "" "reply"]
-                  [:p (hexify root-author)]
-                  [:client "more-speech"]] tags)))
+                  [:p (hexify root-author)]] (drop-last tags))))
 
     (it "composes a message with a slash."
       (let [private-key (num->bytes 64 42)
@@ -275,7 +278,7 @@
         (should= (bytes->hex-string public-key) pubkey)
         (should (<= 0 (- now created_at) 1))                ;within one second.
         (should= 1 kind)
-        (should= [[:client "more-speech"]] tags)
+        (should (have-client-tag? tags))
         (should= text content)
         (should (do-verify (hex-string->bytes id)
                            public-key
@@ -366,7 +369,7 @@
             user-id-1 99
             user-id-2 88
             profiles {user-id-1 {:name "user-1"}
-                       user-id-2 {:name "user-2"}}
+                      user-id-2 {:name "user-2"}}
             event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             content "hello @user-1 and @user-2."]
@@ -380,7 +383,7 @@
             user-id-1 99
             user-id-2 88
             profiles {user-id-1 {:name "user-1"}
-                       user-id-2 {:name "user-2"}}
+                      user-id-2 {:name "user-2"}}
             event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             content "hello @user-3."]
