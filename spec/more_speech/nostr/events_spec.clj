@@ -158,8 +158,9 @@
   (context "composing Text (kind 1) messages"
     (it "composes an original message with no subject."
       (let [private-key (num->bytes 64 314159)
-            event-state {:keys {:private-key (bytes->hex-string private-key)}}
             public-key (get-pub-key private-key)
+            event-state {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}}
             text "message text"
             subject ""
             event (compose-text-event event-state subject text)
@@ -177,8 +178,9 @@
 
     (it "composes an original message with a subject."
       (let [private-key (num->bytes 64 314159)
-            event-state {:keys {:private-key (bytes->hex-string private-key)}}
             public-key (get-pub-key private-key)
+            event-state {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}}
             text "message text"
             subject "subject"
             event (compose-text-event event-state subject text)
@@ -196,13 +198,14 @@
 
     (it "composes a reply to a root article."
       (let [private-key (num->bytes 64 42)
+            public-key (get-pub-key private-key)
             root-id 7734
             root-id-hex (hexify root-id)
             root-author 99
-            event-state {:keys {:private-key (bytes->hex-string private-key)}
+            event-state {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}
                          :text-event-map {root-id {:pubkey root-author
                                                    :tags []}}}
-            public-key (get-pub-key private-key)
             text "message text"
             event (compose-text-event event-state "" text root-id)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -220,19 +223,20 @@
 
     (it "composes a reply to a non-root article."
       (let [private-key (num->bytes 64 42)
+            public-key (get-pub-key private-key)
             root-child-id 7734
             root-child-id-hex (hexify root-child-id)
             root-child-author 88
             root-id 1952
             root-id-hex (hexify root-id)
             root-author 99
-            event-state {:keys {:private-key (bytes->hex-string private-key)}
+            event-state {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}
                          :text-event-map {root-child-id {:pubkey root-child-author
                                                          :tags [[:e root-id-hex]
                                                                 [:p (hexify root-author)]]}
                                           root-id {:pubkey root-author
                                                    :tags []}}}
-            public-key (get-pub-key private-key)
             text "message text"
             event (compose-text-event event-state "" text root-child-id)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -252,11 +256,13 @@
 
     (it "author is removed from replies"
       (let [private-key (num->bytes 64 42)
-            author (bytes->num (get-pub-key private-key))
+            public-key (get-pub-key private-key)
+            author (bytes->num public-key)
             root-id 7734
             root-id-hex (hexify root-id)
             root-author 99
-            event-state {:keys {:private-key (bytes->hex-string private-key)}
+            event-state {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}
                          :text-event-map {root-id {:pubkey root-author
                                                    :tags [[:p (hexify author)]]}}}
             event (compose-text-event event-state "" "message" root-id)
@@ -267,8 +273,9 @@
 
     (it "composes a message with a slash."
       (let [private-key (num->bytes 64 42)
-            event-state {:keys {:private-key (bytes->hex-string private-key)}}
             public-key (get-pub-key private-key)
+            event-state {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}}
             text "message/text"
             event (compose-text-event event-state "" text)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
