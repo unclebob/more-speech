@@ -259,7 +259,7 @@
   [event-state body]
   (let [keys (:keys event-state)
         private-key (util/hex-string->bytes (:private-key keys))
-        pubkey (ecc/get-pub-key private-key)
+        pubkey (util/hex-string->bytes (:public-key keys))
         now (quot (System/currentTimeMillis) 1000)
         body (assoc body :pubkey (util/bytes->hex-string pubkey)
                          :created_at now)
@@ -294,9 +294,7 @@
    (compose-text-event event-state subject text nil))
 
   ([event-state subject text reply-to-or-nil]
-   (let [private-key (get-in event-state [:keys :private-key])
-         private-key (util/hex-string->bytes private-key)
-         pubkey (ecc/get-pub-key private-key)
+   (let [pubkey (util/hex-string->bytes (get-in event-state [:keys :public-key]))
          root (get-reply-root event-state reply-to-or-nil)
          tags (concat (make-event-reference-tags reply-to-or-nil root)
                       (make-people-reference-tags event-state pubkey reply-to-or-nil)
