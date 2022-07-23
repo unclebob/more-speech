@@ -27,4 +27,3 @@
 
 (def user-name-pattern #"\@[\w\-]+")
 (def user-name-chars #"[\w\-]+")
-(def user-name-max-length 15)

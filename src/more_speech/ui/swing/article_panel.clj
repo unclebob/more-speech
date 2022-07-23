@@ -107,7 +107,7 @@
     (text! article-area (formatters/reformat-article
                           (formatters/replace-references event)))
     (text! (select main-frame [:#author-name-label])
-           (formatters/format-user-id (:pubkey event)))
+           (formatters/format-user-id (:pubkey event) 50))
     (text! (select main-frame [:#author-id-label])
            (util/num32->hex-string (:pubkey event)))
     (text! (select main-frame [:#created-time-label])

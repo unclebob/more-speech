@@ -120,14 +120,14 @@
 (defn process-like [event-state _event]
   event-state)
 
-(declare fix-name)
+(declare fix-name add-suffix-for-duplicate)
 (defn process-name-event [event-state {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
     (let [profile (json/read-str content)
           name (get profile "name" "tilt")
           about (get profile "about" "")
           picture (get profile "picture" "")
-          name (fix-name name)]
+          name (add-suffix-for-duplicate pubkey (fix-name name))]
       (-> event-state
           (update-in [:profiles] assoc pubkey {:name name
                                                :about about
@@ -410,16 +410,22 @@
             (first pair)
             (recur (rest pairs))))))))
 
+(defn add-suffix-for-duplicate [pubkey name]
+  (let [profiles (:profiles @(:event-context @ui-context))
+        others-profiles (dissoc profiles pubkey)
+        profile-vals (vals others-profiles)
+        dups (filter #(= name (:name %)) profile-vals)]
+    (if (empty? dups)
+      name
+      (str name (rand-int 1000)))))
+
 (defn fix-name [name]
   (if (empty? name)
-    (str "dud-" (rand-int 100000))
+    (str "dud-" (rand-int 1000000))
     (let [fixed-name (apply str
                             (filter
                               #(re-matches config/user-name-chars (str %))
-                              name))
-          fixed-name (if (> (count fixed-name) config/user-name-max-length)
-                       (subs fixed-name 0 config/user-name-max-length)
-                       fixed-name)]
+                              name))]
       (if (empty? fixed-name)
         (str "dudx-" (rand-int 100000))
         fixed-name))))

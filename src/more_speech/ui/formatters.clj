@@ -28,32 +28,16 @@
         lines (map #(str ">" %) lines)]
     (string/join "\n" lines)))
 
-;(defn reformat-article [article width]
-;  (let [first-line-end (.indexOf article "\n")
-;        reply-line? (and (> first-line-end 0) (= \> (first article)))
-;        blank-line (.lastIndexOf article "\n\n" width)
-;        indentation (.indexOf article "\n ")
-;        breakable-space (.lastIndexOf article " " width)
-;        [break-point break-string skip]
-;        (cond
-;          reply-line? [first-line-end "\n" 1]
-;          (< -1 indentation width) [indentation "\n " 2]
-;          (>= blank-line 0) [blank-line "\n\n" 2]
-;          (<= (count article) width) [(count article) "" 0]
-;          (>= breakable-space 0) [breakable-space "\n" 1]
-;          :else [width "\n" 0])]
-;    (let [head (.substring article 0 break-point)
-;          head (.replaceAll head "\n" " ")
-;          tail (.substring article (+ skip break-point))]
-;      (if (empty? tail)
-;        head
-;        (str head break-string (reformat-article tail width))))))
+(defn format-user-id
+  ([user-id]
+   (format-user-id user-id 20))
 
-(defn format-user-id [user-id]
-  (let [profiles (:profiles @(:event-context @ui-context))]
-    (if (nil? user-id)
-      ""
-      (abbreviate (get-in profiles [user-id :name] (util/num32->hex-string user-id)) 20))))
+  ([user-id length]
+   (let [profiles (:profiles @(:event-context @ui-context))]
+     (if (nil? user-id)
+       ""
+       (abbreviate (get-in profiles [user-id :name] (util/num32->hex-string user-id)) length))))
+  )
 
 (declare get-subject
          replace-references)
@@ -136,7 +120,7 @@
 (def url-pattern #"(?i)\b(?:(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\))+(?:\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))")
 
 (defn linkify [url]
-   (str "<a href=\"" url "\">" url "</a>"))
+  (str "<a href=\"" url "\">" url "</a>"))
 
 (defn segment-text-url [content]
   (let [url (re-find url-pattern content)]
@@ -159,11 +143,11 @@
   (let [segments (segment-text-url article)]
     (reduce
       (fn [formatted-content [seg-type seg]]
-          (cond
-            (= seg-type :text)
-            (str formatted-content
-                 ((comp break-newlines html-escape format-replies) seg))
-            (= seg-type :url)
-            (str formatted-content (linkify seg))))
+        (cond
+          (= seg-type :text)
+          (str formatted-content
+               ((comp break-newlines html-escape format-replies) seg))
+          (= seg-type :url)
+          (str formatted-content (linkify seg))))
       ""
       segments)))

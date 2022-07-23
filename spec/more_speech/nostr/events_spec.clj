@@ -3,8 +3,7 @@
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.config :as config]))
+            [more-speech.ui.swing.ui-context :refer :all]))
 
 (defrecord event-handler-dummy []
   event-handler
@@ -398,17 +397,24 @@
     (should= "badname" (fix-name "bad name"))
     (should= "badname" (fix-name "bad.name")))
 
-  (it "should trim names to max length"
-    (let [bad-name (apply str (repeat (inc config/user-name-max-length) \x))
-          expected-name (apply str (repeat config/user-name-max-length \x))]
-      (should= expected-name (fix-name bad-name)))
-    )
-
   (it "should create a random name for nils and empties"
     (with-redefs [rand-int (fn [_n] 12)]
-      (should= "dud-12" (fix-name ""))
-      )
-    )
+      (should= "dud-12" (fix-name ""))))
+
+  (it "should put a suffix on duplicate names."
+    (let [profiles {1 {:name "unclebob"}}
+          event-context (atom {:profiles profiles})]
+      (reset! ui-context {:event-context event-context})
+      (let [new-name (add-suffix-for-duplicate 2 "unclebob")]
+        (prn new-name)
+        (should (re-matches #"unclebob\d+" new-name)))))
+
+  (it "should put not put a suffix on previously existing names."
+    (let [profiles {1 {:name "unclebob"}}
+          event-context (atom {:profiles profiles})]
+      (reset! ui-context {:event-context event-context})
+      (let [new-name (add-suffix-for-duplicate 1 "unclebob")]
+        (should= "unclebob" new-name))))
   )
 
 (describe "process-name-event"
