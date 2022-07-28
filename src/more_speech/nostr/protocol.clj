@@ -152,7 +152,8 @@
         send-connections (filter some? send-connections)]
     (loop [[type msg] (async/<!! send-chan)]
       (condp = type
-        :closed nil
+        :closed :quit
+        :relaunch :relaunch
         :event
         (do
           (doseq [send-connection send-connections] (send-to send-connection msg))
@@ -167,14 +168,14 @@
 
 (defn get-events [event-context subscription-time]
   (let [id "more-speech"
-        event-handler (:event-handler @event-context)
-        _ (prn 'get-events 'event-handler event-handler)]
+        event-handler (:event-handler @event-context)]
     (connect-to-relays event-context)
     (subscribe-to-relays id subscription-time)
     (events/update-relay-panel event-handler)
     (future (events/compose-and-send-metadata-event @event-context))
-    (process-send-channel event-context)
-    (unsubscribe-from-relays id))
-  (Thread/sleep 100)
-  (prn 'done)
+    (let [exit-condition (process-send-channel event-context)]
+      (unsubscribe-from-relays id)
+      (Thread/sleep 100)
+      (prn 'done)
+      exit-condition))
   )

@@ -7,7 +7,8 @@
     [more-speech.ui.swing.article-panel :as article-panel]
     [more-speech.ui.swing.ui-context :refer :all]
     [clojure.set :as set]
-    [more-speech.nostr.util :as util])
+    [more-speech.nostr.util :as util]
+    [more-speech.ui.swing.util :as swing-util])
   (:use [seesaw core font tree])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -39,33 +40,51 @@
           event-map (:text-event-map @event-context)
           event (get event-map event-id)
           public-key (:pubkey event)
-          tab-names (remove #(= "all" %) (map :name (:tabs-list @event-context)))
+          tab-names (vec (remove #(= "all" %) (map :name (:tabs-list @event-context))))
+          tab-names (conj tab-names "<new-tab>")
           add-author-actions (map #(action :name % :handler (partial add-author-to-tab public-key %)) tab-names)
           block-author-actions (map #(action :name % :handler (partial block-author-from-tab public-key %)) tab-names)
           add-article-actions (map #(action :name % :handler (partial add-article-to-tab event-id %)) tab-names)
           block-article-actions (map #(action :name % :handler (partial block-article-from-tab event-id %)) tab-names)
           p (popup :items [(action :name "Get info..."
                                    :handler (partial get-info event))
-                           ;(menu :text "Add author to tab" :items add-author-actions)
-                           ;(menu :text "Block author from tab" :items block-author-actions)
-                           ;(menu :text "Add article to tab" :items add-article-actions)
-                           ;(menu :text "Block article from tab" :items block-article-actions)
+                           (menu :text "Add author to tab" :items add-author-actions)
+                           (menu :text "Block author from tab" :items block-author-actions)
+                           (menu :text "Add article to tab" :items add-article-actions)
+                           (menu :text "Block article from tab" :items block-article-actions)
                            ])]
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))
     ))
 
-(defn add-author-to-tab [public-key tab-name e]
-  (prn 'add-author-to-tab tab-name (util/num32->hex-string public-key) e))
+(defn if-new-tab [tab-name]
+  (if (= tab-name "<new-tab>")
+    (let [new-tab-name (input "New tab name:")
+          new-tab-name (swing-util/unduplicate-tab-name new-tab-name)]
+      (if (seq new-tab-name)
+        (do (swing-util/add-tab-to-tabs-list new-tab-name)
+            new-tab-name)
+        nil))
+    tab-name))
 
-(defn block-author-from-tab [public-key tab-name e]
-  (prn 'block-author-from-tab tab-name (util/num32->hex-string public-key) e))
+(defn add-author-to-tab [public-key tab-name _e]
+  (when-let [tab-name (if-new-tab tab-name)]
+    (swing-util/add-id-to-tab tab-name :selected public-key)
+    (swing-util/relaunch)))
 
-(defn add-article-to-tab [event-id tab-name e]
-  (prn 'add-article-to-tab tab-name (util/num32->hex-string event-id) e))
+(defn block-author-from-tab [public-key tab-name _e]
+  (when-let [tab-name (if-new-tab tab-name)]
+    (swing-util/add-id-to-tab tab-name :blocked public-key)
+    (swing-util/relaunch)))
 
-(defn block-article-from-tab [event-id tab-name e]
-  (prn 'block-article-from-tab tab-name (util/num32->hex-string event-id) e))
+(defn add-article-to-tab [event-id tab-name _e]
+  (when-let [tab-name (if-new-tab tab-name)]
+    (swing-util/add-id-to-tab tab-name :selected event-id)
+    (swing-util/relaunch)))
 
+(defn block-article-from-tab [event-id tab-name _e]
+  (when-let [tab-name (if-new-tab tab-name)]
+    (swing-util/add-id-to-tab tab-name :blocked event-id)
+    (swing-util/relaunch)))
 
 (defn get-info [event _e]
   (alert

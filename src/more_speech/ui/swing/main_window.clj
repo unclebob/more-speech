@@ -57,7 +57,7 @@
               (.stop timer)
               (let [event-context (:event-context @ui-context)
                     send-chan (:send-chan @event-context)]
-                (async/>!! send-chan [:closed]))
+                (future (async/>!! send-chan [:closed])))
               (.dispose main-frame)))
     (show! main-frame)
     (.start timer)))

@@ -1,5 +1,6 @@
 (ns more-speech.ui.swing.util
-  (:require [more-speech.ui.swing.ui-context :refer :all])
+  (:require [more-speech.ui.swing.ui-context :refer :all]
+            [clojure.core.async :as async])
   (:use [seesaw core]))
 
 (defn clear-popup [popup]
@@ -38,8 +39,52 @@
 
       :else
       (recur (rest tabs-list)
-             (conj new-tabs-list (first tabs-list)))
-      ))
-  )
+             (conj new-tabs-list (first tabs-list))))))
+
+(defn delete-tab-from-tabs-list [tab-name]
+  (loop [tabs-list (:tabs-list @(:event-context @ui-context))
+         new-tabs-list []]
+    (cond
+      (empty? tabs-list)
+      (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)
+
+      (= tab-name (:name (first tabs-list)))
+      (recur (rest tabs-list) new-tabs-list)
+
+      :else
+      (recur (rest tabs-list)
+             (conj new-tabs-list (first tabs-list))))))
+
+(defn add-tab-to-tabs-list [tab-name]
+  (let [tabs-list (:tabs-list @(:event-context @ui-context))
+        new-tabs-list (conj tabs-list {:name tab-name :selected [] :blocked []})]
+    (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)))
+
+
+(defn add-id-to-tab [tab-name key id]
+  (loop [tabs-list (:tabs-list @(:event-context @ui-context))
+           new-tabs-list []]
+      (cond
+        (empty? tabs-list)
+        (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)
+
+        (= tab-name (:name (first tabs-list)))
+        (let [tab-descriptor (first tabs-list)
+              id-list (get tab-descriptor key [])
+              id-list (conj id-list id)]
+        (recur (rest tabs-list) (conj new-tabs-list (assoc tab-descriptor key id-list))))
+
+        :else
+        (recur (rest tabs-list)
+               (conj new-tabs-list (first tabs-list))))))
+
+(defn unduplicate-tab-name [tab-name]
+  (if (some? (get-tab-index tab-name))
+    (str tab-name "-" (rand-int 1000000))
+    tab-name))
+
+(defn relaunch []
+  (let [send-chan (:send-chan @(:event-context @ui-context))]
+    (future (async/>!! send-chan [:relaunch]))))
 
 
