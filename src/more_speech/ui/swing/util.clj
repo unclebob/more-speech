@@ -25,3 +25,21 @@
                     (get-tab-index tab-selector))]
     (selection! tabbed-panel tab-index)))
 
+(defn change-tabs-list-name [old-name new-name]
+  (loop [tabs-list (:tabs-list @(:event-context @ui-context))
+         new-tabs-list []]
+    (cond
+      (empty? tabs-list)
+      (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)
+
+      (= old-name (:name (first tabs-list)))
+      (recur (rest tabs-list)
+             (conj new-tabs-list (assoc (first tabs-list) :name new-name)))
+
+      :else
+      (recur (rest tabs-list)
+             (conj new-tabs-list (first tabs-list)))
+      ))
+  )
+
+

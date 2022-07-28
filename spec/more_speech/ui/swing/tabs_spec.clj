@@ -28,3 +28,21 @@
         (should= 1 (get-tab-index "tab1"))
         (should-be-nil (get-tab-index "tab2")))))
   )
+
+(context "change-tabs-list-name"
+  (it "changes tabs-list name if it exists"
+    (let [tabs-list [{:name "old-name"} {:name "some-name"}]
+          event-context (atom {:tabs-list tabs-list})]
+      (reset! ui-context {:event-context event-context})
+      (change-tabs-list-name "old-name" "new-name")
+      (should= [{:name "new-name"} {:name "some-name"}]
+               (:tabs-list @(:event-context @ui-context)))))
+
+  (it "changes does not change tabs-list name if it does not exist"
+      (let [tabs-list [{:name "old-name"} {:name "some-name"}]
+            event-context (atom {:tabs-list tabs-list})]
+        (reset! ui-context {:event-context event-context})
+        (change-tabs-list-name "bad-name" "new-name")
+        (should= [{:name "old-name"} {:name "some-name"}]
+                 (:tabs-list @(:event-context @ui-context)))))
+  )

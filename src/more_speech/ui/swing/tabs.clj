@@ -23,7 +23,7 @@
               _ (config! header-tree
                          :user-data tab-index
                          :id (keyword (str tab-index)))
-              tab-label (label :text tab-name)
+              tab-label (label :text tab-name :user-data tab-index)
               _ (listen tab-label :mouse-pressed tab-menu)
               tab-content (scrollable header-tree)
               tab-data {:title tab-label
@@ -35,23 +35,40 @@
 (defn tab-menu [e]
   (let [tab-label (.getComponent e)
         tab-name (config tab-label :text)
+        tab-index (config tab-label :user-data)
         isAll? (= "all" tab-name)
         p (popup :items [(action :name "Change name..."
-                                 :handler (partial change-tab-name tab-name)
+                                 :handler (partial change-tab-name tab-label)
                                  :enabled? (not isAll?))
                          (action :name "Delete"
-                                 :handler (partial delete-tab tab-name)
+                                 :handler (partial delete-tab tab-label)
                                  :enabled? (not isAll?))])]
     (if (.isPopupTrigger e)
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
-      (util/select-tab tab-name))
+      (util/select-tab tab-index))
     ))
 
-(defn change-tab-name [tab-name _e]
-  (prn 'change-tab-name tab-name))
+(defn change-tab-name [tab-label _e]
+  (let [tab-name (config tab-label :text)
+        new-name (input (format "rename %s to:" tab-name))
+        new-name (if (some? (util/get-tab-index new-name))
+                   (str new-name "-" (rand-int 1000000))
+                   new-name)
 
-(defn delete-tab [tab-name _e]
-  (prn 'delete-tab tab-name))
+        frame (:frame @ui-context)
+        tab-panel (select frame [:#header-tab-panel])
+        tab-index (config tab-label :user-data)]
+    (if (some? tab-index)
+      (let [label (.getTabComponentAt tab-panel tab-index)]
+        (config! label :text new-name)
+        (util/change-tabs-list-name tab-name new-name))
+      (prn 'bad-tab-name tab-name))
+    ))
+
+(defn delete-tab [tab-label _e]
+  (let [tab-name (config tab-label :text)]
+    (prn 'delete-tab tab-name)
+    (prn (confirm (format "NOT IMPLEMENTED: Confirm delete %s" tab-name)))))
 
 (defn ensure-tab-list-has-all [tab-list]
   (if (some #(= "all" (:name %)) tab-list)

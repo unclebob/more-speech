@@ -22,7 +22,12 @@
     (listen header-tree :mouse-pressed mouse-pressed)
     header-tree))
 
-(declare get-info)
+(declare get-info
+         add-author-to-tab
+         block-author-from-tab
+         add-article-to-tab
+         block-article-from-tab)
+
 
 (defn mouse-pressed [e]
   (when (.isPopupTrigger e)
@@ -33,10 +38,34 @@
           event-context (:event-context @ui-context)
           event-map (:text-event-map @event-context)
           event (get event-map event-id)
+          public-key (:pubkey event)
+          tab-names (remove #(= "all" %) (map :name (:tabs-list @event-context)))
+          add-author-actions (map #(action :name % :handler (partial add-author-to-tab public-key %)) tab-names)
+          block-author-actions (map #(action :name % :handler (partial block-author-from-tab public-key %)) tab-names)
+          add-article-actions (map #(action :name % :handler (partial add-article-to-tab event-id %)) tab-names)
+          block-article-actions (map #(action :name % :handler (partial block-article-from-tab event-id %)) tab-names)
           p (popup :items [(action :name "Get info..."
-                                   :handler (partial get-info event))])]
+                                   :handler (partial get-info event))
+                           ;(menu :text "Add author to tab" :items add-author-actions)
+                           ;(menu :text "Block author from tab" :items block-author-actions)
+                           ;(menu :text "Add article to tab" :items add-article-actions)
+                           ;(menu :text "Block article from tab" :items block-article-actions)
+                           ])]
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))
     ))
+
+(defn add-author-to-tab [public-key tab-name e]
+  (prn 'add-author-to-tab tab-name (util/num32->hex-string public-key) e))
+
+(defn block-author-from-tab [public-key tab-name e]
+  (prn 'block-author-from-tab tab-name (util/num32->hex-string public-key) e))
+
+(defn add-article-to-tab [event-id tab-name e]
+  (prn 'add-article-to-tab tab-name (util/num32->hex-string event-id) e))
+
+(defn block-article-from-tab [event-id tab-name e]
+  (prn 'block-article-from-tab tab-name (util/num32->hex-string event-id) e))
+
 
 (defn get-info [event _e]
   (alert

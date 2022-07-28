@@ -28,7 +28,7 @@
 (declare timer-action)
 
 (defn open-link [e]
-  (if (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
+  (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
          (browse/browse-url (.getURL e))))
 
 (defn make-main-window []

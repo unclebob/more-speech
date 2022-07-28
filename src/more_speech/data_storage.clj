@@ -19,7 +19,12 @@
             (clojure.pprint/pprint (:read-event-ids @event-context))))
     (spit @config/relays-filename
           (with-out-str
-            (clojure.pprint/pprint (relays/relays-for-writing))))))
+            (clojure.pprint/pprint (relays/relays-for-writing))))
+    (spit @config/tabs-list-filename
+              (with-out-str
+                (clojure.pprint/pprint (:tabs-list @event-context))))
+
+    ))
 
 (defn write-messages []
   (let [event-context (:event-context @ui-context)]
