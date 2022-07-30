@@ -109,6 +109,12 @@
     )
   )
 
+;--- Migration 8 user-configuration file ---
+
+(defn migration-8-user-configuration []
+  (spit @config/user-configuration-filename {})
+  )
+
 ;---------- The Migrations List -------
 
 (def migrations (atom {1 initial-migration
@@ -118,6 +124,7 @@
                        5 migration-5-remove-nicknames
                        6 migration-6-reformat-tabs
                        7 migration-7-break-messages-into-daily-files
+                       8 migration-8-user-configuration
                        }))
 
 ;--------------------------------------

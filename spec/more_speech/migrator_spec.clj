@@ -16,6 +16,7 @@
   (reset! config/tabs-list-filename "tmp/tabs-list")
   (reset! config/messages-directory "tmp/messages")
   (reset! config/messages-filename "tmp/messages/message-file")
+  (reset! config/user-configuration-filename "tmp/user-configuration")
   (.mkdir (io/file "tmp"))
   (prn 'changed-to-tmp)
   )
@@ -45,7 +46,9 @@
   (reset! config/tabs-filename "private/tabs")
   (reset! config/tabs-list-filename "private/tabs-list")
   (reset! config/messages-directory "private/messages")
-  (reset! config/messages-filename "private/messages/message-file"))
+  (reset! config/messages-filename "private/messages/message-file")
+  (reset! config/user-configuration-filename "private/user-configuration")
+  )
 
 (describe "The Migrator"
   (with-stubs)
@@ -205,4 +208,11 @@
       (should= [{:id 1 :created-at 0}] (read-string (slurp (str @config/messages-directory "/0-01Jan70"))))
       (should= [{:id 2 :created-at 86400}] (read-string (slurp (str @config/messages-directory "/1-02Jan70"))))
       (should-not (file-exists? @config/messages-filename))))
+
+  (context "migration 8 user configuration"
+    (it "creates an empty user-configuration file"
+      (migration-8-user-configuration)
+      (should (file-exists? @config/user-configuration-filename))
+      (should= {} (read-string (slurp @config/user-configuration-filename))))
+    )
   )

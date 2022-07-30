@@ -4,6 +4,7 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :as relays]
             [more-speech.ui.swing.tabs :as tabs]
+            [more-speech.user-configuration :as user-configuration]
             [clojure.string :as string])
   (:import (java.util Date TimeZone)
            (java.text SimpleDateFormat)))
@@ -23,7 +24,9 @@
     (spit @config/tabs-list-filename
               (with-out-str
                 (clojure.pprint/pprint (:tabs-list @event-context))))
-
+    (spit @config/user-configuration-filename
+              (with-out-str
+                (clojure.pprint/pprint (:user-configuration @event-context))))
     ))
 
 (defn write-messages []
@@ -38,10 +41,14 @@
         profiles (read-string (slurp @config/profiles-filename))
         tabs-list (tabs/ensure-tab-list-has-all
                     (read-string (slurp @config/tabs-list-filename)))
+        user-configuration (user-configuration/validate
+                             (read-string (slurp @config/user-configuration-filename)))
+
         event-context (events/make-event-context {:keys keys
                                                   :profiles profiles
                                                   :read-event-ids read-event-ids
                                                   :tabs-list tabs-list
+                                                  :user-configuration user-configuration
                                                   })]
     (swap! ui-context assoc :event-context event-context)
     (relays/load-relays-from-file @config/relays-filename)))
