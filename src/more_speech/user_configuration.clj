@@ -15,16 +15,17 @@
   (let [valid-config (validate-export-user-profile user-configuration)]
     valid-config))
 
+(defn keys-last-modified []
+  (let [keys-file (clojure.java.io/file @config/keys-filename)]
+    (quot (.lastModified keys-file) 1000)))
 
 (defn should-export? [now-in-seconds]
   (let [user-configuration (:user-configuration @(:event-context @ui-context))
         xad (get-in user-configuration [:export-user-profile :export-after-days])
-        lte (get-in user-configuration [:export-user-profile :last-time-exported])
-        export-after-seconds (* 86400 xad)
-        keys-file (clojure.java.io/file @config/keys-filename)
-        keys-last-modified (quot (.lastModified keys-file) 1000)]
-    (or (>= now-in-seconds (+ lte export-after-seconds))
-        (>= keys-last-modified lte)))
+        lte (get-in user-configuration [:export-user-profile :last-time-exported])]
+    (and (number? xad)
+         (or (>= now-in-seconds (+ lte (* 86400 xad)))
+             (>= (keys-last-modified) lte))))
   )
 
 (defn set-last-time-exported [export-time]
