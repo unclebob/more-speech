@@ -1,0 +1,38 @@
+name: Tests Runner
+
+on: [push, pull_request]
+
+jobs:
+
+  clojure:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macOS-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Prepare java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'adopt'
+          java-version: '17'
+
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@9.3
+        with:
+          lein: 2.9.8                  # Leiningen
+
+      - name: Run tests (Ubuntu, macOS)
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'macOS-latest'
+        run: |
+          export DISPLAY=:99
+          sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+          lein spec        
+
+      - name: Run tests (Windows)
+        if: matrix.os == 'windows-latest'
+        run: lein spec
+        continue-on-error: true
