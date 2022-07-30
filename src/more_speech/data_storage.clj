@@ -6,7 +6,7 @@
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.user-configuration :as user-configuration]
             [clojure.string :as string])
-  (:import (java.util Date TimeZone)
+  (:import (java.util Date TimeZone Locale)
            (java.text SimpleDateFormat)))
 
 
@@ -76,7 +76,7 @@
 (defn file-name-from-day [day]
   (let [time (* day 86400000)
         date (Date. (long time))
-        date-format (SimpleDateFormat. "ddMMMyy")]
+        date-format (SimpleDateFormat. "ddMMMyy" Locale/US)]
     (.setTimeZone date-format (TimeZone/getTimeZone "UTC"))
     (str day "-" (.format date-format date))
     ))
