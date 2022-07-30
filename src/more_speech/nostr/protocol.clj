@@ -4,6 +4,7 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :refer [relays]]
             [more-speech.nostr.util :as util]
+            [more-speech.user-configuration :as user-configuration]
             [clojure.stacktrace :as st])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
@@ -168,11 +169,16 @@
 
 (defn get-events [event-context subscription-time]
   (let [id "more-speech"
-        event-handler (:event-handler @event-context)]
+        event-handler (:event-handler @event-context)
+        now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (connect-to-relays event-context)
     (subscribe-to-relays id subscription-time)
     (events/update-relay-panel event-handler)
-    (future (events/compose-and-send-metadata-event @event-context))
+    (if (user-configuration/should-export? now-in-seconds)
+      (do
+        (user-configuration/set-last-time-exported now-in-seconds)
+        (future (events/compose-and-send-metadata-event @event-context)))
+      (println "Not time to export profile yet."))
     (let [exit-condition (process-send-channel event-context)]
       (unsubscribe-from-relays id)
       (Thread/sleep 100)

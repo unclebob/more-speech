@@ -2,7 +2,8 @@
   (:require [speclj.core :refer :all]
             [more-speech.migrator :refer :all]
             [more-speech.config :as config]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [more-speech.user-configuration :as user-configuration]))
 
 (defn change-to-tmp-files []
   (reset! config/private-directory "tmp")
@@ -210,9 +211,10 @@
       (should-not (file-exists? @config/messages-filename))))
 
   (context "migration 8 user configuration"
-    (it "creates an empty user-configuration file"
+    (it "creates a valid user-configuration file"
       (migration-8-user-configuration)
       (should (file-exists? @config/user-configuration-filename))
-      (should= {} (read-string (slurp @config/user-configuration-filename))))
+      (should= (user-configuration/validate {})
+               (read-string (slurp @config/user-configuration-filename))))
     )
   )

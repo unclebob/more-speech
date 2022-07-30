@@ -7,7 +7,8 @@
             [more-speech.nostr.elliptic-signature :as ecc]
             [more-speech.nostr.events :as events]
             [more-speech.data-storage :as data-storage]
-            [more-speech.data-storage :as data-storage])
+            [more-speech.data-storage :as data-storage]
+            [more-speech.user-configuration :as user-configuration])
   (:import (java.security SecureRandom)))
 
 (defn file-exists? [fname]
@@ -112,7 +113,9 @@
 ;--- Migration 8 user-configuration file ---
 
 (defn migration-8-user-configuration []
-  (spit @config/user-configuration-filename {})
+  (spit
+    @config/user-configuration-filename
+    (user-configuration/validate {}))
   )
 
 ;---------- The Migrations List -------
