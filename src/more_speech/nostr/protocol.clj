@@ -25,6 +25,11 @@
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date))
   )
 
+
+(defn request-metadata [^WebSocket conn id]
+  (send-to conn ["REQ" id {"kinds" [0] "since" 0}])
+  (.request conn 1))
+
 (defn subscribe
   ([conn id]
    (subscribe conn id (int (- (quot (System/currentTimeMillis) 1000) 86400))))
@@ -134,6 +139,16 @@
         (swap! relays assoc-in [url :connection] connection))))
   (prn 'relay-connection-attempts-complete))
 
+
+(defn request-metadata-from-relays [id]
+  (prn 'requesting-metadata)
+  (doseq [url (keys @relays)]
+    (let [conn (get-in @relays [url :connection])
+          read? (get-in @relays [url :read])]
+      (when (and read? (some? conn))
+        (unsubscribe conn id)
+        (request-metadata conn id)))))
+
 (defn subscribe-to-relays [id subscription-time]
   (let [date (- subscription-time 100)]
     (prn 'subscription-date date (format-time date))
@@ -168,19 +183,23 @@
         (close-connection conn id)))))
 
 (defn get-events [event-context subscription-time]
-  (let [id "more-speech"
+  (let [subscription-id "more-speech"
+        metadata-request-id "more-speech-metadata"
         event-handler (:event-handler @event-context)
         now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (connect-to-relays event-context)
-    (subscribe-to-relays id subscription-time)
+    (when (user-configuration/should-import-metadata? now-in-seconds)
+      (request-metadata-from-relays metadata-request-id)
+      (user-configuration/set-last-time-metadata-imported now-in-seconds))
+    (subscribe-to-relays subscription-id subscription-time)
     (events/update-relay-panel event-handler)
-    (if (user-configuration/should-export? now-in-seconds)
+    (if (user-configuration/should-export-profile? now-in-seconds)
       (do
-        (user-configuration/set-last-time-exported now-in-seconds)
+        (user-configuration/set-last-time-profile-exported now-in-seconds)
         (future (events/compose-and-send-metadata-event @event-context)))
       (println "Not time to export profile yet."))
     (let [exit-condition (process-send-channel event-context)]
-      (unsubscribe-from-relays id)
+      (unsubscribe-from-relays subscription-id)
       (Thread/sleep 100)
       (prn 'done)
       exit-condition))

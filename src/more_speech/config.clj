@@ -9,7 +9,7 @@
 (def days-to-read 10) ;how many daily message files to read in.
 
 (def migration-level 8)
-(def version "202207301434")
+(def version "202207310819")
 
 (def test-run? false)
 ;---configuration files
