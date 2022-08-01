@@ -1,4 +1,7 @@
-(ns more-speech.config)
+(ns more-speech.config
+  (:require [clojure.string :as string])
+  (:import (dev.dirs ProjectDirectories))
+  )
 
 (def default-font "COURIER-PLAIN-14")
 (def bold-font "COURIER-BOLD-14")
@@ -13,18 +16,18 @@
 
 (def test-run? false)
 ;---configuration files
-(def private-directory (atom "private"))
-(def migration-filename (atom "private/migration"))
-(def nicknames-filename (atom "private/nicknames")) ;grandfathered.
-(def profiles-filename (atom "private/profiles"))
-(def keys-filename (atom "private/keys"))
-(def relays-filename (atom "private/relays"))
-(def read-event-ids-filename (atom "private/read-event-ids"))
-(def tabs-filename (atom "private/tabs")) ;grandfathered.
-(def tabs-list-filename (atom "private/tabs-list"))
-(def messages-directory (atom "private/messages"))
-(def messages-filename (atom "private/messages/message-file"))
-(def user-configuration-filename (atom "private/user-configuration"))
+(def private-directory (atom (.-configDir (ProjectDirectories/from "org" "unclebob" "more-speech"))))
+(def migration-filename (atom (string/join "/" [@private-directory "migration"])))
+(def nicknames-filename (atom (string/join "/" [@private-directory "nicknames"]))) ;grandfathered.
+(def profiles-filename (atom (string/join "/" [@private-directory, "profiles"])))
+(def keys-filename (atom (string/join "/" [@private-directory, "keys"])))
+(def relays-filename (atom (string/join "/" [@private-directory, "relays"])))
+(def read-event-ids-filename (atom (string/join "/" [@private-directory, "read-event-ids"])))
+(def tabs-filename (atom (string/join "/" [@private-directory, "tabs"]))) ;grandfathered.
+(def tabs-list-filename (atom (string/join "/" [@private-directory, "tabs-list"])))
+(def messages-directory (atom (string/join "/" [@private-directory, "messages"])))
+(def messages-filename (atom (string/join "/" [@private-directory, "messages/message-file"])))
+(def user-configuration-filename (atom (string/join "/" [@private-directory, "user-configuration"])))
 
 (def user-name-pattern #"\@[\w\-]+")
 (def user-name-chars #"[\w\-]+")

@@ -8,6 +8,7 @@
                  [org.clojure/core.async "1.5.648"]
                  [clojure.java-time "0.3.3"]
                  [seesaw "1.5.0"]
+                 [dev.dirs/directories "26"]
                  ]
   :profiles {:dev {:dependencies [[speclj "3.4.1"]]}}
   :plugins [[speclj "3.4.1"]]
