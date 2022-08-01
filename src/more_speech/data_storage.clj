@@ -27,6 +27,9 @@
     (spit @config/user-configuration-filename
               (with-out-str
                 (clojure.pprint/pprint (:user-configuration @event-context))))
+    (spit @config/contact-lists-filename
+                  (with-out-str
+                    (clojure.pprint/pprint (:contact-lists @event-context))))
     ))
 
 (defn write-messages []
@@ -43,12 +46,14 @@
                     (read-string (slurp @config/tabs-list-filename)))
         user-configuration (user-configuration/validate
                              (read-string (slurp @config/user-configuration-filename)))
+        contact-lists (read-string (slurp @config/contact-lists-filename))
 
         event-context (events/make-event-context {:keys keys
                                                   :profiles profiles
                                                   :read-event-ids read-event-ids
                                                   :tabs-list tabs-list
                                                   :user-configuration user-configuration
+                                                  :contact-lists contact-lists
                                                   })]
     (swap! ui-context assoc :event-context event-context)
     (relays/load-relays-from-file @config/relays-filename)))

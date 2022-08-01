@@ -7,6 +7,7 @@
             [clojure.core.async :as async]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.relays :as relays]
+            [more-speech.nostr.contact-list :as contact-list]
             [clojure.string :as string]
             [more-speech.config :as config])
   (:import (java.nio.charset StandardCharsets)))
@@ -113,6 +114,7 @@
         0 (process-name-event event-state event)
         1 (process-text-event event-state event url)
         2 (process-server-recommendation event-state event)
+        3 (contact-list/process-contact-list event-state event url)
         7 (process-like event-state event)
         (do #_(prn "unknown event: " url event)
           event-state)))))

@@ -18,6 +18,7 @@
   (reset! config/messages-directory "tmp/messages")
   (reset! config/messages-filename "tmp/messages/message-file")
   (reset! config/user-configuration-filename "tmp/user-configuration")
+  (reset! config/contact-lists-filename "tmp/contact-lists")
   (.mkdir (io/file "tmp"))
   (prn 'changed-to-tmp)
   )
@@ -49,6 +50,7 @@
   (reset! config/messages-directory "private/messages")
   (reset! config/messages-filename "private/messages/message-file")
   (reset! config/user-configuration-filename "private/user-configuration")
+  (reset! config/contact-lists-filename "private/contact-lists")
   )
 
 (describe "The Migrator"
@@ -217,4 +219,10 @@
       (should= (user-configuration/validate {})
                (read-string (slurp @config/user-configuration-filename))))
     )
+
+  (context "migration 9 contact list"
+    (it "creates an empty contact-list file"
+      (migration-9-contact-lists)
+      (should (file-exists? @config/contact-lists-filename))
+      (should= {} (read-string (slurp @config/contact-lists-filename)))))
   )

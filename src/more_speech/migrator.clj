@@ -118,6 +118,14 @@
     (user-configuration/validate {}))
   )
 
+;--- Migration 9 contact lists file ---
+
+(defn migration-9-contact-lists []
+  (spit
+    @config/contact-lists-filename {})
+  )
+
+
 ;---------- The Migrations List -------
 
 (def migrations (atom {1 initial-migration
@@ -128,6 +136,7 @@
                        6 migration-6-reformat-tabs
                        7 migration-7-break-messages-into-daily-files
                        8 migration-8-user-configuration
+                       9 migration-9-contact-lists
                        }))
 
 ;--------------------------------------

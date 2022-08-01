@@ -8,7 +8,7 @@
 
 (def days-to-read 10) ;how many daily message files to read in.
 
-(def migration-level 8)
+(def migration-level 9)
 (def version "202207310819")
 
 (def test-run? false)
@@ -25,6 +25,7 @@
 (def messages-directory (atom "private/messages"))
 (def messages-filename (atom "private/messages/message-file"))
 (def user-configuration-filename (atom "private/user-configuration"))
+(def contact-lists-filename (atom "private/contact-lists"))
 
 (def user-name-pattern #"\@[\w\-]+")
 (def user-name-chars #"[\w\-]+")
