@@ -33,10 +33,12 @@
    (format-user-id user-id 20))
 
   ([user-id length]
-   (let [profiles (:profiles @(:event-context @ui-context))]
+   (let [event-context (:event-context @ui-context)
+         profiles (:profiles @event-context)]
      (if (nil? user-id)
        ""
-       (abbreviate (get-in profiles [user-id :name] (util/num32->hex-string user-id)) length))))
+       (let [profile-name (get-in profiles [user-id :name] (util/num32->hex-string user-id))]
+         (abbreviate profile-name length)))))
   )
 
 (declare get-subject

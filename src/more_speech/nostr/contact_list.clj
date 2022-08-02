@@ -1,8 +1,9 @@
-(ns more-speech.nostr.contact-list)
+(ns more-speech.nostr.contact-list
+  (:require [more-speech.nostr.util :as util]))
 
 
 (defn make-contact-from-tag [[_p pubkey relay petname]]
-  {:pubkey pubkey :relay relay :petname petname}
+  {:pubkey (util/hex-string->num pubkey) :relay relay :petname petname}
   )
 
 (defn unpack-contact-list-event [event]
