@@ -296,7 +296,7 @@
    (compose-text-event event-state subject text nil))
 
   ([event-state subject text reply-to-or-nil]
-   (let [pubkey (util/hex-string->bytes (get-in event-state [:keys :public-key]))
+   (let [pubkey (:pubkey event-state)
          root (get-reply-root event-state reply-to-or-nil)
          tags (concat (make-event-reference-tags reply-to-or-nil root)
                       (make-people-reference-tags event-state pubkey reply-to-or-nil)

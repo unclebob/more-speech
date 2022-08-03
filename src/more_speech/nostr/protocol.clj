@@ -25,6 +25,9 @@
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date))
   )
 
+(defn request-contact-lists [^WebSocket conn id]
+  (send-to conn ["REQ" id {"kinds" [3] "since" 0}])
+  (.request conn 1))
 
 (defn request-metadata [^WebSocket conn id]
   (send-to conn ["REQ" id {"kinds" [0] "since" 0}])
@@ -140,6 +143,15 @@
   (prn 'relay-connection-attempts-complete))
 
 
+(defn request-contact-lists-from-relays [id]
+  (prn 'requesting-contact-lists)
+  (doseq [url (keys @relays)]
+    (let [conn (get-in @relays [url :connection])
+          read? (get-in @relays [url :read])]
+      (when (and read? (some? conn))
+        (unsubscribe conn id)
+        (request-contact-lists conn id)))))
+
 (defn request-metadata-from-relays [id]
   (prn 'requesting-metadata)
   (doseq [url (keys @relays)]
@@ -185,9 +197,11 @@
 (defn get-events [event-context subscription-time]
   (let [subscription-id "more-speech"
         metadata-request-id "more-speech-metadata"
+        contact-lists-request-id "more-speech-contact-lists"
         event-handler (:event-handler @event-context)
         now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (connect-to-relays event-context)
+    (request-contact-lists-from-relays contact-lists-request-id)
     (when (user-configuration/should-import-metadata? now-in-seconds)
       (request-metadata-from-relays metadata-request-id)
       (user-configuration/set-last-time-metadata-imported now-in-seconds))

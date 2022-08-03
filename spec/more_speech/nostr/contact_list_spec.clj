@@ -1,7 +1,8 @@
 (ns more-speech.nostr.contact-list-spec
   (:require [speclj.core :refer :all]
             [more-speech.nostr.contact-list :refer :all]
-            [more-speech.nostr.util :as util]))
+            [more-speech.nostr.util :as util]
+            [more-speech.ui.swing.ui-context :refer :all]))
 
 (defn hexify [n] (util/num32->hex-string n))
 
@@ -37,4 +38,38 @@
                   :relay nil
                   :petname nil}]]
                (unpack-contact-list-event event))))
+
+  (it "properly skips a malformed tag"
+    (let [pubkey 99
+          contact2 2
+          event {:pubkey pubkey
+                 :tags [[:p "garbage"]
+                        [:p (hexify contact2)]]}]
+      (should= [pubkey
+                [{:pubkey contact2
+                  :relay nil
+                  :petname nil}]]
+               (unpack-contact-list-event event))))
   )
+
+(describe "Determining trust"
+  (it "determines if a pubkey is trusted"
+    (let [my-pubkey 1
+          contact-lists {1 [{:pubkey 2}]}
+          event-state {:pubkey my-pubkey :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)}))
+    (should (is-trusted? 1))
+    (should (is-trusted? 2))
+    (should-not (is-trusted? 3)))
+
+  (it "gets my petname for a trusted user"
+    (let [my-pubkey 1
+          contact-lists {1 [{:pubkey 2 :petname "two"}
+                            {:pubkey 3}]}
+          event-state {:pubkey my-pubkey :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)}))
+    (should= "two" (get-petname 2))
+    (should= nil (get-petname 3))
+    (should= nil (get-petname 4))
+    )
+)

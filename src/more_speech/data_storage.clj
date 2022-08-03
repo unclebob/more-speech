@@ -5,7 +5,8 @@
             [more-speech.nostr.relays :as relays]
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.user-configuration :as user-configuration]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [more-speech.nostr.util :as util])
   (:import (java.util Date TimeZone Locale)
            (java.text SimpleDateFormat)))
 
@@ -40,6 +41,7 @@
 
 (defn load-configuration []
   (let [keys (read-string (slurp @config/keys-filename))
+        pubkey (util/hex-string->num (:public-key keys))
         read-event-ids (read-string (slurp @config/read-event-ids-filename))
         profiles (read-string (slurp @config/profiles-filename))
         tabs-list (tabs/ensure-tab-list-has-all
@@ -49,6 +51,7 @@
         contact-lists (read-string (slurp @config/contact-lists-filename))
 
         event-context (events/make-event-context {:keys keys
+                                                  :pubkey pubkey
                                                   :profiles profiles
                                                   :read-event-ids read-event-ids
                                                   :tabs-list tabs-list

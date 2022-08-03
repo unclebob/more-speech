@@ -205,7 +205,8 @@
             event-state {:keys {:private-key (bytes->hex-string private-key)
                                 :public-key (bytes->hex-string public-key)}
                          :text-event-map {root-id {:pubkey root-author
-                                                   :tags []}}}
+                                                   :tags []}}
+                         :pubkey public-key}
             text "message text"
             event (compose-text-event event-state "" text root-id)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -232,6 +233,7 @@
             root-author 99
             event-state {:keys {:private-key (bytes->hex-string private-key)
                                 :public-key (bytes->hex-string public-key)}
+                         :pubkey public-key
                          :text-event-map {root-child-id {:pubkey root-child-author
                                                          :tags [[:e root-id-hex]
                                                                 [:p (hexify root-author)]]}
@@ -264,7 +266,8 @@
             event-state {:keys {:private-key (bytes->hex-string private-key)
                                 :public-key (bytes->hex-string public-key)}
                          :text-event-map {root-id {:pubkey root-author
-                                                   :tags [[:p (hexify author)]]}}}
+                                                   :tags [[:p (hexify author)]]}}
+                         :pubkey public-key}
             event (compose-text-event event-state "" "message" root-id)
             {:keys [tags]} (second event)]
 

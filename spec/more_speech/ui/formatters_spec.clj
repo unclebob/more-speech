@@ -24,7 +24,7 @@
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "  11111111111111111... " timestamp " \n") header)))
+      (should= (str "  (111111111111111...) " timestamp " \n") header)))
 
   (it "formats a simple message"
     (let [profiles {}
@@ -36,7 +36,7 @@
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "  11111111111111111... " timestamp " the message\n") header)))
+      (should= (str "  (111111111111111...) " timestamp " the message\n") header)))
 
   (it "formats a simple message with a user profile"
     (let [profiles {1 {:name "user-1"}}
@@ -48,7 +48,7 @@
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "                user-1 " timestamp " the message\n") header)))
+      (should= (str "              (user-1) " timestamp " the message\n") header)))
 
   (it "formats a long message with line ends."
     (let [profiles {}
@@ -63,7 +63,7 @@ the proposition that all men are created equal."
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "  11111111111111111... " timestamp " Four score and seven years ago~our fathers brought forth upon this continent~...\n") header)))
+      (should= (str "  (111111111111111...) " timestamp " Four score and seven years ago~our fathers brought forth upon this continent~...\n") header)))
 
   (it "formats a message with a subject"
     (let [profiles {}
@@ -75,7 +75,7 @@ the proposition that all men are created equal."
                  :tags [[:subject "the subject"]]}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "  11111111111111111... " timestamp " the subject|the message\n") header)))
+      (should= (str "  (111111111111111...) " timestamp " the subject|the message\n") header)))
   )
 
 (describe "subject and discussion tags"
@@ -174,7 +174,7 @@ the proposition that all men are created equal."
           tags [["p" (hexify 1)]]
           event {:pubkey 1 :created-at created-at :relays relays :tags tags :content "Hello #[0]."}]
       (should=
-        ">From: user-1 at 07/05/22 24:00:00 on relay-1\n>---------------\n>Hello @user-1."
+        ">From: (user-1) at 07/05/22 24:00:00 on relay-1\n>---------------\n>Hello @user-1."
         (format-reply event)))))
 
 
