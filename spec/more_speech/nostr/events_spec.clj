@@ -293,6 +293,29 @@
                            public-key
                            (hex-string->bytes sig)))))
     )
+
+  (context "compose kind-3 contact-list event"
+    (it "composes an simple contact list"
+      (let [private-key (num->bytes 64 42)
+            public-key (get-pub-key private-key)
+            event-state {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}}
+            contact-list [{:pubkey 1}
+                          {:pubkey 2 :petname "petname"}]
+            event (compose-contact-list event-state contact-list)
+            {:keys [pubkey created_at kind tags content id sig]} (second event)
+            now (quot (System/currentTimeMillis) 1000)
+            ]
+        (should= "EVENT" (first event))
+        (should= (bytes->hex-string public-key) pubkey)
+        (should (<= 0 (- now created_at) 1))                ;within one second.
+        (should= 3 kind)
+        (should= "more-speech contact list" content)
+        (should= [[:p (hexify 1) "" ""] [:p (hexify 2) "" "petname"]] tags)
+        (should (do-verify (hex-string->bytes id)
+                           public-key
+                           (hex-string->bytes sig)))))
+    )
   )
 
 (describe "get references"

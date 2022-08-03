@@ -8,7 +8,8 @@
     [more-speech.ui.swing.ui-context :refer :all]
     [clojure.set :as set]
     [more-speech.nostr.util :as util]
-    [more-speech.ui.swing.util :as swing-util])
+    [more-speech.ui.swing.util :as swing-util]
+    [more-speech.nostr.trust-updater :as trust-updater])
   (:use [seesaw core font tree])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -27,7 +28,8 @@
          add-author-to-tab
          block-author-from-tab
          add-article-to-tab
-         block-article-from-tab)
+         block-article-from-tab
+         trust-this-author)
 
 
 (defn mouse-pressed [e]
@@ -48,6 +50,8 @@
           block-article-actions (map #(action :name % :handler (partial block-article-from-tab event-id %)) tab-names)
           p (popup :items [(action :name "Get info..."
                                    :handler (partial get-info event))
+                           (action :name "Trust this author..."
+                                   :handler (partial trust-this-author event))
                            (menu :text "Add author to tab" :items add-author-actions)
                            (menu :text "Block author from tab" :items block-author-actions)
                            (menu :text "Add article to tab" :items add-article-actions)
@@ -90,6 +94,17 @@
   (alert
     (with-out-str
       (clojure.pprint/pprint event))))
+
+(defn trust-this-author [event _e]
+  (let [his-pubkey (:pubkey event)
+        event-context (:event-context @ui-context)
+        profiles (:profiles @event-context)
+        profile (get profiles his-pubkey)
+        petname (input "Name this author"
+                       :value (:name profile)
+                       :title (str "Entrust " (formatters/abbreviate (util/num32->hex-string his-pubkey) 10)))]
+    (when (some? petname)
+      (trust-updater/entrust-and-send his-pubkey petname))))
 
 (defn select-article
   [tab-index selected-node]

@@ -70,6 +70,5 @@
       (reset! ui-context {:event-context (atom event-state)}))
     (should= "two" (get-petname 2))
     (should= nil (get-petname 3))
-    (should= nil (get-petname 4))
-    )
-)
+    (should= nil (get-petname 4)))
+  )

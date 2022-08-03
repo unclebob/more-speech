@@ -42,7 +42,7 @@
              petname (contact-list/get-petname user-id)
              profile-name (get-in profiles [user-id :name] (util/num32->hex-string user-id))]
          (cond
-           (some? petname)
+           (seq petname)
            (abbreviate petname length)
 
            trusted?

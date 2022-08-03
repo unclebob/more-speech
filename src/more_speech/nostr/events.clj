@@ -7,8 +7,8 @@
             [clojure.core.async :as async]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.relays :as relays]
-            [more-speech.nostr.contact-list :as contact-list]
             [clojure.string :as string]
+            [more-speech.nostr.contact-list :as contact-list]
             [more-speech.config :as config])
   (:import (java.nio.charset StandardCharsets)))
 
@@ -285,6 +285,23 @@
     (body->event event-state body))
   )
 
+(defn make-contact-list-tag [contact-entry]
+  (let [petname (get contact-entry :petname "")
+        petname (if (nil? petname) "" petname)]
+    [:p (hexify (:pubkey contact-entry)) "" petname]))
+
+(defn make-contact-list-tags [contact-list]
+  (map make-contact-list-tag contact-list))
+
+(defn compose-contact-list [event-state contact-list]
+  (let [tags (make-contact-list-tags contact-list)
+        body {:kind 3
+              :tags tags
+              :content "more-speech contact list"}
+        ]
+    (body->event event-state body))
+  )
+
 (declare make-event-reference-tags
          make-people-reference-tags
          make-subject-tag
@@ -361,6 +378,9 @@
 
 (defn compose-and-send-metadata-event [event-state]
   (send-event event-state (compose-metadata-event event-state)))
+
+(defn compose-and-send-contact-list [event-state contact-list]
+  (send-event event-state (compose-contact-list event-state contact-list)))
 
 (declare make-emplacements make-emplacement)
 

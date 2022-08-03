@@ -5,7 +5,8 @@
             [more-speech.nostr.relays :refer [relays]]
             [more-speech.nostr.util :as util]
             [more-speech.user-configuration :as user-configuration]
-            [clojure.stacktrace :as st])
+            [clojure.stacktrace :as st]
+            [more-speech.config :as config])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
@@ -26,7 +27,11 @@
   )
 
 (defn request-contact-lists [^WebSocket conn id]
-  (send-to conn ["REQ" id {"kinds" [3] "since" 0}])
+  (let [now (quot (System/currentTimeMillis) 1000)
+        days-ago config/read-contact-lists-days-ago
+        seconds-ago (* days-ago 86400)
+        since (int (- now seconds-ago))]
+    (send-to conn ["REQ" id {"kinds" [3] "since" since}]))
   (.request conn 1))
 
 (defn request-metadata [^WebSocket conn id]

@@ -43,3 +43,5 @@
         his-entry (first (filter #(= his-pubkey (:pubkey %)) my-contacts))]
     (:petname his-entry)))
 
+
+
