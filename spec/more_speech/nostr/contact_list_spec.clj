@@ -62,6 +62,21 @@
     (should (is-trusted? 2))
     (should-not (is-trusted? 3)))
 
+  (it "determines second degree trust"
+      (let [my-pubkey 99
+            trusted-user 1
+            trusted-by-trusted-user 2
+            profiles {trusted-user {:name "trusted"}
+                      trusted-by-trusted-user {:name "second-degree"}}
+            contact-lists {my-pubkey [{:pubkey trusted-user}]
+                           trusted-user [{:pubkey trusted-by-trusted-user}]}
+            event-state {:pubkey my-pubkey
+                         :profiles profiles
+                         :contact-lists contact-lists}]
+        (reset! ui-context {:event-context (atom event-state)})
+        (should= trusted-user (trusted-by-contact trusted-by-trusted-user))
+        ))
+
   (it "gets my petname for a trusted user"
     (let [my-pubkey 1
           contact-lists {1 [{:pubkey 2 :petname "two"}

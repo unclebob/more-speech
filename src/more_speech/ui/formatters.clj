@@ -39,14 +39,23 @@
      (if (nil? user-id)
        ""
        (let [trusted? (contact-list/is-trusted? user-id)
+             trusted-by (contact-list/trusted-by-contact user-id)
              petname (contact-list/get-petname user-id)
-             profile-name (get-in profiles [user-id :name] (util/num32->hex-string user-id))]
+             id-string (abbreviate (util/num32->hex-string user-id) 10)
+             profile-name (get-in profiles [user-id :name] id-string)]
          (cond
            (seq petname)
            (abbreviate petname length)
 
            trusted?
            (abbreviate profile-name length)
+
+           (some? trusted-by)
+           (let [trusted-id-string (abbreviate (util/num32->hex-string trusted-by) 10)
+                 trusted-profile-name (get-in profiles [trusted-by :name] trusted-id-string)
+                 trusted-pet-name (contact-list/get-petname trusted-by)
+                 trusted-name (if (seq trusted-pet-name) trusted-pet-name trusted-profile-name)]
+             (abbreviate (str profile-name "<-" trusted-name) length))
 
            :else
            (str "(" (abbreviate profile-name (- length 2)) ")")))))))

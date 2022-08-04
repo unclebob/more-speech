@@ -35,6 +35,22 @@
     (or (= candidate-pubkey my-pubkey)
         (contains? my-contact-pubkeys candidate-pubkey))))
 
+(defn trusted-by-contact [candidate-pubkey]
+  (let [event-state @(:event-context @ui-context)
+          my-pubkey (:pubkey event-state)
+          contact-lists (:contact-lists event-state)
+          my-contacts (get contact-lists my-pubkey)
+          my-contact-ids (map :pubkey my-contacts)]
+    (loop [my-contact-ids my-contact-ids]
+      (if (empty? my-contact-ids)
+        nil
+        (let [my-contact (first my-contact-ids)
+              his-contacts (set (map :pubkey (get contact-lists my-contact)))]
+          (if (contains? his-contacts candidate-pubkey)
+            my-contact
+            (recur (rest my-contact-ids)))))))
+  )
+
 (defn get-petname [his-pubkey]
   (let [event-state @(:event-context @ui-context)
         my-pubkey (:pubkey event-state)

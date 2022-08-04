@@ -24,7 +24,7 @@
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "  (111111111111111...) " timestamp " \n") header)))
+      (should= (str "          (1111111...) " timestamp " \n") header)))
 
   (it "formats a simple message"
     (let [profiles {}
@@ -36,7 +36,7 @@
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "  (111111111111111...) " timestamp " the message\n") header)))
+      (should= (str "          (1111111...) " timestamp " the message\n") header)))
 
   (it "formats a simple message with a user profile"
     (let [profiles {1 {:name "user-1"}}
@@ -63,7 +63,7 @@ the proposition that all men are created equal."
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "  (111111111111111...) " timestamp " Four score and seven years ago~our fathers brought forth upon this continent~...\n") header)))
+      (should= (str "          (1111111...) " timestamp " Four score and seven years ago~our fathers brought forth upon this continent~...\n") header)))
 
   (it "formats a message with a subject"
     (let [profiles {}
@@ -75,7 +75,7 @@ the proposition that all men are created equal."
                  :tags [[:subject "the subject"]]}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "  (111111111111111...) " timestamp " the subject|the message\n") header)))
+      (should= (str "          (1111111...) " timestamp " the subject|the message\n") header)))
   )
 
 (describe "subject and discussion tags"
@@ -180,68 +180,137 @@ the proposition that all men are created equal."
 
 (describe "Escape HTML entities"
   (it "returns the same string in the absence of any HTML entities"
-      (let [content "Hi from more-speech"
-            escaped-content (html-escape content)]
-        (should= "Hi from more-speech" escaped-content)))
+    (let [content "Hi from more-speech"
+          escaped-content (html-escape content)]
+      (should= "Hi from more-speech" escaped-content)))
   (it "escapes `&`"
-      (let [content "bread & butter"
-            escaped-content (html-escape content)]
-        (should= "bread &amp; butter" escaped-content)))
+    (let [content "bread & butter"
+          escaped-content (html-escape content)]
+      (should= "bread &amp; butter" escaped-content)))
   (it "escapes `<`"
-      (let [content "< less than"
-            escaped-content (html-escape content)]
-        (should= "&lt; less than" escaped-content)))
+    (let [content "< less than"
+          escaped-content (html-escape content)]
+      (should= "&lt; less than" escaped-content)))
   (it "escapes `>`"
-      (let [content "> greater than"
-            escaped-content (html-escape content)]
-        (should= "&gt; greater than" escaped-content)))
+    (let [content "> greater than"
+          escaped-content (html-escape content)]
+      (should= "&gt; greater than" escaped-content)))
   (it "escapes `\"`"
-      (let [content "\"bread\""
-            escaped-content (html-escape content)]
-        (should= "&quot;bread&quot;" escaped-content)))
+    (let [content "\"bread\""
+          escaped-content (html-escape content)]
+      (should= "&quot;bread&quot;" escaped-content)))
   (it "escapes `'`"
-      (let [content "'bread'"
-            escaped-content (html-escape content)]
-        (should= "&#x27;bread&#x27;" escaped-content)))
+    (let [content "'bread'"
+          escaped-content (html-escape content)]
+      (should= "&#x27;bread&#x27;" escaped-content)))
   (it "escapes `/`"
-      (let [content "/bread/"
-            escaped-content (html-escape content)]
-        (should= "&#x2F;bread&#x2F;" escaped-content))))
+    (let [content "/bread/"
+          escaped-content (html-escape content)]
+      (should= "&#x2F;bread&#x2F;" escaped-content))))
 
 (describe "Linkify URL"
   (it "should wrap a hyperlink around the url string"
-      (should= "<a href=\"https://nostr.com\">https://nostr.com</a>" (linkify "https://nostr.com")))
+    (should= "<a href=\"https://nostr.com\">https://nostr.com</a>" (linkify "https://nostr.com")))
   )
 
 (describe "Format replies"
   (it "always breaks at a reply prefix '>'"
-      (should= ">this is\n>a reply." (format-replies ">this is >a reply.")))
+    (should= ">this is\n>a reply." (format-replies ">this is >a reply.")))
   )
 
 (describe "Newlines as <br>"
   (it "should replace newlines with br tag"
-      (should= "xx<br>xx" (break-newlines "xx\nxx"))))
+    (should= "xx<br>xx" (break-newlines "xx\nxx"))))
 
 (describe "Segment article content"
   (it "returns empty list if content is empty"
-      (should= '() (segment-text-url "")))
+    (should= '() (segment-text-url "")))
   (it "returns a single :text element if no url in content"
-      (should= '([:text "no url"]) (segment-text-url "no url")))
+    (should= '([:text "no url"]) (segment-text-url "no url")))
   (it "returns a single :url element if whole content is a url"
-      (should= '([:url "http://nostr.com"]) (segment-text-url "http://nostr.com")))
+    (should= '([:url "http://nostr.com"]) (segment-text-url "http://nostr.com")))
   (it "returns a list of :text and :url elements when content contains multiple text and url segments"
-      (should= '([:text "Check this "][:url "http://nostr.com"][:text " It's cool"])
-               (segment-text-url "Check this http://nostr.com It's cool")))
+    (should= '([:text "Check this "] [:url "http://nostr.com"] [:text " It's cool"])
+             (segment-text-url "Check this http://nostr.com It's cool")))
   )
 
 (describe "Format article"
   (it "should escape HTML entities"
-      (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article "<b>text</b>")))
+    (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article "<b>text</b>")))
   (it "should linkify url"
-      (should= "<a href=\"https://nostr.com\">https://nostr.com</a>" (reformat-article "https://nostr.com")))
+    (should= "<a href=\"https://nostr.com\">https://nostr.com</a>" (reformat-article "https://nostr.com")))
   (it "should escape HTML entities and linkify url"
-      (should= "&lt;b&gt;Clojure&lt;&#x2F;b&gt;: <a href=\"https://clojure.org/\">https://clojure.org/</a>"
-           (reformat-article "<b>Clojure</b>: https://clojure.org/")))
+    (should= "&lt;b&gt;Clojure&lt;&#x2F;b&gt;: <a href=\"https://clojure.org/\">https://clojure.org/</a>"
+             (reformat-article "<b>Clojure</b>: https://clojure.org/")))
   (it "should format replies and escape HTML entities properly"
-      (should= "&gt;this is<br>&gt;a reply" (reformat-article ">this is >a reply")))
+    (should= "&gt;this is<br>&gt;a reply" (reformat-article ">this is >a reply")))
+  )
+
+(describe "Format User ID"
+  (it "shows untrusted pubkey if no profile or petname"
+    (let [profiles {}
+          contact-lists {}
+          event-state {:profiles profiles :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)}))
+    (let [pubkey 16rdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef]
+      (should= "(deadbee...)" (format-user-id pubkey 30))))
+
+  (it "shows untrusted profile name if no petname"
+    (let [profiles {1 {:name "the name"}}
+          contact-lists {}
+          event-state {:profiles profiles :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)}))
+    (let [pubkey 1]
+      (should= "(the name)" (format-user-id pubkey 30))))
+
+  (it "shows trusted petname if present"
+    (let [my-pubkey 99
+          his-pubkey 1
+          profiles {his-pubkey {:name "his name"}}
+          contact-lists {my-pubkey [{:pubkey his-pubkey :petname "pet name"}]}
+          event-state {:pubkey my-pubkey
+                       :profiles profiles
+                       :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)})
+      (should= "pet name" (format-user-id his-pubkey))))
+
+  (it "shows trusted profile name if trusted, but not pet name"
+    (let [my-pubkey 99
+          his-pubkey 1
+          profiles {his-pubkey {:name "his name"}}
+          contact-lists {my-pubkey [{:pubkey his-pubkey}]}
+          event-state {:pubkey my-pubkey
+                       :profiles profiles
+                       :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)})
+      (should= "his name" (format-user-id his-pubkey))))
+
+  (it "shows second degree of trust for user trusted by trusted user"
+    (let [my-pubkey 99
+          trusted-user 1
+          trusted-by-trusted-user 2
+          profiles {trusted-user {:name "trusted"}
+                    trusted-by-trusted-user {:name "2-deg"}}
+          contact-lists {my-pubkey [{:pubkey trusted-user}]
+                         trusted-user [{:pubkey trusted-by-trusted-user}]}
+          event-state {:pubkey my-pubkey
+                       :profiles profiles
+                       :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)})
+      (should= "2-deg<-trusted" (format-user-id trusted-by-trusted-user))))
+
+  (it "shows second degree of trust petname for user trusted by trusted user"
+      (let [my-pubkey 99
+            trusted-user 1
+            trusted-by-trusted-user 2
+            profiles {trusted-user {:name "trusted"}
+                      trusted-by-trusted-user {:name "2-deg"}}
+            contact-lists {my-pubkey [{:pubkey trusted-user
+                                       :petname "trusted-pet"}]
+                           trusted-user [{:pubkey trusted-by-trusted-user}]}
+            event-state {:pubkey my-pubkey
+                         :profiles profiles
+                         :contact-lists contact-lists}]
+        (reset! ui-context {:event-context (atom event-state)})
+        (should= "2-deg<-trusted-pet" (format-user-id trusted-by-trusted-user))))
   )
