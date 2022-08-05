@@ -117,7 +117,7 @@
              :text (util/num32->hex-string (:id event)))
     (if (some? referent)
       (let [replied-event (get text-map referent)]
-        (text! reply-to (formatters/format-user-id (:pubkey replied-event)))
+        (text! reply-to (formatters/format-user-id (:pubkey replied-event) 50))
         (config! citing
                  :user-data referent
                  :text (util/num32->hex-string referent)))
