@@ -1,7 +1,8 @@
 (ns more-speech.ui.swing.util
   (:require [more-speech.ui.swing.ui-context :refer :all]
             [clojure.core.async :as async])
-  (:use [seesaw core]))
+  (:use [seesaw core])
+  (:import (java.awt.datatransfer StringSelection)))
 
 (defn clear-popup [popup]
   (while (not (empty? (.getSubElements popup)))
@@ -63,20 +64,20 @@
 
 (defn add-id-to-tab [tab-name key id]
   (loop [tabs-list (:tabs-list @(:event-context @ui-context))
-           new-tabs-list []]
-      (cond
-        (empty? tabs-list)
-        (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)
+         new-tabs-list []]
+    (cond
+      (empty? tabs-list)
+      (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)
 
-        (= tab-name (:name (first tabs-list)))
-        (let [tab-descriptor (first tabs-list)
-              id-list (get tab-descriptor key [])
-              id-list (conj id-list id)]
+      (= tab-name (:name (first tabs-list)))
+      (let [tab-descriptor (first tabs-list)
+            id-list (get tab-descriptor key [])
+            id-list (conj id-list id)]
         (recur (rest tabs-list) (conj new-tabs-list (assoc tab-descriptor key id-list))))
 
-        :else
-        (recur (rest tabs-list)
-               (conj new-tabs-list (first tabs-list))))))
+      :else
+      (recur (rest tabs-list)
+             (conj new-tabs-list (first tabs-list))))))
 
 (defn unduplicate-tab-name [tab-name]
   (if (some? (get-tab-index tab-name))
@@ -86,5 +87,13 @@
 (defn relaunch []
   (let [send-chan (:send-chan @(:event-context @ui-context))]
     (future (async/>!! send-chan [:relaunch]))))
+
+(defn- get-clipboard []
+  (.getSystemClipboard (java.awt.Toolkit/getDefaultToolkit)))
+
+(defn copy-to-clipboard [text & _]
+  (let [selection (StringSelection. text)]
+    (.setContents (get-clipboard) selection selection)))
+
 
 
