@@ -1,16 +1,23 @@
 (ns more-speech.ui.swing.article-panel
-  (:require [more-speech.ui.swing.edit-window :as edit-window]
-            [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.ui.swing.article-tree-util :as article-tree-util]
-            [more-speech.config :as config]
-            [more-speech.ui.formatters :as formatters]
+  (:require [more-speech.config :as config]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.util :as swing-util])
-  (:use [seesaw core border])
-  )
+            [more-speech.ui.formatters :as formatters]
+            [more-speech.ui.swing.article-tree-util :as article-tree-util]
+            [more-speech.ui.swing.edit-window :as edit-window]
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]])
+  (:use [seesaw core border]))
 
 (declare id-click bold-label)
+
+(defn copy-click [e]
+  (when (.isPopupTrigger e)
+    (let [x (.x (.getPoint e))
+          y (.y (.getPoint e))
+          node (.getComponent e)
+          p (popup :items [(action :name "Copy" :handler #(copy-to-clipboard (.getText node) %))])]
+      (.show p (to-widget e) x y))))
 
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
@@ -31,20 +38,20 @@
             :mouse-exited (fn [_e] (hide! relays-popup)))
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
+    (listen id-label :mouse-pressed copy-click)
     (let [grid
           (grid-panel
-            :columns 3
-            :preferred-size [-1 :by 70]                     ;icky.
-            :items [(flow-panel :align :left :items [(bold-label "Author:") author-name-label])
-                    (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
-                    (flow-panel :align :left :items [(bold-label "pubkey:") author-id-label])
-                    (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
-                    (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
-                    (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
-                    (flow-panel :align :left :items [(bold-label "id:") id-label])
-                    (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
-                    (flow-panel :align :left :items [(bold-label "Root:") root-label])])
-          ]
+           :columns 3
+           :preferred-size [-1 :by 70]                     ;icky.
+           :items [(flow-panel :align :left :items [(bold-label "Author:") author-name-label])
+                   (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
+                   (flow-panel :align :left :items [(bold-label "pubkey:") author-id-label])
+                   (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
+                   (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
+                   (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
+                   (flow-panel :align :left :items [(bold-label "id:") id-label])
+                   (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
+                   (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
       grid)))
 
 (defn bold-label [s]
@@ -57,10 +64,10 @@
 
 (defn make-article-area []
   (editor-pane
-    :content-type "text/html"
-    :editable? false
-    :id :article-area
-    :text editor-pane-stylesheet))
+   :content-type "text/html"
+   :editable? false
+   :id :article-area
+   :text editor-pane-stylesheet))
 
 (declare go-back go-forward)
 
@@ -105,7 +112,7 @@
     (swing-util/clear-popup relays-popup)
     (config! relays-popup :items (:relays event))
     (text! article-area (formatters/reformat-article
-                          (formatters/replace-references event)))
+                         (formatters/replace-references event)))
     (text! (select main-frame [:#author-name-label])
            (formatters/format-user-id (:pubkey event) 50))
     (text! (select main-frame [:#author-id-label])
@@ -129,5 +136,4 @@
                :text (util/num32->hex-string root-id))
       (text! root-label ""))
     (text! subject-label (formatters/get-subject (:tags event)))
-    (text! relays-label (pr-str (count (:relays event)) (first (:relays event))))
-    ))
+    (text! relays-label (pr-str (count (:relays event)) (first (:relays event))))))

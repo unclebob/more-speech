@@ -13,3 +13,5 @@ pom.xml.asc
 private
 /tmp/
 /private-save/
+.lsp
+.clj-kondo
