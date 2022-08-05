@@ -91,7 +91,7 @@
 (defn- get-clipboard []
   (.getSystemClipboard (java.awt.Toolkit/getDefaultToolkit)))
 
-(defn copy-to-clipboard [text & _]
+(defn copy-to-clipboard [text _e]
   (let [selection (StringSelection. text)]
     (.setContents (get-clipboard) selection selection)))
 

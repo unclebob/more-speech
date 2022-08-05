@@ -16,7 +16,7 @@
     (let [x (.x (.getPoint e))
           y (.y (.getPoint e))
           node (.getComponent e)
-          p (popup :items [(action :name "Copy" :handler #(copy-to-clipboard (.getText node) %))])]
+          p (popup :items [(action :name "Copy" :handler (partial copy-to-clipboard (.getText node)))])]
       (.show p (to-widget e) x y))))
 
 (defn make-article-info-panel []
@@ -39,19 +39,20 @@
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
     (listen id-label :mouse-pressed copy-click)
+    (listen author-id-label :mouse-pressed copy-click)
     (let [grid
           (grid-panel
-           :columns 3
-           :preferred-size [-1 :by 70]                     ;icky.
-           :items [(flow-panel :align :left :items [(bold-label "Author:") author-name-label])
-                   (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
-                   (flow-panel :align :left :items [(bold-label "pubkey:") author-id-label])
-                   (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
-                   (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
-                   (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
-                   (flow-panel :align :left :items [(bold-label "id:") id-label])
-                   (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
-                   (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
+            :columns 3
+            :preferred-size [-1 :by 70]                     ;icky.
+            :items [(flow-panel :align :left :items [(bold-label "Author:") author-name-label])
+                    (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
+                    (flow-panel :align :left :items [(bold-label "pubkey:") author-id-label])
+                    (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
+                    (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
+                    (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
+                    (flow-panel :align :left :items [(bold-label "id:") id-label])
+                    (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
+                    (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
       grid)))
 
 (defn bold-label [s]
@@ -64,10 +65,10 @@
 
 (defn make-article-area []
   (editor-pane
-   :content-type "text/html"
-   :editable? false
-   :id :article-area
-   :text editor-pane-stylesheet))
+    :content-type "text/html"
+    :editable? false
+    :id :article-area
+    :text editor-pane-stylesheet))
 
 (declare go-back go-forward)
 
@@ -94,7 +95,9 @@
   (article-tree-util/go-back-by -1))
 
 (defn id-click [e]
-  (article-tree-util/id-click ui-context (config e :user-data)))
+  (if (.isPopupTrigger e)
+    (copy-click e)
+    (article-tree-util/id-click ui-context (config e :user-data))))
 
 (defn load-article-info [selected-id]
   (let [event-state @(:event-context @ui-context)
@@ -112,7 +115,7 @@
     (swing-util/clear-popup relays-popup)
     (config! relays-popup :items (:relays event))
     (text! article-area (formatters/reformat-article
-                         (formatters/replace-references event)))
+                          (formatters/replace-references event)))
     (text! (select main-frame [:#author-name-label])
            (formatters/format-user-id (:pubkey event) 50))
     (text! (select main-frame [:#author-id-label])
