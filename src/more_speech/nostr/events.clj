@@ -149,13 +149,13 @@
   (map process-tag tags))
 
 (defn get-unmarked-references [e-tags]
-    (let [refs (map second e-tags)
-          refs (map hex-string->num refs)
-          root (if (empty? refs) nil (first refs))
-          referent (last refs)
-          mentions (drop-last (rest refs))]
-      [root mentions referent])
-    )
+  (let [refs (map second e-tags)
+        refs (map hex-string->num refs)
+        root (if (empty? refs) nil (first refs))
+        referent (last refs)
+        mentions (drop-last (rest refs))]
+    [root mentions referent])
+  )
 
 (defn get-marked-references [e-tags]
   (loop [tags e-tags
@@ -421,14 +421,17 @@
         ))))
 
 (defn find-user-id [user-name]
-  (let [profiles (:profiles @(:event-context @ui-context))]
-    (loop [pairs (vec profiles)]
-      (if (empty? pairs)
-        nil
-        (let [pair (first pairs)]
-          (if (= user-name (:name (second pair)))
-            (first pair)
-            (recur (rest pairs))))))))
+  (let [pet-pubkey (contact-list/get-pubkey-from-petname user-name)]
+    (if (some? pet-pubkey)
+      pet-pubkey
+      (let [profiles (:profiles @(:event-context @ui-context))]
+        (loop [pairs (vec profiles)]
+          (if (empty? pairs)
+            nil
+            (let [pair (first pairs)]
+              (if (= user-name (:name (second pair)))
+                (first pair)
+                (recur (rest pairs))))))))))
 
 (defn add-suffix-for-duplicate [pubkey name]
   (let [profiles (:profiles @(:event-context @ui-context))

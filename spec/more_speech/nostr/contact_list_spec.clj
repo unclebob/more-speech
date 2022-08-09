@@ -86,4 +86,15 @@
     (should= "two" (get-petname 2))
     (should= nil (get-petname 3))
     (should= nil (get-petname 4)))
+
+  (it "gets the pubkey for a trusted pet name"
+      (let [my-pubkey 1
+            contact-lists {1 [{:pubkey 2 :petname "two"}
+                              {:pubkey 3}]}
+            event-state {:pubkey my-pubkey :contact-lists contact-lists}]
+        (reset! ui-context {:event-context (atom event-state)}))
+      (should= 2 (get-pubkey-from-petname "two"))
+      (should= nil (get-pubkey-from-petname "none"))
+      (should= nil (get-petname 3))
+      (should= nil (get-petname 4)))
   )

@@ -59,5 +59,18 @@
         his-entry (first (filter #(= his-pubkey (:pubkey %)) my-contacts))]
     (:petname his-entry)))
 
+(defn get-pubkey-from-petname [petname]
+  (let [event-state @(:event-context @ui-context)
+          my-pubkey (:pubkey event-state)
+          contact-lists (:contact-lists event-state)
+          my-contacts (get contact-lists my-pubkey)]
+    (loop [contacts my-contacts]
+      (if (seq contacts)
+        (if (= petname (:petname (first contacts)))
+          (:pubkey (first contacts))
+          (recur (rest contacts)))
+        nil))
+      ) )
+
 
 

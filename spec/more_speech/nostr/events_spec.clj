@@ -464,4 +464,18 @@
     (let [event-state {:profiles {1 {:name "bob"}}}]
       (reset! ui-context {:event-context (atom event-state)})
       (should= 1 (find-user-id "bob"))
-      (should= nil (find-user-id "bill")))))
+      (should= nil (find-user-id "bill"))))
+
+  (it "finds the id from a trusted pet-name"
+      (let [my-pubkey 1
+            profiles {2 {:name "bob"}}
+            contact-lists {my-pubkey [{:pubkey 2 :petname "petname"}]}
+            event-state {:profiles profiles
+                         :pubkey my-pubkey
+                         :contact-lists contact-lists}]
+        (reset! ui-context {:event-context (atom event-state)})
+        (should= 2 (find-user-id "petname"))
+        (should= 2 (find-user-id "bob"))))
+
+
+  )

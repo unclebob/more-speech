@@ -117,7 +117,8 @@
         reference
         (let [id-string (-> tags (nth index) second)
               id (util/hex-string->num id-string)
-              name (get-in profiles [id :name])
+              name (contact-list/get-petname id)
+              name (if (nil? name) (get-in profiles [id :name]) name)
               name (if (nil? name)
                      (str "id:" (abbreviate id-string 8))
                      name)]
