@@ -193,6 +193,13 @@
       (prn 'get-references 'bad-tags-in-event (.getMessage e) event)
       [nil nil nil])))
 
+(defn get-root-of-thread [id]
+  (let [event-context (:event-context @ui-context)
+        messages (:text-event-map @event-context)
+        event (get messages id)
+        [root _ _] (get-references event)]
+    (if (some? root) root id)))
+
 (defn process-references [state event]
   (let [[_ _ referent] (get-references event)]
     (if (nil? referent)

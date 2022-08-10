@@ -5,7 +5,8 @@
             [more-speech.ui.swing.article-tree-util :refer :all]
             [more-speech.nostr.util :as util]
             [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.ui.swing.article-panel :as article-panel])
+            [more-speech.ui.swing.article-panel :as article-panel]
+            [more-speech.ui.swing.util :as swing-util])
   (:import (javax.swing.tree DefaultMutableTreeNode)))
 
 (defn hexify [n] (util/num32->hex-string n))
@@ -497,4 +498,33 @@
           _ (.add child2 (DefaultMutableTreeNode. 4))
           copied-node (copy-node node)]
       (should= [1 [2] [3 [4]]] (depict-node copied-node))))
+  )
+
+(describe "adding ids to tabs"
+  (with-stubs)
+  (it "adds an an unrooted article id to a tab"
+    (let [message-id 1
+          messages {message-id {:tags []}}
+          event-context (atom {:text-event-map messages})
+          ]
+      (reset! ui-context {:event-context event-context})
+      (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
+                    swing-util/relaunch (stub :relaunch)]
+        (add-article-to-tab 1 "tab" nil)
+        (should-have-invoked :relaunch)
+        (should-have-invoked :add-id-to-tab {:with ["tab" :selected 1]}))))
+
+  (it "adds the root id of a thread to a tab"
+    (let [message-id 1
+          root-id 100
+          messages {message-id {:tags [[:e (hexify root-id) "" "root"]]}}
+          event-context (atom {:text-event-map messages})
+          ]
+      (reset! ui-context {:event-context event-context})
+      (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
+                    swing-util/relaunch (stub :relaunch)]
+        (add-article-to-tab message-id "tab" nil)
+        (should-have-invoked :relaunch)
+        (should-have-invoked :add-id-to-tab {:with ["tab" :selected root-id]})
+        )))
   )

@@ -370,6 +370,13 @@
       (should= 2 root)
       (should= 2 referent)
       (should= [1 4] mentions)))
+
+  (it "finds the root when only root is marked."
+      (let [event {:tags [[:e (hexify 2) "" "root"]]}
+            [root mentions referent] (get-references event)]
+        (should= 2 root)
+        (should= 2 referent)
+        (should= [] mentions)))
   )
 
 (describe "json"

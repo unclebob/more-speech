@@ -82,7 +82,8 @@
 
 (defn add-article-to-tab [event-id tab-name _e]
   (when-let [tab-name (if-new-tab tab-name)]
-    (swing-util/add-id-to-tab tab-name :selected event-id)
+    (let [root-of-thread (events/get-root-of-thread event-id)]
+      (swing-util/add-id-to-tab tab-name :selected root-of-thread))
     (swing-util/relaunch)))
 
 (defn block-article-from-tab [event-id tab-name _e]
