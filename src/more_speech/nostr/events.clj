@@ -416,11 +416,22 @@
 
 (declare find-user-id)
 
+(defn abbreviate-pubkey [pubkey-string]
+  (let [pubkey (util/hex-string->num pubkey-string)
+        abbreviated-pubkey (str (subs pubkey-string 0 11) "-")
+        event-context (:event-context @ui-context)]
+    (swap! event-context assoc-in [:profiles pubkey] {:name abbreviated-pubkey})
+    pubkey))
+
 (defn make-emplacement [reference tags]
   (let [tags (vec tags)                                     ;conj adds to end.
         tag-index (count tags)
-        user-name (subs reference 1)
-        user-id (find-user-id user-name)]
+        user-reference (subs reference 1)
+        user-id (find-user-id user-reference)
+        user-id (if (and (nil? user-id)
+                         (re-matches config/pubkey-pattern user-reference))
+                  (abbreviate-pubkey user-reference)
+                  user-id)]
     (if (nil? user-id)
       [reference tags]
       (let [tag [:p (util/num32->hex-string user-id)]

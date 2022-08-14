@@ -10,7 +10,7 @@
 (def read-contact-lists-days-ago 7)
 
 (def migration-level 9)
-(def version "202208140945")
+(def version "202208141306")
 
 (def test-run? false)
 ;---configuration files
@@ -29,4 +29,5 @@
 (def contact-lists-filename (atom "private/contact-lists"))
 
 (def user-name-pattern #"\@[\w\-]+")
+(def pubkey-pattern #"[0-9a-f]{64}+")
 (def user-name-chars #"[\w\-]+")

@@ -442,7 +442,7 @@
                                           [:p (hexify user-id-2)]]]
                  (emplace-references content tags))))
 
-    (it "does not emplace a username that is not a in the profile"
+    (it "does not emplace a username that is not in the profile"
       (let [tags [[:e "blah"]]
             user-id-1 99
             user-id-2 88
@@ -452,7 +452,30 @@
             _ (reset! ui-context {:event-context event-context})
             content "hello @user-3."]
         (should= ["hello @user-3." [[:e "blah"]]]
-                 (emplace-references content tags))))))
+                 (emplace-references content tags))))
+
+    (it "adds an abbreviated profile name for an unamed pubkey"
+          (let [tags [[:e "blah"]]
+                user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
+                pubkey (num32->hex-string user-id)
+                profiles {}
+                event-context (atom {:profiles profiles})
+                _ (reset! ui-context {:event-context event-context})
+                content (str "hello @" pubkey ".")]
+            (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
+                     (emplace-references content tags))
+            (should= {user-id {:name "0123456789a-"}}
+                     (:profiles @(:event-context @ui-context)))))
+
+    (it "does not recognize pubkeys that aren't 32 bytes"
+              (let [tags [[:e "blah"]]
+                    profiles {}
+                    event-context (atom {:profiles profiles})
+                    _ (reset! ui-context {:event-context event-context})
+                    content "hello @01234567abc."]
+                (should= ["hello @01234567abc." [[:e "blah"]]]
+                         (emplace-references content tags))
+                (should= {} (:profiles @(:event-context @ui-context)))))))
 
 (describe "fixing names"
   (it "should not fix a good name"

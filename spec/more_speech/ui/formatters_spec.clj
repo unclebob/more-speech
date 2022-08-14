@@ -1,6 +1,7 @@
 (ns more-speech.ui.formatters-spec
   (:require [speclj.core :refer :all]
             [more-speech.ui.formatters :refer :all]
+            [more-speech.ui.formatter-util :refer :all]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.util :as util]))
 
@@ -9,9 +10,7 @@
 (describe "Abbreviations."
   (it "abbreviates pubkeys"
     (should= "short" (abbreviate "short" 10))
-    (should= "some lo..." (abbreviate "some long string." 10)))
-
-  )
+    (should= "some lo..." (abbreviate "some long string." 10))))
 
 (describe "format header"
   (it "formats an empty message"
@@ -154,7 +153,7 @@ the proposition that all men are created equal."
             event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p "deadbeef"]]}]
-        (should= "@id:deadbeef" (replace-references event))))
+        (should= "@deadbeef" (replace-references event))))
 
     (it "does not replace reference if there is no p tag"
       (let [content "#[1]"

@@ -4,30 +4,9 @@
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.contact-list :as contact-list]
+            [more-speech.ui.formatter-util :refer :all]
             )
-  (:import (java.util Date)
-           (java.text SimpleDateFormat)))
-
-(defn format-time [time]
-  (let [time (* time 1000)
-        date (Date. (long time))]
-    (.format (SimpleDateFormat. "MM/dd/yy kk:mm:ss") date))
   )
-
-(defn make-date [date-string]
-  (let [date (.parse (SimpleDateFormat. "MM/dd/yyyy") date-string)]
-    (quot (.getTime date) 1000)))
-
-(defn abbreviate [s n]
-  (let [dots "..."]
-    (if (<= (count s) n)
-      s
-      (str (subs s 0 (- n (count dots))) dots))))
-
-(defn prepend> [text]
-  (let [lines (string/split-lines text)
-        lines (map #(str ">" %) lines)]
-    (string/join "\n" lines)))
 
 (defn format-user-id
   ([user-id]
@@ -120,7 +99,7 @@
               name (contact-list/get-petname id)
               name (if (nil? name) (get-in profiles [id :name]) name)
               name (if (nil? name)
-                     (str "id:" (abbreviate id-string 8))
+                     id-string
                      name)]
           (str "@" name)))))
 

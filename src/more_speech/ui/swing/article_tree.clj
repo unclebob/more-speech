@@ -9,7 +9,8 @@
     [clojure.set :as set]
     [more-speech.nostr.util :as util]
     [more-speech.ui.swing.util :as swing-util]
-    [more-speech.nostr.trust-updater :as trust-updater])
+    [more-speech.nostr.trust-updater :as trust-updater]
+    [more-speech.ui.formatter-util :as f-util])
   (:use [seesaw core font tree])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -103,7 +104,7 @@
         profile (get profiles his-pubkey)
         petname (input "Name this author"
                        :value (:name profile)
-                       :title (str "Entrust " (formatters/abbreviate (util/num32->hex-string his-pubkey) 10)))]
+                       :title (str "Entrust " (f-util/abbreviate (util/num32->hex-string his-pubkey) 10)))]
     (when (some? petname)
       (trust-updater/entrust-and-send his-pubkey petname))))
 

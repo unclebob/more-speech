@@ -3,6 +3,7 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatters :as formatters]
+            [more-speech.ui.formatter-util :as f-util]
             [more-speech.ui.swing.article-tree-util :as article-tree-util]
             [more-speech.ui.swing.edit-window :as edit-window]
             [more-speech.ui.swing.ui-context :refer :all]
@@ -121,7 +122,7 @@
     (text! (select main-frame [:#author-id-label])
            (util/num32->hex-string (:pubkey event)))
     (text! (select main-frame [:#created-time-label])
-           (formatters/format-time (:created-at event)))
+           (f-util/format-time (:created-at event)))
     (config! (select main-frame [:#id-label])
              :user-data (:id event)
              :text (util/num32->hex-string (:id event)))
