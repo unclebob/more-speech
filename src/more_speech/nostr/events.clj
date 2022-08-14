@@ -142,7 +142,8 @@
 
 (defn process-tag [tag]
   (let [tag-type (first tag)
-        tag-args (rest tag)]
+        tag-args (rest tag)
+        tag-type (.replace tag-type \: \-)]
     (concat [(keyword tag-type)] tag-args)))
 
 (defn process-tags [tags]

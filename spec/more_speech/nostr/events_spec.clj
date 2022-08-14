@@ -39,7 +39,32 @@
                 :content content
                 :sig sig}
                (translate-event event)))
-    ))
+    )
+
+  (it "corrects malformed tags"
+      (let [id (rand-int 1000000)
+            pubkey (rand-int 1000000)
+            sig (rand-int 1000000)
+            created_at (rand-int 10000)
+            content "the content"
+            tags [["e:" 1 2 3] ["p:p:" 4 5 6 7]]
+            event {"id" (hexify id)
+                   "pubkey" (hexify pubkey)
+                   "created_at" created_at
+                   "kind" 1
+                   "tags" tags
+                   "content" content
+                   "sig" (->> sig (num->bytes 64) bytes->hex-string)}]
+        (should= {:id id
+                  :pubkey pubkey
+                  :created-at created_at
+                  :kind 1
+                  :tags [[:e- 1 2 3] [:p-p- 4 5 6 7]]
+                  :content content
+                  :sig sig}
+                 (translate-event event)))
+      )
+  )
 
 (declare now event state)
 (describe "Processing Text events (Kind 1)"
@@ -372,11 +397,11 @@
       (should= [1 4] mentions)))
 
   (it "finds the root when only root is marked."
-      (let [event {:tags [[:e (hexify 2) "" "root"]]}
-            [root mentions referent] (get-references event)]
-        (should= 2 root)
-        (should= 2 referent)
-        (should= [] mentions)))
+    (let [event {:tags [[:e (hexify 2) "" "root"]]}
+          [root mentions referent] (get-references event)]
+      (should= 2 root)
+      (should= 2 referent)
+      (should= [] mentions)))
   )
 
 (describe "json"
@@ -474,15 +499,14 @@
       (should= nil (find-user-id "bill"))))
 
   (it "finds the id from a trusted pet-name"
-      (let [my-pubkey 1
-            profiles {2 {:name "bob"}}
-            contact-lists {my-pubkey [{:pubkey 2 :petname "petname"}]}
-            event-state {:profiles profiles
-                         :pubkey my-pubkey
-                         :contact-lists contact-lists}]
-        (reset! ui-context {:event-context (atom event-state)})
-        (should= 2 (find-user-id "petname"))
-        (should= 2 (find-user-id "bob"))))
-
+    (let [my-pubkey 1
+          profiles {2 {:name "bob"}}
+          contact-lists {my-pubkey [{:pubkey 2 :petname "petname"}]}
+          event-state {:profiles profiles
+                       :pubkey my-pubkey
+                       :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)})
+      (should= 2 (find-user-id "petname"))
+      (should= 2 (find-user-id "bob"))))
 
   )
