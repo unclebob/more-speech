@@ -24,23 +24,24 @@
         event-map (:text-event-map event-state)
         selected-id (if reply? (:selected-event @event-context) nil)
         event (if reply? (get event-map selected-id) nil)]
-    (when reply?
-      (let [subject (formatters/get-subject (:tags event))
-            prefix (if (empty? subject) "" "Re: ")]
-        (text! subject-text (str prefix subject))))
-    (listen send-button :action
-            (fn [_]
-              (let [message (text edit-area)
-                    subject (text subject-text)]
-                (events/compose-and-send-text-event event-state event subject message))
-              (dispose! edit-frame)))
-    (text! edit-area
-           (if reply?
-             (formatters/format-reply event)
-             ""))
-    (config! edit-frame :content
-             (border-panel
-               :north subject-panel
-               :center (scrollable edit-area)
-               :south (flow-panel :items [send-button])))
-    (show! edit-frame)))
+    (when (and reply? (some? event))
+      (when reply?
+        (let [subject (formatters/get-subject (:tags event))
+              prefix (if (empty? subject) "" "Re: ")]
+          (text! subject-text (str prefix subject))))
+      (listen send-button :action
+              (fn [_]
+                (let [message (text edit-area)
+                      subject (text subject-text)]
+                  (events/compose-and-send-text-event event-state event subject message))
+                (dispose! edit-frame)))
+      (text! edit-area
+             (if reply?
+               (formatters/format-reply event)
+               ""))
+      (config! edit-frame :content
+               (border-panel
+                 :north subject-panel
+                 :center (scrollable edit-area)
+                 :south (flow-panel :items [send-button])))
+      (show! edit-frame))))
