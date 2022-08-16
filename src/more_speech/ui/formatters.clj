@@ -5,7 +5,7 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.ui.formatter-util :refer :all]
-            )
+            [more-speech.config :as config])
   )
 
 (defn format-user-id
@@ -117,14 +117,11 @@
   (defn format-replies [content]
     (string/replace content " >" "\n>"))
 
-  ;; https://daringfireball.net/2010/07/improved_regex_for_matching_urls
-  (def url-pattern #"(?i)\b(?:(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\))+(?:\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))")
-
-  (defn linkify [url]
+   (defn linkify [url]
     (str "<a href=\"" url "\">" url "</a>"))
 
   (defn segment-text-url [content]
-    (let [url (re-find url-pattern content)]
+    (let [url (re-find config/url-pattern content)]
       (cond
         (not (nil? url))
         (let [url-start-index (string/index-of content url)

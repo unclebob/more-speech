@@ -50,11 +50,26 @@
         (recur (rest urls)
                (assoc relays-to-write url {:read read :write write}))))))
 
+(defn validate-relay-url [url]
+  (if (empty? url)
+    nil
+    (let [lurl (.toLowerCase url)]
+      (if (and (re-matches config/url-pattern url)
+               (not (.startsWith lurl "http"))
+               (= -1 (.indexOf lurl "localhost")))
+        url
+        nil)))
+  )
+
 (defn add-relay [url]
-  (when (and (not (empty? url))
-             (not (contains? @relays url)))
-    (prn 'adding-relay url)
-    (swap! relays assoc url {:read false :write false})))
+  (let [checked-url (validate-relay-url url)]
+    (when (and (not (empty? url))
+               (empty? checked-url))
+      (prn 'invalid-relay url))
+    (when (and (not (empty? checked-url))
+               (not (contains? @relays checked-url)))
+      (prn 'adding-relay checked-url)
+      (swap! relays assoc checked-url {:read false :write false}))))
 
 (defn add-recommended-relays-in-tags [event]
   (loop [tags (:tags event)]
