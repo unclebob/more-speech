@@ -24,7 +24,8 @@
         event-map (:text-event-map event-state)
         selected-id (if reply? (:selected-event @event-context) nil)
         event (if reply? (get event-map selected-id) nil)]
-    (when (and reply? (some? event))
+    (when (or (not reply?)
+              (and reply? (some? event)))
       (when reply?
         (let [subject (formatters/get-subject (:tags event))
               prefix (if (empty? subject) "" "Re: ")]

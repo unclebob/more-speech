@@ -10,7 +10,8 @@
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
-           (java.net URI)))
+           (java.net URI)
+           (java.nio ByteBuffer)))
 
 (defn send-to [^WebSocket conn msg]
   (try
@@ -135,6 +136,11 @@
     (.get (.sendClose conn WebSocket/NORMAL_CLOSURE "done"))
     (catch Exception e
       (prn 'on-send-close-error (:reason e)))))
+
+(defn send-ping []
+  (doseq [url (keys @relays)]
+    (when-let [conn (get-in @relays [url :connection])]
+      (.sendPing conn (ByteBuffer/allocate 4)))))
 
 (defn connect-to-relays [event-context]
   (doseq [url (keys @relays)]

@@ -11,19 +11,24 @@
             [more-speech.data-storage :as data-storage]
             [clojure.core.async :as async])
   (:use [seesaw core])
-  )
+  (:import (java.util Timer TimerTask)))
 
 (def send-chan (async/chan))
 
-(declare set-event-handler)
+(defn start-timer []
+  (let [timer (Timer. "more-speech timer")
+        ping-task (proxy [TimerTask] []
+                      (run [] (protocol/send-ping)))]
+    (.schedule timer ping-task (long 30000) (long 30000)))
+  )
 
 (defn ^:export -main [& args]
   (migrator/migrate-to config/migration-level)
   (data-storage/load-configuration)
+  (start-timer)
   (let [event-context (:event-context @ui-context)
         handler (swing/setup-main-window)]
-    (swap! event-context set-event-handler handler)
-    (swap! event-context assoc :send-chan send-chan)
+    (swap! event-context assoc :send-chan send-chan :event-handler handler)
     (let [latest-old-message-time
           (if (not config/test-run?)
             (data-storage/read-in-last-n-days config/days-to-read event-context handler)
@@ -39,9 +44,6 @@
           (recur args)
           )
         (System/exit 1)))))
-
-(defn set-event-handler [event-state handler]
-  (assoc event-state :event-handler handler))
 
 
 

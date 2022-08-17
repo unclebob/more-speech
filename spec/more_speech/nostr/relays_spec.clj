@@ -25,10 +25,11 @@
       (load-relays (str "{\"relay-url-1\" {:read true :write true}\n"
                         "\"relay-url-2\" {:read false :write false}}")
                    )
-      (should= @relays {"relay-url-1"
-                        {:read true :write true :connection nil :subscribed false}
-                        "relay-url-2"
-                        {:read false :write false :connection nil :subscribed false}})
+      (should= {"relay-url-1"
+                {:read true :write true :connection nil :subscribed false}
+                "relay-url-2"
+                {:read false :write false :connection nil :subscribed false}}
+               @relays)
       (should (s/conform ::relays/relays @relays))))
 
   )
