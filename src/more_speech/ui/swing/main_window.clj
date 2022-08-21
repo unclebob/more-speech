@@ -29,7 +29,12 @@
 
 (defn open-link [e]
   (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
-         (browse/browse-url (str (.getURL e)))))
+    (when-let [url (str (.getURL e))]
+      (try
+        (browse/browse-url url)
+        (catch Exception ex
+          (prn 'open-link url (.getMessage ex))
+          (prn ex))))))
 
 (defn make-main-window []
   (let [event-context @(:event-context @ui-context)
