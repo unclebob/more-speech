@@ -141,10 +141,11 @@
       event-state)))
 
 (defn process-tag [tag]
-  (let [tag-type (first tag)
-        tag-args (rest tag)
-        tag-type (.replace tag-type \: \-)]
-    (concat [(keyword tag-type)] tag-args)))
+  (when (seq tag)
+    (let [tag-type (first tag)
+          tag-args (rest tag)
+          tag-type (.replace tag-type \: \-)]
+      (concat [(keyword tag-type)] tag-args))))
 
 (defn process-tags [tags]
   (map process-tag tags))
