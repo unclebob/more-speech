@@ -39,113 +39,121 @@
            :else
            (str "(" (abbreviate profile-name (- length 2)) ")")))))))
 
-  (declare get-subject
-           replace-references)
+(declare get-subject
+         replace-references)
 
-  (defn format-header [{:keys [pubkey created-at tags] :as event}]
-    (if (nil? event)
-      "nil"
-      (let [content (replace-references event)
-            name (format-user-id pubkey)
-            time (format-time created-at)
-            subject (get-subject tags)
-            [reply-id _ _] (events/get-references event)
-            reply-mark (if (some? reply-id) "^" " ")
-            header-text (-> content (string/replace \newline \~) (abbreviate 80))
-            content (if (empty? subject)
-                      header-text
-                      (abbreviate (str subject "|" header-text) 80))]
-        (format "%s %20s %s %s\n" reply-mark name time content))))
-
-  (defn format-reply [event]
+(defn format-header [{:keys [pubkey created-at tags] :as event}]
+  (if (nil? event)
+    "nil"
     (let [content (replace-references event)
-          content (prepend> content)
-          header (format ">From: %s at %s on %s\n"
-                         (format-user-id (:pubkey event))
-                         (format-time (:created-at event))
-                         (first (:relays event))
-                         )]
-      (str header ">---------------\n" content)))
+          name (format-user-id pubkey)
+          time (format-time created-at)
+          subject (get-subject tags)
+          [reply-id _ _] (events/get-references event)
+          reply-mark (if (some? reply-id) "^" " ")
+          header-text (-> content (string/replace \newline \~) (abbreviate 80))
+          content (if (empty? subject)
+                    header-text
+                    (abbreviate (str subject "|" header-text) 80))]
+      (format "%s %20s %s %s\n" reply-mark name time content))))
 
-  (defn get-subject [tags]
-    (if (empty? tags)
-      nil
-      (let [tag (first tags)]
-        (if (= (first tag) :subject)
-          (abbreviate (second tag) 90)
-          (recur (rest tags))))))
+(defn format-reply [event]
+  (let [content (replace-references event)
+        content (prepend> content)
+        header (format ">From: %s at %s on %s\n"
+                       (format-user-id (:pubkey event))
+                       (format-time (:created-at event))
+                       (first (:relays event))
+                       )]
+    (str header ">---------------\n" content)))
 
-  (declare lookup-reference)
+(defn get-subject [tags]
+  (if (empty? tags)
+    nil
+    (let [tag (first tags)]
+      (if (= (first tag) :subject)
+        (abbreviate (second tag) 90)
+        (recur (rest tags))))))
 
-  (defn replace-references [event]
-    (let [padded-content (str " " (:content event) " ")
-          pattern #"\#\[\d+\]"
-          references (re-seq pattern padded-content)
-          segments (string/split padded-content pattern)
-          referents (mapv (partial lookup-reference event) references)
-          referents (conj referents " ")
-          ]
-      (string/trim (apply str (interleave segments referents)))))
+(declare lookup-reference)
 
-  (defn lookup-reference [event reference]
-    (let [profiles (:profiles @(:event-context @ui-context))
-          ref-string (re-find #"\d+" reference)
-          index (Integer/parseInt ref-string)
-          tags (:tags event)]
-      (if (>= index (count tags))
-        reference
+(defn replace-references [event]
+  (let [padded-content (str " " (:content event) " ")
+        pattern #"\#\[\d+\]"
+        references (re-seq pattern padded-content)
+        segments (string/split padded-content pattern)
+        referents (mapv (partial lookup-reference event) references)
+        referents (conj referents " ")
+        ]
+    (string/trim (apply str (interleave segments referents)))))
+
+(defn lookup-reference [event reference]
+  (let [profiles (:profiles @(:event-context @ui-context))
+        ref-string (re-find #"\d+" reference)
+        index (Integer/parseInt ref-string)
+        tags (:tags event)]
+    (if (>= index (count tags))
+      reference
+      (try
         (let [id-string (-> tags (nth index) second)
               id (util/hex-string->num id-string)
               name (contact-list/get-petname id)
-              name (if (nil? name) (get-in profiles [id :name]) name)
-              name (if (nil? name)
+              name (if (empty? name) (get-in profiles [id :name]) name)
+              name (if (empty? name)
                      id-string
                      name)]
-          (str "@" name)))))
+          (str "@" name)
+          )
+        (catch Exception e
+          (prn `lookup-reference 'bad-id index tags)
+          "@-unknown-"
+          ))
 
-  (defn html-escape [content]
-    (string/escape content {\& "&amp;"
-                            \< "&lt;"
-                            \> "&gt;"
-                            \" "&quot;"
-                            \' "&#x27;"
-                            \/ "&#x2F;"}))
+      )))
 
-  (defn break-newlines [content]
-    (string/replace content "\n" "<br>"))
+(defn html-escape [content]
+  (string/escape content {\& "&amp;"
+                          \< "&lt;"
+                          \> "&gt;"
+                          \" "&quot;"
+                          \' "&#x27;"
+                          \/ "&#x2F;"}))
 
-  (defn format-replies [content]
-    (string/replace content " >" "\n>"))
+(defn break-newlines [content]
+  (string/replace content "\n" "<br>"))
 
-   (defn linkify [url]
-    (str "<a href=\"" url "\">" url "</a>"))
+(defn format-replies [content]
+  (string/replace content " >" "\n>"))
 
-  (defn segment-text-url [content]
-    (let [url (re-find config/url-pattern content)]
-      (cond
-        (not (nil? url))
-        (let [url-start-index (string/index-of content url)
-              url-end-index (+ url-start-index (.length url))
-              text-sub (subs content 0 url-start-index)
-              url-sub (subs content url-start-index url-end-index)
-              rest (subs content url-end-index)]
-          (concat
-            (if (empty? text-sub)
-              [[:url url-sub]]
-              [[:text text-sub] [:url url-sub]])
-            (segment-text-url rest)))
-        (not (empty? content)) (list [:text content])
-        :else '())))
+(defn linkify [url]
+  (str "<a href=\"" url "\">" url "</a>"))
 
-  (defn reformat-article [article]
-    (let [segments (segment-text-url article)]
-      (reduce
-        (fn [formatted-content [seg-type seg]]
-          (cond
-            (= seg-type :text)
-            (str formatted-content
-                 ((comp break-newlines html-escape format-replies) seg))
-            (= seg-type :url)
-            (str formatted-content (linkify seg))))
-        ""
-        segments)))
+(defn segment-text-url [content]
+  (let [url (re-find config/url-pattern content)]
+    (cond
+      (not (nil? url))
+      (let [url-start-index (string/index-of content url)
+            url-end-index (+ url-start-index (.length url))
+            text-sub (subs content 0 url-start-index)
+            url-sub (subs content url-start-index url-end-index)
+            rest (subs content url-end-index)]
+        (concat
+          (if (empty? text-sub)
+            [[:url url-sub]]
+            [[:text text-sub] [:url url-sub]])
+          (segment-text-url rest)))
+      (not (empty? content)) (list [:text content])
+      :else '())))
+
+(defn reformat-article [article]
+  (let [segments (segment-text-url article)]
+    (reduce
+      (fn [formatted-content [seg-type seg]]
+        (cond
+          (= seg-type :text)
+          (str formatted-content
+               ((comp break-newlines html-escape format-replies) seg))
+          (= seg-type :url)
+          (str formatted-content (linkify seg))))
+      ""
+      segments)))
