@@ -19,14 +19,6 @@
   (update-relay-panel [_handler]
     (invoke-later (relay-panel/update-relay-panel ui-context))))
 
-(declare make-main-window)
-
-(defn setup-main-window []
-  (invoke-now (make-main-window))
-  (->seesawHandler))
-
-(declare timer-action)
-
 (defn open-link [e]
   (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
     (when-let [url (str (.getURL e))]
@@ -35,6 +27,10 @@
         (catch Exception ex
           (prn 'open-link url (.getMessage ex))
           (prn ex))))))
+
+(defn timer-action [_]
+  ;nothing for now.
+  )
 
 (defn make-main-window []
   (let [event-context @(:event-context @ui-context)
@@ -67,8 +63,11 @@
     (show! main-frame)
     (.start timer)))
 
-(defn timer-action [_]
-  ;nothing for now.
-  )
+(defn setup-main-window []
+  (invoke-now (make-main-window))
+  (->seesawHandler))
+
+
+
 
 

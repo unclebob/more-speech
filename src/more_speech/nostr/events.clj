@@ -93,36 +93,26 @@
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
-(declare translate-event
-         process-text-event
-         process-name-event
-         process-server-recommendation
-         process-like)
+(defn fix-name [name]
+  (if (empty? name)
+    (str "dud-" (rand-int 1000000))
+    (let [fixed-name (apply str
+                            (filter
+                              #(re-matches config/user-name-chars (str %))
+                              name))]
+      (if (empty? fixed-name)
+        (str "dudx-" (rand-int 100000))
+        fixed-name))))
 
-(defn process-event [{:keys [profiles] :as event-state} event url]
-  (let [_name-of (fn [pubkey] (get-in profiles [pubkey :name] pubkey))
-        {:keys [id pubkey _created-at kind _tags _content sig]} event
-        valid? (ecc/do-verify (util/num->bytes 32 id)
-                              (util/num->bytes 32 pubkey)
-                              (util/num->bytes 64 sig))
-        ]
-    (if (not valid?)
-      (do
-        (prn 'signature-verification-failed url event)
-        event-state)
-      (condp = kind
-        0 (process-name-event event-state event)
-        1 (process-text-event event-state event url)
-        2 (process-server-recommendation event-state event)
-        3 (contact-list/process-contact-list event-state event url)
-        7 (process-like event-state event)
-        (do #_(prn "unknown event: " url event)
-          event-state)))))
+(defn add-suffix-for-duplicate [pubkey name]
+  (let [profiles (:profiles @(:event-context @ui-context))
+        others-profiles (dissoc profiles pubkey)
+        profile-vals (vals others-profiles)
+        dups (filter #(= name (:name %)) profile-vals)]
+    (if (empty? dups)
+      name
+      (str name (rand-int 1000)))))
 
-(defn process-like [event-state _event]
-  event-state)
-
-(declare fix-name add-suffix-for-duplicate)
 (defn process-name-event [event-state {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
     (let [profile (json/read-str content)
@@ -133,22 +123,12 @@
       (-> event-state
           (update-in [:profiles] assoc pubkey {:name name
                                                :about about
-                                               :picture picture})
-          ))
+                                               :picture picture})))
     (catch Exception e
       (prn 'json-exception-process-name-event-ignored (.getMessage e))
       (prn event)
       event-state)))
 
-(defn process-tag [tag]
-  (when (seq tag)
-    (let [tag-type (first tag)
-          tag-args (rest tag)
-          tag-type (.replace tag-type \: \-)]
-      (concat [(keyword tag-type)] tag-args))))
-
-(defn process-tags [tags]
-  (map process-tag tags))
 
 (defn get-unmarked-references [e-tags]
   (let [refs (map second e-tags)
@@ -177,6 +157,7 @@
             (recur (rest tags) root referent (conj mentions id)))
           (recur (rest tags) root referent (conj mentions id)))))))
 
+
 (defn get-references
   "returns [root mentions referent] as BigIntegers.
   root is the root id of the thread.
@@ -195,13 +176,6 @@
       (prn 'get-references 'bad-tags-in-event (.getMessage e) event)
       [nil nil nil])))
 
-(defn get-root-of-thread [id]
-  (let [event-context (:event-context @ui-context)
-        messages (:text-event-map @event-context)
-        event (get messages id)
-        [root _ _] (get-references event)]
-    (if (some? root) root id)))
-
 (defn process-references [state event]
   (let [[_ _ referent] (get-references event)]
     (if (nil? referent)
@@ -213,18 +187,6 @@
             state
             (concat referent-path [:references])
             conj (:id event)))))))
-
-(defn translate-event [event]
-  (let [id (hex-string->num (get event "id"))
-        pubkey (hex-string->num (get event "pubkey"))
-        sig (hex-string->num (get event "sig"))]
-    {:id id
-     :pubkey pubkey
-     :created-at (get event "created_at")
-     :kind (get event "kind")
-     :content (get event "content")
-     :sig sig
-     :tags (process-tags (get event "tags"))}))
 
 (defn add-event [event-state event url]
   (let [id (:id event)
@@ -243,9 +205,61 @@
     (relays/add-recommended-relays-in-tags event)
     event-state))
 
+(defn process-tag [tag]
+  (when (seq tag)
+    (let [tag-type (first tag)
+          tag-args (rest tag)
+          tag-type (.replace tag-type \: \-)]
+      (concat [(keyword tag-type)] tag-args))))
+
+(defn process-tags [tags]
+  (map process-tag tags))
+
+(defn translate-event [event]
+  (let [id (hex-string->num (get event "id"))
+        pubkey (hex-string->num (get event "pubkey"))
+        sig (hex-string->num (get event "sig"))]
+    {:id id
+     :pubkey pubkey
+     :created-at (get event "created_at")
+     :kind (get event "kind")
+     :content (get event "content")
+     :sig sig
+     :tags (process-tags (get event "tags"))}))
+
+(defn process-like [event-state _event]
+  event-state)
+
 (defn process-server-recommendation [event-state event]
   (relays/add-relay (:content event))
   event-state)
+
+(defn process-event [{:keys [profiles] :as event-state} event url]
+  (let [_name-of (fn [pubkey] (get-in profiles [pubkey :name] pubkey))
+        {:keys [id pubkey _created-at kind _tags _content sig]} event
+        valid? (ecc/do-verify (util/num->bytes 32 id)
+                              (util/num->bytes 32 pubkey)
+                              (util/num->bytes 64 sig))
+        ]
+    (if (not valid?)
+      (do
+        (prn 'signature-verification-failed url event)
+        event-state)
+      (condp = kind
+        0 (process-name-event event-state event)
+        1 (process-text-event event-state event url)
+        2 (process-server-recommendation event-state event)
+        3 (contact-list/process-contact-list event-state event url)
+        7 (process-like event-state event)
+        (do #_(prn "unknown event: " url event)
+          event-state)))))
+
+(defn get-root-of-thread [id]
+  (let [event-context (:event-context @ui-context)
+        messages (:text-event-map @event-context)
+        event (get messages id)
+        [root _ _] (get-references event)]
+    (if (some? root) root id)))
 
 (defn chronological-event-comparator [[i1 t1] [i2 t2]]
   (if (= i1 i2)
@@ -311,45 +325,6 @@
     (body->event event-state body))
   )
 
-(declare make-event-reference-tags
-         make-people-reference-tags
-         make-subject-tag
-         get-reply-root
-         emplace-references)
-
-(defn compose-text-event
-  ([event-state subject text]
-   (compose-text-event event-state subject text nil))
-
-  ([event-state subject text reply-to-or-nil]
-   (let [pubkey (:pubkey event-state)
-         root (get-reply-root event-state reply-to-or-nil)
-         tags (concat (make-event-reference-tags reply-to-or-nil root)
-                      (make-people-reference-tags event-state pubkey reply-to-or-nil)
-                      (make-subject-tag subject)
-                      [[:client (str "more-speech - " config/version)]])
-         [content tags] (emplace-references text tags)
-         body {:kind 1
-               :tags tags
-               :content content}]
-     (body->event event-state body))))
-
-(defn make-subject-tag [subject]
-  (if (empty? (.trim subject))
-    []
-    [[:subject subject]]))
-
-(defn get-reply-root [event-state reply-to-or-nil]
-  (if (nil? reply-to-or-nil)
-    nil
-    (let [reply-id reply-to-or-nil
-          event-map (:text-event-map event-state)
-          replied-to-event (get event-map reply-id)
-          [root _mentions _referent] (get-references replied-to-event)]
-      root)
-    )
-  )
-
 (defn make-event-reference-tags
   ([reply-to root]
    (if (or (nil? root) (= root reply-to))
@@ -359,9 +334,7 @@
   ([reply-to]
    (if (nil? reply-to)
      []
-     [[:e (hexify reply-to) "" "reply"]])
-   )
-  )
+     [[:e (hexify reply-to) "" "reply"]])))
 
 (defn make-people-reference-tags [event-state pubkey reply-to-or-nil]
   (if (nil? reply-to-or-nil)
@@ -376,46 +349,33 @@
           people-ids (remove #(= (hexify pubkey) %) people-ids)]
       (map #(vector :p %) people-ids))))
 
-(defn send-event [event-state event]
-  (let [send-chan (:send-chan event-state)]
-    (async/>!! send-chan [:event event])))
+(defn make-subject-tag [subject]
+  (if (empty? (.trim subject))
+    []
+    [[:subject subject]]))
 
-(defn compose-and-send-text-event [event-state source-event-or-nil subject message]
-  (let [reply-to-or-nil (:id source-event-or-nil)
-        event (compose-text-event event-state subject message reply-to-or-nil)]
-    (send-event event-state event)))
 
-(defn compose-and-send-metadata-event [event-state]
-  (send-event event-state (compose-metadata-event event-state)))
+(defn get-reply-root [event-state reply-to-or-nil]
+  (if (nil? reply-to-or-nil)
+    nil
+    (let [reply-id reply-to-or-nil
+          event-map (:text-event-map event-state)
+          replied-to-event (get event-map reply-id)
+          [root _mentions _referent] (get-references replied-to-event)]
+      root)))
 
-(defn compose-and-send-contact-list [event-state contact-list]
-  (send-event event-state (compose-contact-list event-state contact-list)))
-
-(declare make-emplacements make-emplacement)
-
-(defn emplace-references [content tags]
-  (let [padded-content (str " " content " ")
-        pattern config/user-name-pattern
-        references (re-seq pattern padded-content)
-        segments (string/split padded-content pattern)
-        [emplacements tags] (make-emplacements references tags)]
-    [(string/trim (apply str (interleave segments (conj emplacements ""))))
-     tags]
-    ))
-
-(defn make-emplacements [references tags]
-  (loop [references references
-         emplacements []
-         tags tags]
-    (if (empty? references)
-      [emplacements tags]
-      (let [reference (first references)
-            [emplacement tags] (make-emplacement reference tags)]
-        (recur (rest references)
-               (conj emplacements emplacement)
-               tags)))))
-
-(declare find-user-id)
+(defn find-user-id [user-name]
+  (let [pet-pubkey (contact-list/get-pubkey-from-petname user-name)]
+    (if (some? pet-pubkey)
+      pet-pubkey
+      (let [profiles (:profiles @(:event-context @ui-context))]
+        (loop [pairs (vec profiles)]
+          (if (empty? pairs)
+            nil
+            (let [pair (first pairs)]
+              (if (= user-name (:name (second pair)))
+                (first pair)
+                (recur (rest pairs))))))))))
 
 (defn abbreviate-pubkey [pubkey-string]
   (let [pubkey (util/hex-string->num pubkey-string)
@@ -437,38 +397,61 @@
       [reference tags]
       (let [tag [:p (util/num32->hex-string user-id)]
             emplacement (str "#[" tag-index "]")]
-        [emplacement (conj tags tag)]
-        ))))
+        [emplacement (conj tags tag)]))))
 
-(defn find-user-id [user-name]
-  (let [pet-pubkey (contact-list/get-pubkey-from-petname user-name)]
-    (if (some? pet-pubkey)
-      pet-pubkey
-      (let [profiles (:profiles @(:event-context @ui-context))]
-        (loop [pairs (vec profiles)]
-          (if (empty? pairs)
-            nil
-            (let [pair (first pairs)]
-              (if (= user-name (:name (second pair)))
-                (first pair)
-                (recur (rest pairs))))))))))
+(defn make-emplacements [references tags]
+  (loop [references references
+         emplacements []
+         tags tags]
+    (if (empty? references)
+      [emplacements tags]
+      (let [reference (first references)
+            [emplacement tags] (make-emplacement reference tags)]
+        (recur (rest references)
+               (conj emplacements emplacement)
+               tags)))))
 
-(defn add-suffix-for-duplicate [pubkey name]
-  (let [profiles (:profiles @(:event-context @ui-context))
-        others-profiles (dissoc profiles pubkey)
-        profile-vals (vals others-profiles)
-        dups (filter #(= name (:name %)) profile-vals)]
-    (if (empty? dups)
-      name
-      (str name (rand-int 1000)))))
+(defn emplace-references [content tags]
+  (let [padded-content (str " " content " ")
+        pattern config/user-name-pattern
+        references (re-seq pattern padded-content)
+        segments (string/split padded-content pattern)
+        [emplacements tags] (make-emplacements references tags)]
+    [(string/trim (apply str (interleave segments (conj emplacements ""))))
+     tags]
+    ))
 
-(defn fix-name [name]
-  (if (empty? name)
-    (str "dud-" (rand-int 1000000))
-    (let [fixed-name (apply str
-                            (filter
-                              #(re-matches config/user-name-chars (str %))
-                              name))]
-      (if (empty? fixed-name)
-        (str "dudx-" (rand-int 100000))
-        fixed-name))))
+(defn compose-text-event
+  ([event-state subject text]
+   (compose-text-event event-state subject text nil))
+
+  ([event-state subject text reply-to-or-nil]
+   (let [pubkey (:pubkey event-state)
+         root (get-reply-root event-state reply-to-or-nil)
+         tags (concat (make-event-reference-tags reply-to-or-nil root)
+                      (make-people-reference-tags event-state pubkey reply-to-or-nil)
+                      (make-subject-tag subject)
+                      [[:client (str "more-speech - " config/version)]])
+         [content tags] (emplace-references text tags)
+         body {:kind 1
+               :tags tags
+               :content content}]
+     (body->event event-state body))))
+
+(defn send-event [event-state event]
+  (let [send-chan (:send-chan event-state)]
+    (async/>!! send-chan [:event event])))
+
+(defn compose-and-send-text-event [event-state source-event-or-nil subject message]
+  (let [reply-to-or-nil (:id source-event-or-nil)
+        event (compose-text-event event-state subject message reply-to-or-nil)]
+    (send-event event-state event)))
+
+(defn compose-and-send-metadata-event [event-state]
+  (send-event event-state (compose-metadata-event event-state)))
+
+(defn compose-and-send-contact-list [event-state contact-list]
+  (send-event event-state (compose-contact-list event-state contact-list)))
+
+
+

@@ -39,8 +39,45 @@
            :else
            (str "(" (abbreviate profile-name (- length 2)) ")")))))))
 
-(declare get-subject
-         replace-references)
+(defn lookup-reference [event reference]
+  (let [profiles (:profiles @(:event-context @ui-context))
+        ref-string (re-find #"\d+" reference)
+        index (Integer/parseInt ref-string)
+        tags (:tags event)]
+    (if (>= index (count tags))
+      reference
+      (try
+        (let [id-string (-> tags (nth index) second)
+              id (util/hex-string->num id-string)
+              name (contact-list/get-petname id)
+              name (if (empty? name) (get-in profiles [id :name]) name)
+              name (if (empty? name)
+                     id-string
+                     name)]
+          (str "@" name)
+          )
+        (catch Exception _e
+          (prn `lookup-reference 'bad-id index tags)
+          "@-unknown-"
+          )))))
+
+(defn replace-references [event]
+  (let [padded-content (str " " (:content event) " ")
+        pattern #"\#\[\d+\]"
+        references (re-seq pattern padded-content)
+        segments (string/split padded-content pattern)
+        referents (mapv (partial lookup-reference event) references)
+        referents (conj referents " ")
+        ]
+    (string/trim (apply str (interleave segments referents)))))
+
+(defn get-subject [tags]
+  (if (empty? tags)
+    nil
+    (let [tag (first tags)]
+      (if (= (first tag) :subject)
+        (abbreviate (second tag) 90)
+        (recur (rest tags))))))
 
 (defn format-header [{:keys [pubkey created-at tags] :as event}]
   (if (nil? event)
@@ -66,50 +103,6 @@
                        (first (:relays event))
                        )]
     (str header ">---------------\n" content)))
-
-(defn get-subject [tags]
-  (if (empty? tags)
-    nil
-    (let [tag (first tags)]
-      (if (= (first tag) :subject)
-        (abbreviate (second tag) 90)
-        (recur (rest tags))))))
-
-(declare lookup-reference)
-
-(defn replace-references [event]
-  (let [padded-content (str " " (:content event) " ")
-        pattern #"\#\[\d+\]"
-        references (re-seq pattern padded-content)
-        segments (string/split padded-content pattern)
-        referents (mapv (partial lookup-reference event) references)
-        referents (conj referents " ")
-        ]
-    (string/trim (apply str (interleave segments referents)))))
-
-(defn lookup-reference [event reference]
-  (let [profiles (:profiles @(:event-context @ui-context))
-        ref-string (re-find #"\d+" reference)
-        index (Integer/parseInt ref-string)
-        tags (:tags event)]
-    (if (>= index (count tags))
-      reference
-      (try
-        (let [id-string (-> tags (nth index) second)
-              id (util/hex-string->num id-string)
-              name (contact-list/get-petname id)
-              name (if (empty? name) (get-in profiles [id :name]) name)
-              name (if (empty? name)
-                     id-string
-                     name)]
-          (str "@" name)
-          )
-        (catch Exception e
-          (prn `lookup-reference 'bad-id index tags)
-          "@-unknown-"
-          ))
-
-      )))
 
 (defn html-escape [content]
   (string/escape content {\& "&amp;"

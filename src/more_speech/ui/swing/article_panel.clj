@@ -10,7 +10,8 @@
             [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]])
   (:use [seesaw core border]))
 
-(declare id-click bold-label)
+(defn bold-label [s]
+  (label :text s :font config/bold-font))
 
 (defn copy-click [e]
   (when (.isPopupTrigger e)
@@ -19,6 +20,11 @@
           node (.getComponent e)
           p (popup :items [(action :name "Copy" :handler (partial copy-to-clipboard (.getText node)))])]
       (.show p (to-widget e) x y))))
+
+(defn id-click [e]
+  (if (.isPopupTrigger e)
+    (copy-click e)
+    (article-tree-util/id-click ui-context (config e :user-data))))
 
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
@@ -56,9 +62,6 @@
                     (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
       grid)))
 
-(defn bold-label [s]
-  (label :text s :font config/bold-font))
-
 (def editor-pane-stylesheet
   "<style>
     body {font-family: courier; font-style: normal; font-size: 14; font-weight: lighter;}
@@ -71,7 +74,11 @@
     :id :article-area
     :text editor-pane-stylesheet))
 
-(declare go-back go-forward)
+(defn go-back [_e]
+  (article-tree-util/go-back-by 1))
+
+(defn go-forward [_e]
+  (article-tree-util/go-back-by -1))
 
 (defn make-control-panel []
   (let [reply-button (button :text "Reply")
@@ -88,17 +95,6 @@
     (border-panel :west back-button
                   :east forward-button
                   :center (flow-panel :items [reply-button create-button]))))
-
-(defn go-back [_e]
-  (article-tree-util/go-back-by 1))
-
-(defn go-forward [_e]
-  (article-tree-util/go-back-by -1))
-
-(defn id-click [e]
-  (if (.isPopupTrigger e)
-    (copy-click e)
-    (article-tree-util/id-click ui-context (config e :user-data))))
 
 (defn load-article-info [selected-id]
   (let [event-state @(:event-context @ui-context)

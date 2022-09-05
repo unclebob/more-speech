@@ -4,12 +4,48 @@
             [more-speech.ui.swing.article-tree :as article-tree])
   (:use [seesaw core]))
 
+(defn delete-tab [tab-label _e]
+  (let [tab-name (config tab-label :text)]
+    (when (confirm (format "Confirm delete %s" tab-name))
+      (util/delete-tab-from-tabs-list tab-name)
+      (util/relaunch))))
 
-(declare change-tab-name
-         delete-tab
-         new-tab
-         tab-menu
-         get-tabs-with-all)
+(defn new-tab [_e]
+  (let [new-tab-name (input "New tab name:")
+        new-tab-name (util/unduplicate-tab-name new-tab-name)]
+    (when (seq new-tab-name)
+      (util/add-tab-to-tabs-list new-tab-name)
+      (util/relaunch))))
+
+(defn change-tab-name [tab-label _e]
+  (let [tab-name (config tab-label :text)
+        new-name (input (format "rename %s to:" tab-name))
+        new-name (util/unduplicate-tab-name new-name)
+        frame (:frame @ui-context)
+        tab-panel (select frame [:#header-tab-panel])
+        tab-index (config tab-label :user-data)]
+    (when (and (some? tab-index) (seq new-name))
+      (let [label (.getTabComponentAt tab-panel tab-index)]
+        (config! label :text new-name)
+        (util/change-tabs-list-name tab-name new-name)))))
+
+(defn tab-menu [e]
+  (let [tab-label (.getComponent e)
+        tab-name (config tab-label :text)
+        tab-index (config tab-label :user-data)
+        isAll? (= "all" tab-name)
+        p (popup :items [(action :name "Change name..."
+                                 :handler (partial change-tab-name tab-label)
+                                 :enabled? (not isAll?))
+                         (action :name (str "Delete " tab-name "...")
+                                 :handler (partial delete-tab tab-label)
+                                 :enabled? (not isAll?))
+                         (action :name "New tab..."
+                                 :handler new-tab
+                                 :enabled? true)])]
+    (if (.isPopupTrigger e)
+      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
+      (util/select-tab tab-index))))
 
 (defn make-tabs []
   (let [event-context (:event-context @ui-context)]
@@ -32,50 +68,6 @@
           (recur (rest tabs-list)
                  (conj header-tree-tabs tab-data)
                  (inc tab-index)))))))
-
-(defn tab-menu [e]
-  (let [tab-label (.getComponent e)
-        tab-name (config tab-label :text)
-        tab-index (config tab-label :user-data)
-        isAll? (= "all" tab-name)
-        p (popup :items [(action :name "Change name..."
-                                 :handler (partial change-tab-name tab-label)
-                                 :enabled? (not isAll?))
-                         (action :name (str "Delete " tab-name "...")
-                                 :handler (partial delete-tab tab-label)
-                                 :enabled? (not isAll?))
-                         (action :name "New tab..."
-                                 :handler new-tab
-                                 :enabled? true)])]
-    (if (.isPopupTrigger e)
-      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
-      (util/select-tab tab-index))
-    ))
-
-(defn change-tab-name [tab-label _e]
-  (let [tab-name (config tab-label :text)
-        new-name (input (format "rename %s to:" tab-name))
-        new-name (util/unduplicate-tab-name new-name)
-        frame (:frame @ui-context)
-        tab-panel (select frame [:#header-tab-panel])
-        tab-index (config tab-label :user-data)]
-    (when (and (some? tab-index) (seq new-name))
-      (let [label (.getTabComponentAt tab-panel tab-index)]
-        (config! label :text new-name)
-        (util/change-tabs-list-name tab-name new-name)))))
-
-(defn delete-tab [tab-label _e]
-  (let [tab-name (config tab-label :text)]
-    (when (confirm (format "Confirm delete %s" tab-name))
-      (util/delete-tab-from-tabs-list tab-name)
-      (util/relaunch))))
-
-(defn new-tab [_e]
-  (let [new-tab-name (input "New tab name:")
-        new-tab-name (util/unduplicate-tab-name new-tab-name)]
-    (when (seq new-tab-name)
-      (util/add-tab-to-tabs-list new-tab-name)
-      (util/relaunch))))
 
 (defn ensure-tab-list-has-all [tab-list]
   (if (some #(= "all" (:name %)) tab-list)

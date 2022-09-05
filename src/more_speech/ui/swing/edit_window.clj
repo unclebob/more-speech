@@ -5,8 +5,6 @@
             [more-speech.ui.swing.ui-context :refer :all])
   (:use [seesaw core]))
 
-(declare format-content)
-
 (defn make-edit-window [kind]
   (let [reply? (= kind :reply)
         event-context (:event-context @ui-context)

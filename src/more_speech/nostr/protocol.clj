@@ -49,20 +49,6 @@
 (defn unsubscribe [^WebSocket conn id]
   (send-to conn ["CLOSE" id]))
 
-(declare record-and-display-event)
-(def event-agent (agent nil))
-
-(defn handle-text [{:keys [buffer event-context url]} data last]
-  (.append buffer (.toString data))
-  (when last
-    (try
-      (let [envelope (json/read-str (.toString buffer))]
-        (send event-agent record-and-display-event event-context envelope url))
-      (catch Exception e
-        (prn 'onText url (.getMessage e))
-        (prn (.toString buffer))))
-    (.delete buffer 0 (.length buffer))))
-
 (defn compute-id [event]
   (util/bytes->num
     (events/make-id
@@ -92,6 +78,19 @@
       (do (prn `record-and-display-event url (.getMessage e))
           (st/print-stack-trace e))
       )))
+
+(def event-agent (agent nil))
+
+(defn handle-text [{:keys [buffer event-context url]} data last]
+  (.append buffer (.toString data))
+  (when last
+    (try
+      (let [envelope (json/read-str (.toString buffer))]
+        (send event-agent record-and-display-event event-context envelope url))
+      (catch Exception e
+        (prn 'onText url (.getMessage e))
+        (prn (.toString buffer))))
+    (.delete buffer 0 (.length buffer))))
 
 (defrecord listener [buffer event-context url]
   WebSocket$Listener

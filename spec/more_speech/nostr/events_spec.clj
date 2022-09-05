@@ -62,9 +62,7 @@
                   :tags [[:e- 1 2 3] [:p-p- 4 5 6 7]]
                   :content content
                   :sig sig}
-                 (translate-event event)))
-      )
-  )
+                 (translate-event event)))))
 
 (declare now event state)
 (describe "Processing Text events (Kind 1)"

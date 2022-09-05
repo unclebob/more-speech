@@ -347,12 +347,33 @@
           (should= read-event-ids #{selected-event-id})
           (should= selected-event selected-event-id)
           (should= [[tab-index selected-event-id]] event-history)
-          (should= 0 back-count)))))
-  )
+          (should= 0 back-count))))))
 
-(declare depict-tree
-         make-event-map
-         add-events)
+(defn depict-node [node]
+  (loop [ns (range (.getChildCount node))
+         node-depiction [(.getUserObject node)]]
+    (if (empty? ns)
+      node-depiction
+      (let [n (first ns)
+            child (.getChildAt node n)]
+        (recur (rest ns) (conj node-depiction (depict-node child)))))))
+
+(defn depict-tree [tree]
+  (let [model (config tree :model)
+        root (.getRoot model)]
+    (depict-node root)))
+
+(defn make-event-map [event-list]
+  (loop [event-list event-list
+         event-map {}]
+    (if (empty? event-list)
+      event-map
+      (let [event (first event-list)]
+        (recur (rest event-list) (assoc event-map (:id event) event))))))
+
+(defn add-events [event-list]
+  (doseq [event event-list]
+    (add-event event)))
 
 (defn events->tree [event-list]
   (with-redefs [render-event (stub :render-event)]
@@ -440,34 +461,6 @@
                   {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
                   {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}]))))
   )
-
-(declare depict-node)
-
-(defn depict-tree [tree]
-  (let [model (config tree :model)
-        root (.getRoot model)]
-    (depict-node root)))
-
-(defn depict-node [node]
-  (loop [ns (range (.getChildCount node))
-         node-depiction [(.getUserObject node)]]
-    (if (empty? ns)
-      node-depiction
-      (let [n (first ns)
-            child (.getChildAt node n)]
-        (recur (rest ns) (conj node-depiction (depict-node child)))))))
-
-(defn make-event-map [event-list]
-  (loop [event-list event-list
-         event-map {}]
-    (if (empty? event-list)
-      event-map
-      (let [event (first event-list)]
-        (recur (rest event-list) (assoc event-map (:id event) event))))))
-
-(defn add-events [event-list]
-  (doseq [event event-list]
-    (add-event event)))
 
 (describe "copy-node copies a node and all its children"
   (it "copies one node"

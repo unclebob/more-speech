@@ -71,23 +71,10 @@
         )
       )))
 
-(declare adjust-back-count display-event)
-
-(defn go-back-by [n]
-  (let [event-context (:event-context @ui-context)
-        event-history (:event-history @event-context)]
-    (when-not (empty? event-history)
-      (swap! event-context adjust-back-count n)
-      (let [back-count (:back-count @event-context)
-            event-position (- (count event-history) back-count 1)
-            [tab-index event-id] (nth event-history event-position)]
-        (display-event tab-index event-id)))))
-
 (defn adjust-back-count [event-data n]
   (let [event-history (:event-history event-data)
         back-count (-> (:back-count event-data) (+ n) (max 0) (min (dec (count event-history))))]
-    (assoc event-data :back-count back-count :backing-up true))
-  )
+    (assoc event-data :back-count back-count :backing-up true)))
 
 (defn display-event [tab-index event-id]
   (let [frame (:frame @ui-context)
@@ -98,5 +85,14 @@
         node (find-header-node root-node event-id)]
     (when (some? node)
       (util/select-tab tab-index)
-      (select-tree-node tree node)
-      )))
+      (select-tree-node tree node))))
+
+(defn go-back-by [n]
+  (let [event-context (:event-context @ui-context)
+        event-history (:event-history @event-context)]
+    (when-not (empty? event-history)
+      (swap! event-context adjust-back-count n)
+      (let [back-count (:back-count @event-context)
+            event-position (- (count event-history) back-count 1)
+            [tab-index event-id] (nth event-history event-position)]
+        (display-event tab-index event-id)))))
