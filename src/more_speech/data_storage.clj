@@ -23,14 +23,14 @@
           (with-out-str
             (clojure.pprint/pprint (relays/relays-for-writing))))
     (spit @config/tabs-list-filename
-              (with-out-str
-                (clojure.pprint/pprint (:tabs-list @event-context))))
+          (with-out-str
+            (clojure.pprint/pprint (:tabs-list @event-context))))
     (spit @config/user-configuration-filename
-              (with-out-str
-                (clojure.pprint/pprint (:user-configuration @event-context))))
+          (with-out-str
+            (clojure.pprint/pprint (:user-configuration @event-context))))
     (spit @config/contact-lists-filename
-                  (with-out-str
-                    (clojure.pprint/pprint (:contact-lists @event-context))))
+          (with-out-str
+            (clojure.pprint/pprint (:contact-lists @event-context))))
     ))
 
 (defn write-messages []
@@ -140,10 +140,11 @@
         now (quot (System/currentTimeMillis) 1000)
         last-time (if (nil? last-time) (- now 86400) last-time)
         first-time (if (nil? first-time) now first-time)]
-    (doseq [file-name file-names]
-      (prn 'reading file-name)
-      (let [old-events (read-string (slurp (str @config/messages-directory "/" file-name)))]
-        (load-events old-events event-context handler)))
-    (swap! event-context assoc :days-changed #{} :earliest-loaded-time first-time)
+    (future
+      (doseq [file-name (reverse file-names)]
+        (prn 'reading file-name)
+        (let [old-events (read-string (slurp (str @config/messages-directory "/" file-name)))]
+          (load-events old-events event-context handler)))
+      (swap! event-context assoc :days-changed #{(quot last-time 86400)} :earliest-loaded-time first-time))
     last-time))
 
