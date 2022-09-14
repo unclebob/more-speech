@@ -124,6 +124,12 @@
         nil)))
   )
 
+(defn get-last-event-time [file-name]
+  (let [events (read-string (slurp (str @config/messages-directory "/" file-name)))
+        last-event (last events)
+        last-time (:created-at last-event)]
+    last-time))
+
 (defn is-message-file? [file-name]
   (re-matches #"\d+\-\d+\w+\d+" file-name))
 
@@ -136,7 +142,7 @@
         first-file-name (first file-names)
         last-file-name (last file-names)
         first-time (time-from-file-name first-file-name)
-        last-time (time-from-file-name last-file-name)
+        last-time (get-last-event-time last-file-name)
         now (quot (System/currentTimeMillis) 1000)
         last-time (if (nil? last-time) (- now 86400) last-time)
         first-time (if (nil? first-time) now first-time)]
