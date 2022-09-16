@@ -250,6 +250,7 @@
         1 (process-text-event event-state event url)
         2 (process-server-recommendation event-state event)
         3 (contact-list/process-contact-list event-state event url)
+        4 (do (prn 'DM url event) event-state)
         7 (process-like event-state event)
         (do #_(prn "unknown event: " url event)
           event-state)))))
