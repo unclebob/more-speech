@@ -10,7 +10,7 @@
 
 
 (defn get-tab-index [name]
-  (loop [tab-list (:tabs-list @(:event-context @ui-context))
+  (loop [tab-list (get-event-state :tabs-list)
          index 0]
     (cond
       (empty? tab-list) nil
@@ -28,7 +28,7 @@
     (selection! tabbed-panel tab-index)))
 
 (defn change-tabs-list-name [old-name new-name]
-  (loop [tabs-list (:tabs-list @(:event-context @ui-context))
+  (loop [tabs-list (get-event-state :tabs-list)
          new-tabs-list []]
     (cond
       (empty? tabs-list)
@@ -43,7 +43,7 @@
              (conj new-tabs-list (first tabs-list))))))
 
 (defn delete-tab-from-tabs-list [tab-name]
-  (loop [tabs-list (:tabs-list @(:event-context @ui-context))
+  (loop [tabs-list (get-event-state :tabs-list)
          new-tabs-list []]
     (cond
       (empty? tabs-list)
@@ -57,13 +57,13 @@
              (conj new-tabs-list (first tabs-list))))))
 
 (defn add-tab-to-tabs-list [tab-name]
-  (let [tabs-list (:tabs-list @(:event-context @ui-context))
+  (let [tabs-list (get-event-state :tabs-list)
         new-tabs-list (conj tabs-list {:name tab-name :selected [] :blocked []})]
     (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)))
 
 
 (defn add-id-to-tab [tab-name key id]
-  (loop [tabs-list (:tabs-list @(:event-context @ui-context))
+  (loop [tabs-list (get-event-state :tabs-list)
          new-tabs-list []]
     (cond
       (empty? tabs-list)
@@ -85,7 +85,7 @@
     tab-name))
 
 (defn relaunch []
-  (let [send-chan (:send-chan @(:event-context @ui-context))]
+  (let [send-chan (get-event-state :send-chan)]
     (future (async/>!! send-chan [:relaunch]))))
 
 (defn- get-clipboard []

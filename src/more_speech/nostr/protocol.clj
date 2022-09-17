@@ -1,6 +1,7 @@
 (ns more-speech.nostr.protocol
   (:require [clojure.data.json :as json]
             [clojure.core.async :as async]
+            [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :refer [relays]]
             [more-speech.nostr.util :as util]
@@ -58,17 +59,17 @@
        :tags (get event "tags")
        :content (get event "content")})))
 
-(defn record-and-display-event [_agent event-context envelope url]
+(defn record-and-display-event [_agent envelope url]
   (try
     (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
           event (events/translate-event inner-event)
           id (:id event)
           computed-id (compute-id inner-event)
-          ui-handler (:event-handler @event-context)
-          dup? (contains? (:text-event-map @event-context) id)]
+          ui-handler (get-event-state :event-handler)
+          dup? (contains? (get-event-state :text-event-map) id)]
       (if (= id computed-id)
         (do
-          (swap! event-context events/process-event event url)
+          (swap! (:event-context @ui-context) events/process-event event url)
           (when (and (not dup?) (= (:kind event) 1))
             (events/handle-text-event ui-handler event)
             ))
@@ -81,18 +82,18 @@
 
 (def event-agent (agent nil))
 
-(defn handle-text [{:keys [buffer event-context url]} data last]
+(defn handle-text [{:keys [buffer url]} data last]
   (.append buffer (.toString data))
   (when last
     (try
       (let [envelope (json/read-str (.toString buffer))]
-        (send event-agent record-and-display-event event-context envelope url))
+        (send event-agent record-and-display-event envelope url))
       (catch Exception e
         (prn 'onText url (.getMessage e))
         (prn (.toString buffer))))
     (.delete buffer 0 (.length buffer))))
 
-(defrecord listener [buffer event-context url]
+(defrecord listener [buffer url]
   WebSocket$Listener
   (onOpen [_this _webSocket]
     (prn 'open url))
@@ -112,11 +113,11 @@
     (prn 'websocket-listener-error url error))
   )
 
-(defn connect-to-relay ^WebSocket [url event-context]
+(defn connect-to-relay ^WebSocket [url]
   (try
     (let [client (HttpClient/newHttpClient)
           cl (.newWebSocketBuilder client)
-          cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) event-context url))
+          cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) url))
           wsf (future (.get cws))
           ws (deref wsf 1000 :time-out)]
       (if (= ws :time-out)
@@ -141,12 +142,12 @@
     (when-let [conn (get-in @relays [url :connection])]
       (.sendPing conn (ByteBuffer/allocate 4)))))
 
-(defn connect-to-relays [event-context]
+(defn connect-to-relays []
   (doseq [url (keys @relays)]
     (let [relay (get @relays url)
           should-connect? (or (:read relay) (:write relay))
           connection (if should-connect?
-                       (connect-to-relay url event-context)
+                       (connect-to-relay url)
                        nil)]
       (when (some? connection)
         (swap! relays assoc-in [url :connection] connection))))
@@ -182,8 +183,8 @@
           (subscribe conn id date)
           (swap! relays assoc-in [url :subscribed] true))))))
 
-(defn process-send-channel [event-context]
-  (let [send-chan (:send-chan @event-context)
+(defn process-send-channel []
+  (let [send-chan (get-event-state :send-chan)
         urls (keys @relays)
         send-urls (filter #(:write (get @relays %)) urls)
         send-connections (map #(get-in @relays [% :connection]) send-urls)
@@ -204,13 +205,13 @@
         (prn 'closing url)
         (close-connection conn id)))))
 
-(defn get-events [event-context subscription-time]
+(defn get-events [subscription-time]
   (let [subscription-id "more-speech"
         metadata-request-id "more-speech-metadata"
         contact-lists-request-id "more-speech-contact-lists"
-        event-handler (:event-handler @event-context)
+        event-handler (get-event-state :event-handler)
         now-in-seconds (quot (System/currentTimeMillis) 1000)]
-    (connect-to-relays event-context)
+    (connect-to-relays)
     (request-contact-lists-from-relays contact-lists-request-id)
     (when (user-configuration/should-import-metadata? now-in-seconds)
       (request-metadata-from-relays metadata-request-id)
@@ -220,9 +221,9 @@
     (if (user-configuration/should-export-profile? now-in-seconds)
       (do
         (user-configuration/set-last-time-profile-exported now-in-seconds)
-        (future (events/compose-and-send-metadata-event @event-context)))
+        (future (events/compose-and-send-metadata-event)))
       (println "Not time to export profile yet."))
-    (let [exit-condition (process-send-channel event-context)]
+    (let [exit-condition (process-send-channel)]
       (unsubscribe-from-relays subscription-id)
       (Thread/sleep 100)
       (prn 'done)

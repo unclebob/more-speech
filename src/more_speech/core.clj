@@ -31,13 +31,13 @@
     (swap! event-context assoc :send-chan send-chan :event-handler handler)
     (let [latest-old-message-time
           (if (not config/test-run?)
-            (data-storage/read-in-last-n-days config/days-to-read event-context handler)
+            (data-storage/read-in-last-n-days config/days-to-read handler)
             (-> (System/currentTimeMillis) (quot 1000) (- 86400)))
-          exit-condition (protocol/get-events event-context latest-old-message-time)]
+          exit-condition (protocol/get-events latest-old-message-time)]
 
       (when (not config/test-run?)
         (data-storage/write-configuration)
-        (data-storage/write-changed-days event-context))
+        (data-storage/write-changed-days))
       (if (= exit-condition :relaunch)
         (do
           (invoke-now (.dispose (:frame @ui-context)))

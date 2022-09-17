@@ -52,8 +52,7 @@
 
 (defn trust-this-author [event _e]
   (let [his-pubkey (:pubkey event)
-        event-context (:event-context @ui-context)
-        profiles (:profiles @event-context)
+        profiles (get-event-state :profiles)
         profile (get profiles his-pubkey)
         petname (input "Name this author"
                        :value (:name profile)
@@ -67,11 +66,10 @@
           path (.getPathForLocation tree (.getX e) (.getY e))
           node (.getLastPathComponent path)
           event-id (.getUserObject ^DefaultMutableTreeNode node)
-          event-context (:event-context @ui-context)
-          event-map (:text-event-map @event-context)
+          event-map (get-event-state :text-event-map)
           event (get event-map event-id)
           public-key (:pubkey event)
-          tab-names (vec (remove #(= "all" %) (map :name (:tabs-list @event-context))))
+          tab-names (vec (remove #(= "all" %) (map :name (get-event-state :tabs-list))))
           tab-names (conj tab-names "<new-tab>")
           add-author-actions (map #(action :name % :handler (partial add-author-to-tab public-key %)) tab-names)
           block-author-actions (map #(action :name % :handler (partial block-author-from-tab public-key %)) tab-names)
@@ -106,13 +104,11 @@
 (defn render-event [widget info]
   (if (seqable? (:value info))
     (text! widget "Articles")
-    (let [event-context (:event-context @ui-context)
-          event-state @event-context
-          event-map (:text-event-map event-state)
+    (let [event-map (get-event-state :text-event-map)
           node (:value info)
           event-id (.getUserObject node)
           event (get event-map event-id)
-          read? (contains? (:read-event-ids @event-context) event-id)
+          read? (contains? (get-event-state :read-event-ids) event-id)
           font (if read? config/default-font config/bold-font)]
       (config! widget :font font)
       (text! widget (formatters/format-header event)))))
@@ -222,10 +218,9 @@
 
 (defn add-event [event]
   (let [frame (:frame @ui-context)
-        event-state @(:event-context @ui-context)
-        event-map (:text-event-map event-state)
+        event-map (get-event-state :text-event-map)
         event-id (:id event)]
-    (loop [tabs (:tabs-list event-state)
+    (loop [tabs (get-event-state :tabs-list)
            index 0]
       (if (empty? tabs)
         nil

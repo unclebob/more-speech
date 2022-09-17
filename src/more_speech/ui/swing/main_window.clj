@@ -17,7 +17,7 @@
   (handle-text-event [_handler event]
     (invoke-now (article-tree/add-event event)))
   (update-relay-panel [_handler]
-    (invoke-later (relay-panel/update-relay-panel ui-context))))
+    (invoke-later (relay-panel/update-relay-panel))))
 
 (defn open-link [e]
   (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
@@ -33,8 +33,7 @@
   )
 
 (defn make-main-window []
-  (let [event-context @(:event-context @ui-context)
-        title (str "More-Speech:" (:name (:keys event-context)) " - " config/version)
+  (let [title (str "More-Speech:" (:name (get-event-state :keys)) " - " config/version)
         main-frame (frame :title title :size [1500 :by 1000])
         _ (swap! ui-context assoc :frame main-frame)
         article-area (article-panel/make-article-area)
@@ -56,8 +55,7 @@
     (listen main-frame :window-closing
             (fn [_]
               (.stop timer)
-              (let [event-context (:event-context @ui-context)
-                    send-chan (:send-chan @event-context)]
+              (let [send-chan (get-event-state :send-chan)]
                 (future (async/>!! send-chan [:closed])))
               (.dispose main-frame)))
     (show! main-frame)

@@ -105,7 +105,7 @@
         fixed-name))))
 
 (defn add-suffix-for-duplicate [pubkey name]
-  (let [profiles (:profiles @(:event-context @ui-context))
+  (let [profiles (get-event-state :profiles)
         others-profiles (dissoc profiles pubkey)
         profile-vals (vals others-profiles)
         dups (filter #(= name (:name %)) profile-vals)]
@@ -176,15 +176,15 @@
       (prn 'get-references 'bad-tags-in-event (.getMessage e) event)
       [nil nil nil])))
 
-(defn process-references [state event]
+(defn process-references [event-state event]
   (let [[_ _ referent] (get-references event)]
     (if (nil? referent)
-      state
+      event-state
       (let [referent-path [:text-event-map referent]]
-        (if (nil? (get-in state referent-path))
-          state
+        (if (nil? (get-in event-state referent-path))
+          event-state
           (update-in
-            state
+            event-state
             (concat referent-path [:references])
             conj (:id event)))))))
 
@@ -256,8 +256,7 @@
           event-state)))))
 
 (defn get-root-of-thread [id]
-  (let [event-context (:event-context @ui-context)
-        messages (:text-event-map @event-context)
+  (let [messages (get-event-state :text-event-map)
         event (get messages id)
         [root _ _] (get-references event)]
     (if (some? root) root id)))
@@ -282,8 +281,8 @@
   "Adds pubkey, created-at, id, and sig to the partially composed body,
   which must include kind, tags, and content.  The body is put into an
   EVENT wrapper that is ready to send."
-  [event-state body]
-  (let [keys (:keys event-state)
+  [body]
+  (let [keys (get-event-state :keys)
         private-key (util/hex-string->bytes (:private-key keys))
         pubkey (util/hex-string->bytes (:public-key keys))
         now (quot (System/currentTimeMillis) 1000)
@@ -298,15 +297,15 @@
     ["EVENT" event])
   )
 
-(defn compose-metadata-event [event-state]
-  (let [keys (:keys event-state)
+(defn compose-metadata-event []
+  (let [keys (get-event-state :keys)
         content (to-json {:name (:name keys)
                           :about (:about keys)
                           :picture (:picture keys)})
         body {:kind 0
               :tags []
               :content content}]
-    (body->event event-state body))
+    (body->event body))
   )
 
 (defn make-contact-list-tag [contact-entry]
@@ -317,13 +316,13 @@
 (defn make-contact-list-tags [contact-list]
   (map make-contact-list-tag contact-list))
 
-(defn compose-contact-list [event-state contact-list]
+(defn compose-contact-list [contact-list]
   (let [tags (make-contact-list-tags contact-list)
         body {:kind 3
               :tags tags
               :content "more-speech contact list"}
         ]
-    (body->event event-state body))
+    (body->event body))
   )
 
 (defn make-event-reference-tags
@@ -337,10 +336,10 @@
      []
      [[:e (hexify reply-to) "" "reply"]])))
 
-(defn make-people-reference-tags [event-state pubkey reply-to-or-nil]
+(defn make-people-reference-tags [pubkey reply-to-or-nil]
   (if (nil? reply-to-or-nil)
     []
-    (let [event-map (:text-event-map event-state)
+    (let [event-map (get-event-state :text-event-map)
           parent-event-id reply-to-or-nil
           parent-event (get event-map parent-event-id)
           parent-tags (:tags parent-event)
@@ -356,11 +355,11 @@
     [[:subject subject]]))
 
 
-(defn get-reply-root [event-state reply-to-or-nil]
+(defn get-reply-root [reply-to-or-nil]
   (if (nil? reply-to-or-nil)
     nil
     (let [reply-id reply-to-or-nil
-          event-map (:text-event-map event-state)
+          event-map (get-event-state :text-event-map)
           replied-to-event (get event-map reply-id)
           [root _mentions _referent] (get-references replied-to-event)]
       root)))
@@ -369,7 +368,7 @@
   (let [pet-pubkey (contact-list/get-pubkey-from-petname user-name)]
     (if (some? pet-pubkey)
       pet-pubkey
-      (let [profiles (:profiles @(:event-context @ui-context))]
+      (let [profiles (get-event-state :profiles)]
         (loop [pairs (vec profiles)]
           (if (empty? pairs)
             nil
@@ -423,36 +422,36 @@
     ))
 
 (defn compose-text-event
-  ([event-state subject text]
-   (compose-text-event event-state subject text nil))
+  ([subject text]
+   (compose-text-event subject text nil))
 
-  ([event-state subject text reply-to-or-nil]
-   (let [pubkey (:pubkey event-state)
-         root (get-reply-root event-state reply-to-or-nil)
+  ([subject text reply-to-or-nil]
+   (let [pubkey (get-event-state :pubkey)
+         root (get-reply-root reply-to-or-nil)
          tags (concat (make-event-reference-tags reply-to-or-nil root)
-                      (make-people-reference-tags event-state pubkey reply-to-or-nil)
+                      (make-people-reference-tags pubkey reply-to-or-nil)
                       (make-subject-tag subject)
                       [[:client (str "more-speech - " config/version)]])
          [content tags] (emplace-references text tags)
          body {:kind 1
                :tags tags
                :content content}]
-     (body->event event-state body))))
+     (body->event body))))
 
-(defn send-event [event-state event]
-  (let [send-chan (:send-chan event-state)]
+(defn send-event [event]
+  (let [send-chan (get-event-state :send-chan)]
     (async/>!! send-chan [:event event])))
 
-(defn compose-and-send-text-event [event-state source-event-or-nil subject message]
+(defn compose-and-send-text-event [source-event-or-nil subject message]
   (let [reply-to-or-nil (:id source-event-or-nil)
-        event (compose-text-event event-state subject message reply-to-or-nil)]
-    (send-event event-state event)))
+        event (compose-text-event subject message reply-to-or-nil)]
+    (send-event event)))
 
-(defn compose-and-send-metadata-event [event-state]
-  (send-event event-state (compose-metadata-event event-state)))
+(defn compose-and-send-metadata-event []
+  (send-event (compose-metadata-event)))
 
-(defn compose-and-send-contact-list [event-state contact-list]
-  (send-event event-state (compose-contact-list event-state contact-list)))
+(defn compose-and-send-contact-list [contact-list]
+  (send-event (compose-contact-list contact-list)))
 
 
 

@@ -42,27 +42,27 @@
     )
 
   (it "corrects malformed tags"
-      (let [id (rand-int 1000000)
-            pubkey (rand-int 1000000)
-            sig (rand-int 1000000)
-            created_at (rand-int 10000)
-            content "the content"
-            tags [["e:" 1 2 3] ["p:p:" 4 5 6 7]]
-            event {"id" (hexify id)
-                   "pubkey" (hexify pubkey)
-                   "created_at" created_at
-                   "kind" 1
-                   "tags" tags
-                   "content" content
-                   "sig" (->> sig (num->bytes 64) bytes->hex-string)}]
-        (should= {:id id
-                  :pubkey pubkey
-                  :created-at created_at
-                  :kind 1
-                  :tags [[:e- 1 2 3] [:p-p- 4 5 6 7]]
-                  :content content
-                  :sig sig}
-                 (translate-event event)))))
+    (let [id (rand-int 1000000)
+          pubkey (rand-int 1000000)
+          sig (rand-int 1000000)
+          created_at (rand-int 10000)
+          content "the content"
+          tags [["e:" 1 2 3] ["p:p:" 4 5 6 7]]
+          event {"id" (hexify id)
+                 "pubkey" (hexify pubkey)
+                 "created_at" created_at
+                 "kind" 1
+                 "tags" tags
+                 "content" content
+                 "sig" (->> sig (num->bytes 64) bytes->hex-string)}]
+      (should= {:id id
+                :pubkey pubkey
+                :created-at created_at
+                :kind 1
+                :tags [[:e- 1 2 3] [:p-p- 4 5 6 7]]
+                :content content
+                :sig sig}
+               (translate-event event)))))
 
 (declare now event state)
 (describe "Processing Text events (Kind 1)"
@@ -162,9 +162,9 @@
                   :name "name"
                   :about "about"
                   :picture "picture"}
-            event-state {:keys keys}
+            _ (reset! (:event-context @ui-context) {:keys keys})
             now (quot (System/currentTimeMillis) 1000)
-            event (compose-metadata-event event-state)
+            event (compose-metadata-event)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             ]
         (should= "EVENT" (first event))
@@ -182,11 +182,11 @@
     (it "composes an original message with no subject."
       (let [private-key (num->bytes 64 314159)
             public-key (get-pub-key private-key)
-            event-state {:keys {:private-key (bytes->hex-string private-key)
-                                :public-key (bytes->hex-string public-key)}}
+            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                           :public-key (bytes->hex-string public-key)}})
             text "message text"
             subject ""
-            event (compose-text-event event-state subject text)
+            event (compose-text-event subject text)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))
@@ -202,11 +202,11 @@
     (it "composes an original message with a subject."
       (let [private-key (num->bytes 64 314159)
             public-key (get-pub-key private-key)
-            event-state {:keys {:private-key (bytes->hex-string private-key)
-                                :public-key (bytes->hex-string public-key)}}
+            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                           :public-key (bytes->hex-string public-key)}})
             text "message text"
             subject "subject"
-            event (compose-text-event event-state subject text)
+            event (compose-text-event subject text)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))
@@ -225,13 +225,13 @@
             root-id 7734
             root-id-hex (hexify root-id)
             root-author 99
-            event-state {:keys {:private-key (bytes->hex-string private-key)
-                                :public-key (bytes->hex-string public-key)}
-                         :text-event-map {root-id {:pubkey root-author
-                                                   :tags []}}
-                         :pubkey public-key}
+            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                           :public-key (bytes->hex-string public-key)}
+                                                    :text-event-map {root-id {:pubkey root-author
+                                                                              :tags []}}
+                                                    :pubkey public-key})
             text "message text"
-            event (compose-text-event event-state "" text root-id)
+            event (compose-text-event "" text root-id)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))
@@ -254,16 +254,16 @@
             root-id 1952
             root-id-hex (hexify root-id)
             root-author 99
-            event-state {:keys {:private-key (bytes->hex-string private-key)
-                                :public-key (bytes->hex-string public-key)}
-                         :pubkey public-key
-                         :text-event-map {root-child-id {:pubkey root-child-author
-                                                         :tags [[:e root-id-hex]
-                                                                [:p (hexify root-author)]]}
-                                          root-id {:pubkey root-author
-                                                   :tags []}}}
+            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                           :public-key (bytes->hex-string public-key)}
+                                                    :pubkey public-key
+                                                    :text-event-map {root-child-id {:pubkey root-child-author
+                                                                                    :tags [[:e root-id-hex]
+                                                                                           [:p (hexify root-author)]]}
+                                                                     root-id {:pubkey root-author
+                                                                              :tags []}}})
             text "message text"
-            event (compose-text-event event-state "" text root-child-id)
+            event (compose-text-event "" text root-child-id)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))
@@ -286,12 +286,12 @@
             root-id 7734
             root-id-hex (hexify root-id)
             root-author 99
-            event-state {:keys {:private-key (bytes->hex-string private-key)
-                                :public-key (bytes->hex-string public-key)}
-                         :text-event-map {root-id {:pubkey root-author
-                                                   :tags [[:p (hexify author)]]}}
-                         :pubkey public-key}
-            event (compose-text-event event-state "" "message" root-id)
+            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                           :public-key (bytes->hex-string public-key)}
+                                                    :text-event-map {root-id {:pubkey root-author
+                                                                              :tags [[:p (hexify author)]]}}
+                                                    :pubkey public-key})
+            event (compose-text-event "" "message" root-id)
             {:keys [tags]} (second event)]
 
         (should= [[:e root-id-hex "" "reply"]
@@ -300,10 +300,10 @@
     (it "composes a message with a slash."
       (let [private-key (num->bytes 64 42)
             public-key (get-pub-key private-key)
-            event-state {:keys {:private-key (bytes->hex-string private-key)
-                                :public-key (bytes->hex-string public-key)}}
+            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                           :public-key (bytes->hex-string public-key)}})
             text "message/text"
-            event (compose-text-event event-state "" text)
+            event (compose-text-event "" text)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)]
         (should= "EVENT" (first event))
@@ -321,11 +321,12 @@
     (it "composes an simple contact list"
       (let [private-key (num->bytes 64 42)
             public-key (get-pub-key private-key)
-            event-state {:keys {:private-key (bytes->hex-string private-key)
-                                :public-key (bytes->hex-string public-key)}}
+            event-context (:event-context @ui-context)
+            _ (reset! event-context {:keys {:private-key (bytes->hex-string private-key)
+                                            :public-key (bytes->hex-string public-key)}})
             contact-list [{:pubkey 1}
                           {:pubkey 2 :petname "petname"}]
-            event (compose-contact-list event-state contact-list)
+            event (compose-contact-list contact-list)
             {:keys [pubkey created_at kind tags content id sig]} (second event)
             now (quot (System/currentTimeMillis) 1000)
             ]
@@ -453,27 +454,27 @@
                  (emplace-references content tags))))
 
     (it "adds an abbreviated profile name for an unamed pubkey"
-          (let [tags [[:e "blah"]]
-                user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
-                pubkey (num32->hex-string user-id)
-                profiles {}
-                event-context (atom {:profiles profiles})
-                _ (reset! ui-context {:event-context event-context})
-                content (str "hello @" pubkey ".")]
-            (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
-                     (emplace-references content tags))
-            (should= {user-id {:name "0123456789a-"}}
-                     (:profiles @(:event-context @ui-context)))))
+      (let [tags [[:e "blah"]]
+            user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
+            pubkey (num32->hex-string user-id)
+            profiles {}
+            event-context (atom {:profiles profiles})
+            _ (reset! ui-context {:event-context event-context})
+            content (str "hello @" pubkey ".")]
+        (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
+                 (emplace-references content tags))
+        (should= {user-id {:name "0123456789a-"}}
+                 (:profiles @(:event-context @ui-context)))))
 
     (it "does not recognize pubkeys that aren't 32 bytes"
-              (let [tags [[:e "blah"]]
-                    profiles {}
-                    event-context (atom {:profiles profiles})
-                    _ (reset! ui-context {:event-context event-context})
-                    content "hello @01234567abc."]
-                (should= ["hello @01234567abc." [[:e "blah"]]]
-                         (emplace-references content tags))
-                (should= {} (:profiles @(:event-context @ui-context)))))))
+      (let [tags [[:e "blah"]]
+            profiles {}
+            event-context (atom {:profiles profiles})
+            _ (reset! ui-context {:event-context event-context})
+            content "hello @01234567abc."]
+        (should= ["hello @01234567abc." [[:e "blah"]]]
+                 (emplace-references content tags))
+        (should= {} (:profiles @(:event-context @ui-context)))))))
 
 (describe "fixing names"
   (it "should not fix a good name"

@@ -24,7 +24,7 @@
 (defn id-click [e]
   (if (.isPopupTrigger e)
     (copy-click e)
-    (article-tree-util/id-click ui-context (config e :user-data))))
+    (article-tree-util/id-click (config e :user-data))))
 
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
@@ -97,9 +97,8 @@
                   :center (flow-panel :items [reply-button create-button]))))
 
 (defn load-article-info [selected-id]
-  (let [event-state @(:event-context @ui-context)
-        main-frame (:frame @ui-context)
-        text-map (:text-event-map event-state)
+  (let [main-frame (:frame @ui-context)
+        text-map (get-event-state :text-event-map)
         event (get text-map selected-id)
         [root-id _ referent] (events/get-references event)
         reply-to (select main-frame [:#reply-to-label])

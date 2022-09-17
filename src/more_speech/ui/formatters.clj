@@ -13,8 +13,7 @@
    (format-user-id user-id 20))
 
   ([user-id length]
-   (let [event-context (:event-context @ui-context)
-         profiles (:profiles @event-context)]
+   (let [profiles (get-event-state :profiles)]
      (if (nil? user-id)
        ""
        (let [trusted? (contact-list/is-trusted? user-id)
@@ -40,7 +39,7 @@
            (str "(" (abbreviate profile-name (- length 2)) ")")))))))
 
 (defn lookup-reference [event reference]
-  (let [profiles (:profiles @(:event-context @ui-context))
+  (let [profiles (get-event-state :profiles)
         ref-string (re-find #"\d+" reference)
         index (Integer/parseInt ref-string)
         tags (:tags event)]

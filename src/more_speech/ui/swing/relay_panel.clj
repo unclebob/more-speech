@@ -1,6 +1,7 @@
 (ns more-speech.ui.swing.relay-panel
   (:use [seesaw core])
-  (:require [more-speech.nostr.relays :refer [relays]]))
+  (:require [more-speech.nostr.relays :refer [relays]]
+            [more-speech.ui.swing.ui-context :refer :all]))
 
 (defn make-relay-control-panel [relay-url]
   (let [relay (get @relays relay-url)
@@ -22,7 +23,7 @@
         relay-panel (vertical-panel :items relay-control-panels :id :relay-panel :user-data panel-map)]
     relay-panel))
 
-(defn update-relay-panel [ui-context]
+(defn update-relay-panel []
   (let [frame (:frame @ui-context)
         relay-panel (select frame [:#relay-panel])
         panel-map (config relay-panel :user-data)]

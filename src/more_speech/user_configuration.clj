@@ -30,7 +30,7 @@
     (quot (.lastModified keys-file) 1000)))
 
 (defn should-export-profile? [now-in-seconds]
-  (let [user-configuration (:user-configuration @(:event-context @ui-context))
+  (let [user-configuration (get-event-state :user-configuration)
         xad (get-in user-configuration [:export-user-profile :export-after-days])
         lte (get-in user-configuration [:export-user-profile :last-time-exported])]
     (and (number? xad)
@@ -46,7 +46,7 @@
            export-time)))
 
 (defn should-import-metadata? [now-in-seconds]
-  (let [user-configuration (:user-configuration @(:event-context @ui-context))
+  (let [user-configuration (get-event-state :user-configuration)
         iad (get-in user-configuration [:import-metadata :import-after-days])
         lti (get-in user-configuration [:import-metadata :last-time-imported])]
     (and (number? iad)

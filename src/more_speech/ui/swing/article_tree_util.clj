@@ -51,7 +51,7 @@
     (.setSelectionPath tree tree-path)
     (.scrollPathToVisible tree tree-path)))
 
-(defn id-click [ui-context id]
+(defn id-click [id]
   (let [frame (:frame @ui-context)
         tab-index (:selected-tab @ui-context)
         tab-selector (keyword (str "#" tab-index))
@@ -89,10 +89,10 @@
 
 (defn go-back-by [n]
   (let [event-context (:event-context @ui-context)
-        event-history (:event-history @event-context)]
+        event-history (get-event-state :event-history)]
     (when-not (empty? event-history)
       (swap! event-context adjust-back-count n)
-      (let [back-count (:back-count @event-context)
+      (let [back-count (get-event-state :back-count)
             event-position (- (count event-history) back-count 1)
             [tab-index event-id] (nth event-history event-position)]
         (display-event tab-index event-id)))))

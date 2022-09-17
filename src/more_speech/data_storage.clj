@@ -12,26 +12,26 @@
 
 
 (defn write-configuration []
-  (let [event-context (:event-context @ui-context)]
-    (spit @config/profiles-filename
-          (with-out-str
-            (clojure.pprint/pprint (:profiles @event-context))))
-    (spit @config/read-event-ids-filename
-          (with-out-str
-            (clojure.pprint/pprint (:read-event-ids @event-context))))
-    (spit @config/relays-filename
-          (with-out-str
-            (clojure.pprint/pprint (relays/relays-for-writing))))
-    (spit @config/tabs-list-filename
-          (with-out-str
-            (clojure.pprint/pprint (:tabs-list @event-context))))
-    (spit @config/user-configuration-filename
-          (with-out-str
-            (clojure.pprint/pprint (:user-configuration @event-context))))
-    (spit @config/contact-lists-filename
-          (with-out-str
-            (clojure.pprint/pprint (:contact-lists @event-context))))
-    ))
+
+  (spit @config/profiles-filename
+        (with-out-str
+          (clojure.pprint/pprint (get-event-state :profiles))))
+  (spit @config/read-event-ids-filename
+        (with-out-str
+          (clojure.pprint/pprint (get-event-state :read-event-ids))))
+  (spit @config/relays-filename
+        (with-out-str
+          (clojure.pprint/pprint (relays/relays-for-writing))))
+  (spit @config/tabs-list-filename
+        (with-out-str
+          (clojure.pprint/pprint (get-event-state :tabs-list))))
+  (spit @config/user-configuration-filename
+        (with-out-str
+          (clojure.pprint/pprint (get-event-state :user-configuration))))
+  (spit @config/contact-lists-filename
+        (with-out-str
+          (clojure.pprint/pprint (get-event-state :contact-lists))))
+  )
 
 (defn write-messages []
   (let [event-context (:event-context @ui-context)]
@@ -61,16 +61,16 @@
     (swap! ui-context assoc :event-context event-context)
     (relays/load-relays-from-file @config/relays-filename)))
 
-(defn load-events [old-events event-context handler]
+(defn load-events [old-events handler]
   (doseq [event old-events]
     (let [url (first (:relays event))]
-      (swap! event-context events/add-event event url)
+      (swap! (:event-context @ui-context) events/add-event event url)
       (events/handle-text-event handler event))))
 
-(defn read-old-events [event-context handler]
+(defn read-old-events [handler]
   (let [old-events (vals (read-string (slurp @config/messages-filename)))
         creation-times (map :created-at old-events)]
-    (load-events old-events event-context handler)
+    (load-events old-events handler)
     (if (empty? creation-times)
       (-> (System/currentTimeMillis) (quot 1000) (- 86400))
       (apply max creation-times))))
@@ -106,11 +106,11 @@
                  (clojure.pprint/pprint
                    (second day-partition)))))))))
 
-(defn write-changed-days [event-context]
-  (let [days-changed (:days-changed @event-context)
-        first-day-loaded (quot (:earliest-loaded-time @event-context) 86400)
+(defn write-changed-days []
+  (let [days-changed (get-event-state :days-changed)
+        first-day-loaded (quot (get-event-state :earliest-loaded-time) 86400)
         days-to-write (set (filter #(>= % first-day-loaded) days-changed))
-        daily-partitions (partition-messages-by-day (:text-event-map @event-context))
+        daily-partitions (partition-messages-by-day (get-event-state :text-event-map))
         changed-partitions (filter #(contains? days-to-write (first %)) daily-partitions)]
     (write-messages-by-day changed-partitions)))
 
@@ -133,7 +133,7 @@
 (defn is-message-file? [file-name]
   (re-matches #"\d+\-\d+\w+\d+" file-name))
 
-(defn read-in-last-n-days [n event-context handler]
+(defn read-in-last-n-days [n handler]
   (let [message-directory (clojure.java.io/file @config/messages-directory)
         files (.listFiles message-directory)
         file-names (for [file files] (.getName file))
@@ -150,7 +150,7 @@
       (doseq [file-name (reverse file-names)]
         (prn 'reading file-name)
         (let [old-events (read-string (slurp (str @config/messages-directory "/" file-name)))]
-          (load-events old-events event-context handler)))
-      (swap! event-context assoc :days-changed #{(quot last-time 86400)} :earliest-loaded-time first-time))
+          (load-events old-events handler)))
+      (swap! (:event-context @ui-context) assoc :days-changed #{(quot last-time 86400)} :earliest-loaded-time first-time))
     last-time))
 
