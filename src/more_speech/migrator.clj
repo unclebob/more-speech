@@ -1,6 +1,7 @@
 (ns more-speech.migrator
   (:require [clojure.java.io :as io]
             [clojure.set :as set]
+            [more-speech.nostr.util :as util]
             [more-speech.config :refer [migration-filename]]
             [more-speech.config :as config]
             [more-speech.nostr.util :as util]
@@ -9,7 +10,7 @@
             [more-speech.data-storage :as data-storage]
             [more-speech.data-storage :as data-storage]
             [more-speech.user-configuration :as user-configuration])
-  (:import (java.security SecureRandom)))
+  )
 
 (defn file-exists? [fname]
   (.exists (io/file fname)))
@@ -21,11 +22,7 @@
   (when (file-exists? fname)
     (io/delete-file fname)))
 
-(defn make-private-key []
-  (let [gen (SecureRandom.)
-        key-bytes (byte-array 32)
-        _ (.nextBytes gen key-bytes)]
-    key-bytes))
+
 
 ;---The Migrations
 
@@ -33,7 +30,7 @@
   (when-not (file-exists? @config/private-directory)
     (.mkdir (io/file @config/private-directory)))
   (when-not (file-exists? @config/keys-filename)
-    (let [private-key (make-private-key)
+    (let [private-key (util/make-private-key)
           public-key (ecc/get-pub-key private-key)
           temp-user-name (str "more-speech-" (rand-int 100000))]
       (spit @config/keys-filename {:name temp-user-name

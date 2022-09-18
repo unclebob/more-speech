@@ -62,9 +62,8 @@
 
 (defn replace-references [event]
   (let [padded-content (str " " (:content event) " ")
-        pattern #"\#\[\d+\]"
-        references (re-seq pattern padded-content)
-        segments (string/split padded-content pattern)
+        references (re-seq config/reference-pattern padded-content)
+        segments (string/split padded-content config/reference-pattern)
         referents (mapv (partial lookup-reference event) references)
         referents (conj referents " ")
         ]

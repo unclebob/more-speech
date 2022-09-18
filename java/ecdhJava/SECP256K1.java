@@ -25,10 +25,26 @@ public class SECP256K1 {
     curve= new ECDomainParameters(params.getCurve(), params.getG(), params.getN(), params.getH());
   }
 
+  public static byte[] bytesFromBigInteger(BigInteger n) {
+      byte[] b = n.toByteArray();
+
+      if(b.length == 32) {
+          return b;
+      }
+      else if(b.length > 32) {
+          return java.util.Arrays.copyOfRange(b, b.length - 32, b.length);
+      }
+      else {
+          byte[] buf = new byte[32];
+          System.arraycopy(b, 0, buf, buf.length - b.length, b.length);
+          return buf;
+      }
+  }
+
   public static BigInteger calculateKeyAgreement(BigInteger privKey, BigInteger theirPubKey) {
     ECPrivateKeyParameters privKeyP = new ECPrivateKeyParameters(privKey, curve);
     byte[] compressed = new byte[]{2};
-    byte[] val = Arrays.concatenate(compressed, theirPubKey.toByteArray());
+    byte[] val = Arrays.concatenate(compressed, bytesFromBigInteger(theirPubKey));
     ECPoint ecPoint = curve.getCurve().decodePoint(val);
     ECPublicKeyParameters pubKeyP = new ECPublicKeyParameters(ecPoint, curve);
 
@@ -42,7 +58,7 @@ public class SECP256K1 {
     byte[] iv = new byte[16];
     r.nextBytes(iv);
     Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-    cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key.toByteArray(), "AES"), new IvParameterSpec(iv));
+    cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(bytesFromBigInteger(key), "AES"), new IvParameterSpec(iv));
     String ivBase64 = Base64.toBase64String(iv);
     byte[] encryptedMsg = cipher.doFinal(msg.getBytes());
     String encryptedMsgBase64 = Base64.toBase64String(encryptedMsg);
@@ -56,7 +72,7 @@ public class SECP256K1 {
     byte[] decodedMsg = Base64.decode(msgPart);
     byte[] iv = Base64.decode(ivPart);
     Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-    cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(key.toByteArray(), "AES"), new IvParameterSpec(iv));
+    cipher.init(Cipher.DECRYPT_MODE, new SecretKeySpec(bytesFromBigInteger(key), "AES"), new IvParameterSpec(iv));
     return new String(cipher.doFinal(decodedMsg));
   }
 }

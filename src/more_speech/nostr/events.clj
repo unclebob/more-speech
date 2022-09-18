@@ -10,7 +10,8 @@
             [clojure.string :as string]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.config :as config])
-  (:import (java.nio.charset StandardCharsets)))
+  (:import (java.nio.charset StandardCharsets)
+           (ecdhJava SECP256K1)))
 
 (s/def ::id number?)
 (s/def ::pubkey number?)
@@ -421,6 +422,21 @@
      tags]
     ))
 
+(defn encrypt-if-direct-message [content tags]
+  (if (re-matches #"D \#\[\d+\].*" content)
+    (let [reference-digits (re-find #"\d+" content)
+          reference-index (Integer/parseInt reference-digits)
+          p-tag (get tags reference-index)]
+      (if (nil? p-tag)
+        [content 1]
+        (let [recipient-key (hex-string->num (second p-tag))
+              sender-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
+              shared-secret (SECP256K1/calculateKeyAgreement sender-key recipient-key)
+              encrypted-content (SECP256K1/encrypt shared-secret content)]
+          [encrypted-content 4])))
+    [content 1])
+  )
+
 (defn compose-text-event
   ([subject text]
    (compose-text-event subject text nil))
@@ -433,7 +449,8 @@
                       (make-subject-tag subject)
                       [[:client (str "more-speech - " config/version)]])
          [content tags] (emplace-references text tags)
-         body {:kind 1
+         [content kind] (encrypt-if-direct-message content tags)
+         body {:kind kind
                :tags tags
                :content content}]
      (body->event body))))

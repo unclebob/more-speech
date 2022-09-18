@@ -1,5 +1,5 @@
 (ns more-speech.nostr.util
-  (:import (java.security MessageDigest)))
+  (:import (java.security MessageDigest SecureRandom)))
 
 (defn num->bytes
   "Returns the byte-array representation of n.
@@ -69,3 +69,9 @@
     (doseq [i (range (alength a))]
       (aset result i (byte (bit-xor (aget a i) (aget b i)))))
     result))
+
+(defn make-private-key []
+  (let [gen (SecureRandom.)
+        key-bytes (byte-array 32)
+        _ (.nextBytes gen key-bytes)]
+    key-bytes))

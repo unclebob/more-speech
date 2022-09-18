@@ -1,9 +1,11 @@
 (ns more-speech.nostr.events_spec
   (:require [speclj.core :refer :all]
+            [more-speech.nostr.util :as util]
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]))
+            [more-speech.ui.swing.ui-context :refer :all])
+  (:import (ecdhJava SECP256K1)))
 
 (defrecord event-handler-dummy []
   event-handler
@@ -315,6 +317,58 @@
         (should (do-verify (hex-string->bytes id)
                            public-key
                            (hex-string->bytes sig)))))
+    )
+
+  (context "compose direct messages (kind 4)"
+    (it "does not encrypt a regular message"
+      (should= ["message" 1] (encrypt-if-direct-message "message" [])))
+
+    (it "encrypts with shared keys"
+      (let [sender-private-key (util/make-private-key)
+            recipient-private-key (util/make-private-key)
+            sender-public-key (get-pub-key sender-private-key)
+            recipient-public-key (get-pub-key recipient-private-key)
+            outbound-shared-secret (SECP256K1/calculateKeyAgreement
+                            (bytes->num sender-private-key)
+                            (bytes->num recipient-public-key))
+            content "message"
+            encrypted-content (SECP256K1/encrypt outbound-shared-secret content)
+            inbound-shared-secret (SECP256K1/calculateKeyAgreement
+                                    (bytes->num recipient-private-key)
+                                    (bytes->num sender-public-key))]
+        (should= inbound-shared-secret outbound-shared-secret)
+        (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-content))))
+
+    (it "encrypts a direct message"
+          (let [event-context (:event-context @ui-context)
+                sender-private-key (util/make-private-key)
+                recipient-private-key (util/make-private-key)
+                sender-public-key (get-pub-key sender-private-key)
+                recipient-public-key (get-pub-key recipient-private-key)
+                _ (reset! event-context {:keys {:private-key (bytes->hex-string sender-private-key)}})
+                tags [[:p (bytes->hex-string recipient-public-key)]]
+                content "D #[0] hi."
+                inbound-shared-secret (SECP256K1/calculateKeyAgreement
+                                        (bytes->num recipient-private-key)
+                                        (bytes->num sender-public-key))
+                [encrypted-message kind] (encrypt-if-direct-message content tags)]
+            (should= 4 kind)
+            (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-message))))
+
+    (it "catches fake DMs with phoney #[xxx] in them."
+              (let [event-context (:event-context @ui-context)
+                    sender-private-key (util/make-private-key)
+                    recipient-private-key (util/make-private-key)
+                    sender-public-key (get-pub-key sender-private-key)
+                    _ (reset! event-context {:keys {:private-key (bytes->num sender-private-key)}})
+                    tags [[:p "dummy"]]
+                    content "D #[223] hi."
+                    inbound-shared-secret (SECP256K1/calculateKeyAgreement
+                                            (bytes->num recipient-private-key)
+                                            (bytes->num sender-public-key))
+                    [encrypted-message kind] (encrypt-if-direct-message content tags)]
+                (should= 1 kind)
+                (should= content encrypted-message)))
     )
 
   (context "compose kind-3 contact-list event"
