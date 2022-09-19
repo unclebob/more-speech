@@ -86,11 +86,12 @@
           subject (get-subject tags)
           [reply-id _ _] (events/get-references event)
           reply-mark (if (some? reply-id) "^" " ")
+          dm-mark (if (= 4 (:kind event)) "🚫 " "")
           header-text (-> content (string/replace \newline \~) (abbreviate 80))
           content (if (empty? subject)
                     header-text
                     (abbreviate (str subject "|" header-text) 80))]
-      (format "%s %20s %s %s\n" reply-mark name time content))))
+      (format "%s %20s %s %s%s\n" reply-mark name time dm-mark content))))
 
 (defn format-reply [event]
   (let [content (replace-references event)
