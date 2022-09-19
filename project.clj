@@ -20,5 +20,6 @@
   ;:java-cmd "/Users/unclebob/Library/Java/JavaVirtualMachines/openjdk-17.0.2/Contents/Home/bin/java"
   :java-source-paths ["java"]
 ;  :resource-paths ["jars/bcprov-jdk18on-171.jar"]
+  ; remember to deploy: lein deploy local bcprov 1.7.1 jars/bcprov-jdk18on-171.jar
 )
 
