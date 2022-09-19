@@ -8,6 +8,10 @@
             [more-speech.config :as config])
   )
 
+
+(defn hexify [bigint]
+  (util/num32->hex-string bigint))
+
 (defn format-user-id
   ([user-id]
    (format-user-id user-id 20))
@@ -38,9 +42,14 @@
            :else
            (str "(" (abbreviate profile-name (- length 2)) ")")))))))
 
+(defn get-best-name [id]
+  (let [name (contact-list/get-petname id)
+        name (if (empty? name) (get-in (get-event-state :profiles) [id :name]) name)
+        name (if (empty? name) (hexify id) name)]
+    name))
+
 (defn lookup-reference [event reference]
-  (let [profiles (get-event-state :profiles)
-        ref-string (re-find #"\d+" reference)
+  (let [ref-string (re-find #"\d+" reference)
         index (Integer/parseInt ref-string)
         tags (:tags event)]
     (if (>= index (count tags))
@@ -48,11 +57,7 @@
       (try
         (let [id-string (-> tags (nth index) second)
               id (util/hex-string->num id-string)
-              name (contact-list/get-petname id)
-              name (if (empty? name) (get-in profiles [id :name]) name)
-              name (if (empty? name)
-                     id-string
-                     name)]
+              name (get-best-name id)]
           (str "@" name)
           )
         (catch Exception _e
@@ -100,8 +105,11 @@
                        (format-user-id (:pubkey event))
                        (format-time (:created-at event))
                        (first (:relays event))
-                       )]
-    (str header ">---------------\n" content)))
+                       )
+        dm-prefix (if (:dm event)
+                    (str "D @" (get-best-name (:pubkey event)) "\n")
+                    "")]
+    (str dm-prefix header ">---------------\n" content)))
 
 (defn html-escape [content]
   (string/escape content {\& "&amp;"
@@ -149,9 +157,6 @@
           (str formatted-content (linkify seg))))
       ""
       segments)))
-
-(defn hexify [bigint]
-  (util/num32->hex-string bigint))
 
 (defn hexify-event [event]
   (assoc event :pubkey (hexify (:pubkey event))

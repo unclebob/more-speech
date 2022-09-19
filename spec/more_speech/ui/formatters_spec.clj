@@ -5,8 +5,6 @@
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.util :as util]))
 
-(defn hexify [n] (util/num32->hex-string n))
-
 (describe "Abbreviations."
   (it "abbreviates pubkeys"
     (should= "short" (abbreviate "short" 10))
@@ -153,7 +151,8 @@ the proposition that all men are created equal."
             event-context (atom {:profiles profiles})
             _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p "deadbeef"]]}]
-        (should= "@deadbeef" (replace-references event))))
+        (should= "@00000000000000000000000000000000000000000000000000000000deadbeef"
+                 (replace-references event))))
 
     (it "does not replace reference if there is no p tag"
       (let [content "#[1]"
@@ -171,10 +170,27 @@ the proposition that all men are created equal."
           created-at (make-date "07/05/2022")
           relays ["relay-1"]
           tags [["p" (hexify 1)]]
-          event {:pubkey 1 :created-at created-at :relays relays :tags tags :content "Hello #[0]."}]
+          event {:pubkey 1 :created-at created-at
+                 :relays relays :tags tags :content "Hello #[0]."}]
       (should=
         ">From: (user-1) at 07/05/22 24:00:00 on relay-1\n>---------------\n>Hello @user-1."
-        (format-reply event)))))
+        (format-reply event))))
+
+  (it "formats a reply to a DM"
+    (let [profiles {1 {:name "user-1"}
+                    2 {:name "user-2"}}
+          _ (reset! ui-context {:event-context (atom {:profiles profiles})})
+          created-at (make-date "07/05/2022")
+          relays ["relay-1"]
+          tags [["p" (hexify 2)]]
+          event {:pubkey 1 :created-at created-at :dm true
+                 :relays relays :tags tags :content "Hello #[0]."}]
+      (should=
+        "D @user-1\n>From: (user-1) at 07/05/22 24:00:00 on relay-1\n>---------------\n>Hello @user-2."
+        (format-reply event)))
+    )
+
+  )
 
 
 (describe "Escape HTML entities"
@@ -299,17 +315,17 @@ the proposition that all men are created equal."
       (should= "2-deg<-trusted" (format-user-id trusted-by-trusted-user))))
 
   (it "shows second degree of trust petname for user trusted by trusted user"
-      (let [my-pubkey 99
-            trusted-user 1
-            trusted-by-trusted-user 2
-            profiles {trusted-user {:name "trusted"}
-                      trusted-by-trusted-user {:name "2-deg"}}
-            contact-lists {my-pubkey [{:pubkey trusted-user
-                                       :petname "trusted-pet"}]
-                           trusted-user [{:pubkey trusted-by-trusted-user}]}
-            event-state {:pubkey my-pubkey
-                         :profiles profiles
-                         :contact-lists contact-lists}]
-        (reset! ui-context {:event-context (atom event-state)})
-        (should= "2-deg<-trusted-pet" (format-user-id trusted-by-trusted-user))))
+    (let [my-pubkey 99
+          trusted-user 1
+          trusted-by-trusted-user 2
+          profiles {trusted-user {:name "trusted"}
+                    trusted-by-trusted-user {:name "2-deg"}}
+          contact-lists {my-pubkey [{:pubkey trusted-user
+                                     :petname "trusted-pet"}]
+                         trusted-user [{:pubkey trusted-by-trusted-user}]}
+          event-state {:pubkey my-pubkey
+                       :profiles profiles
+                       :contact-lists contact-lists}]
+      (reset! ui-context {:event-context (atom event-state)})
+      (should= "2-deg<-trusted-pet" (format-user-id trusted-by-trusted-user))))
   )
