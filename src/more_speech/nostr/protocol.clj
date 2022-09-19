@@ -59,6 +59,10 @@
        :tags (get event "tags")
        :content (get event "content")})))
 
+(defn is-text-event? [event]
+  (or (= (:kind event) 1)
+      (= (:kind event) 4)))
+
 (defn record-and-display-event [_agent envelope url]
   (try
     (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
@@ -68,11 +72,13 @@
           ui-handler (get-event-state :event-handler)
           dup? (contains? (get-event-state :text-event-map) id)]
       (if (= id computed-id)
-        (do
-          (swap! (:event-context @ui-context) events/process-event event url)
-          (when (and (not dup?) (= (:kind event) 1))
-            (events/handle-text-event ui-handler event)
-            ))
+        (let [event (events/decrypt-dm-event event)]
+          (when (not (:private event))
+            (swap! (:event-context @ui-context) events/process-event event url)
+            (when (and (not dup?)
+                       (is-text-event? event))
+              (events/handle-text-event ui-handler event)
+              )))
         (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)
         ))
     (catch Exception e

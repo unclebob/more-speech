@@ -82,6 +82,40 @@
                 }
                event-context-map)))
 
+
+(defn decrypt-his-dm [event]
+  (let [p-tags (filter #(= :p (first %)) (:tags event))
+        my-tag (filter #(= (hex-string->num (second %))
+                           (get-event-state :pubkey))
+                       p-tags)]
+    (if (empty? my-tag)
+      (assoc event :private true)
+      (let [his-key (:pubkey event)
+            priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
+            shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
+            decrypted-content (SECP256K1/decrypt shared-secret (:content event))
+            event (assoc event :content decrypted-content)]
+        event))))
+
+(defn decrypt-my-dm [event]
+  (let [p-tags (filter #(= :p (first %)) (:tags event))
+        p-tag (first p-tags)
+        his-key (hex-string->num (second p-tag))
+        priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
+        shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
+        decrypted-content (SECP256K1/decrypt shared-secret (:content event))
+        event (assoc event :content decrypted-content)]
+    event))
+
+(defn decrypt-dm-event [event]
+  (if (= 4 (:kind event))
+    (let [author-key (:pubkey event)
+          event (assoc event :dm true)]
+      (if (= author-key (get-event-state :pubkey))
+        (decrypt-my-dm event)
+        (decrypt-his-dm event)))
+    event))
+
 (defn select-event [event-state tab-index id]
   (swap! ui-context assoc :selected-tab tab-index)
   (if-not (:backing-up event-state)
@@ -251,7 +285,7 @@
         1 (process-text-event event-state event url)
         2 (process-server-recommendation event-state event)
         3 (contact-list/process-contact-list event-state event url)
-        4 (do (prn 'DM url event) event-state)
+        4 (process-text-event event-state event url)
         7 (process-like event-state event)
         (do #_(prn "unknown event: " url event)
           event-state)))))

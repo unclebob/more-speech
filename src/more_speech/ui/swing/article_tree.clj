@@ -109,8 +109,9 @@
           event-id (.getUserObject node)
           event (get event-map event-id)
           read? (contains? (get-event-state :read-event-ids) event-id)
-          font (if read? config/default-font config/bold-font)]
-      (config! widget :font font)
+          font (if read? config/default-font config/bold-font)
+          color (if (= (:kind event) 4) :blue :black)]
+      (config! widget :font font :foreground color)
       (text! widget (formatters/format-header event)))))
 
 (defn make-header-tree [tab-index]

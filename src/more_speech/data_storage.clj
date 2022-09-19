@@ -142,7 +142,9 @@
         first-file-name (first file-names)
         last-file-name (last file-names)
         first-time (time-from-file-name first-file-name)
-        last-time (get-last-event-time last-file-name)
+        last-time (if (nil? last-file-name)
+                    nil
+                    (get-last-event-time last-file-name))
         now (quot (System/currentTimeMillis) 1000)
         last-time (if (nil? last-time) (- now 86400) last-time)
         first-time (if (nil? first-time) now first-time)]

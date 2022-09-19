@@ -9,11 +9,16 @@
                  [clojure.java-time "0.3.3"]
                  [javax.xml.bind/jaxb-api "2.4.0-b180830.0359"]
                  [seesaw "1.5.0"]
+                 [bcprov "1.7.1"]
                  ]
-  :profiles {:dev {:dependencies [[speclj "3.4.1"]]}}
+  :profiles {:dev {:dependencies [[speclj "3.4.1"]]}
+             :uberjar {:aot :all}}
+  :repositories {"local" {:url "file:lib" :username "" :password ""}}
   :plugins [[speclj "3.4.1"]]
   :test-paths ["spec"]
   :main more-speech.core
   ;:java-cmd "/Users/unclebob/Library/Java/JavaVirtualMachines/openjdk-17.0.2/Contents/Home/bin/java"
   :java-source-paths ["java"]
-  :resource-paths ["jars/bcprov-jdk18on-171.jar"])
+;  :resource-paths ["jars/bcprov-jdk18on-171.jar"]
+)
+
