@@ -457,7 +457,7 @@
     ))
 
 (defn encrypt-if-direct-message [content tags]
-  (if (re-matches #"D \#\[\d+\].*" content)
+  (if (re-find #"^D \#\[\d+\]" content)
     (let [reference-digits (re-find #"\d+" content)
           reference-index (Integer/parseInt reference-digits)
           p-tag (get tags reference-index)]
