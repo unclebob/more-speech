@@ -10,7 +10,7 @@
 (def read-contact-lists-days-ago 7)
 
 (def migration-level 9)
-(def version "202209051410")
+(def version "202209191120")
 
 (def test-run? true)
 ;---configuration files
