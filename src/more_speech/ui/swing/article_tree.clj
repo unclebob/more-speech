@@ -11,7 +11,7 @@
     [more-speech.ui.swing.util :as swing-util]
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.ui.formatter-util :as f-util])
-  (:use [seesaw core font tree])
+  (:use [seesaw core font tree color])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
 (defn if-new-tab [tab-name]
@@ -118,7 +118,9 @@
   (let [header-tree (tree :renderer render-event
                           :root-visible? false
                           :expands-selected-paths? true
-                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Root")))]
+                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Root")))
+        renderer (.getCellRenderer header-tree)
+        _ (.setBackgroundSelectionColor renderer (color :azure))]
     (listen header-tree :selection (partial node-selected tab-index))
     (listen header-tree :mouse-pressed mouse-pressed)
     header-tree))
