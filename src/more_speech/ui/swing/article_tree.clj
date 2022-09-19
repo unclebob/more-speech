@@ -48,7 +48,7 @@
 (defn get-info [event _e]
   (alert
     (with-out-str
-      (clojure.pprint/pprint event))))
+      (clojure.pprint/pprint (formatters/hexify-event event)))))
 
 (defn trust-this-author [event _e]
   (let [his-pubkey (:pubkey event)

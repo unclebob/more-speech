@@ -148,3 +148,11 @@
           (str formatted-content (linkify seg))))
       ""
       segments)))
+
+(defn hexify [bigint]
+  (util/num32->hex-string bigint))
+
+(defn hexify-event [event]
+  (assoc event :pubkey (hexify (:pubkey event))
+               :id (hexify (:id event))
+               :sig (hexify (:sig event))))
