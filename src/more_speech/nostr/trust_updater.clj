@@ -19,4 +19,4 @@
 (defn entrust-and-send [his-pubkey his-petname]
   (let [event-context (:event-context @ui-context)
         my-contact-list (entrust his-pubkey his-petname)]
-  (events/compose-and-send-contact-list @event-context my-contact-list)))
+  (events/compose-and-send-contact-list my-contact-list)))
