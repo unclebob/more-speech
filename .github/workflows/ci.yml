@@ -30,8 +30,11 @@ jobs:
         run: |
           export DISPLAY=:99
           sudo Xvfb -ac :99 -screen 0 1280x1024x24 > /dev/null 2>&1 &
+          lein deploy local bcprov 1.7.1 jars/bcprov-jdk18on-171.jar
           lein spec        
 
       - name: Run tests (Windows)
         if: matrix.os == 'windows-latest'
-        run: lein spec
+        run: |
+          lein deploy local bcprov 1.7.1 jars/bcprov-jdk18on-171.jar
+          lein spec
