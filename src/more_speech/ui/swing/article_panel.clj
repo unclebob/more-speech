@@ -1,5 +1,5 @@
 (ns more-speech.ui.swing.article-panel
-  (:require [more-speech.config :as config]
+  (:require [more-speech.user-configuration :as uconfig]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatters :as formatters]
@@ -11,7 +11,7 @@
   (:use [seesaw core border]))
 
 (defn bold-label [s]
-  (label :text s :font config/bold-font))
+  (label :text s :font (uconfig/get-bold-font)))
 
 (defn copy-click [e]
   (when (.isPopupTrigger e)
@@ -28,13 +28,14 @@
 
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
-        author-id-label (text :id :author-id-label :editable? false :font config/small-font)
+        label-font (uconfig/get-small-font)
+        author-id-label (text :id :author-id-label :editable? false :font label-font)
         created-time-label (label :id :created-time-label)
         reply-to-label (label :id :reply-to-label)
-        id-label (text :id :id-label :editable? false :font config/small-font)
-        citing-label (text :id :citing-label :editable? false :font config/small-font)
-        subject-label (label :id :subject-label :font config/small-font)
-        root-label (text :id :root-label :editable? false :font config/small-font)
+        id-label (text :id :id-label :editable? false :font label-font)
+        citing-label (text :id :citing-label :editable? false :font label-font)
+        subject-label (label :id :subject-label :font label-font)
+        root-label (text :id :root-label :editable? false :font label-font)
         relays-popup (popup :enabled? false)
         relays-label (label :id :relays-label :user-data relays-popup)]
     (listen relays-label

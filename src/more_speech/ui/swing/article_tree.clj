@@ -3,14 +3,14 @@
     [more-speech.ui.swing.article-tree-util :refer :all]
     [more-speech.nostr.events :as events]
     [more-speech.ui.formatters :as formatters]
-    [more-speech.config :as config]
     [more-speech.ui.swing.article-panel :as article-panel]
     [more-speech.ui.swing.ui-context :refer :all]
     [clojure.set :as set]
     [more-speech.nostr.util :as util]
     [more-speech.ui.swing.util :as swing-util]
     [more-speech.nostr.trust-updater :as trust-updater]
-    [more-speech.ui.formatter-util :as f-util])
+    [more-speech.ui.formatter-util :as f-util]
+    [more-speech.user-configuration :as uconfig])
   (:use [seesaw core font tree color])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -109,7 +109,7 @@
           event-id (.getUserObject node)
           event (get event-map event-id)
           read? (contains? (get-event-state :read-event-ids) event-id)
-          font (if read? config/default-font config/bold-font)
+          font (if read? (uconfig/get-default-font) (uconfig/get-bold-font))
           color (if (= (:kind event) 4) :blue :black)]
       (config! widget :font font :foreground color)
       (text! widget (formatters/format-header event)))))

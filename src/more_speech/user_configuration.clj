@@ -58,3 +58,12 @@
            assoc-in
            [:user-configuration :import-metadata :last-time-imported]
            import-time)))
+
+(defn get-default-font[]
+  (get (get-event-state :user-configuration) :default-font config/default-font))
+
+(defn get-bold-font []
+  (get (get-event-state :user-configuration) :bold-font config/bold-font))
+
+(defn get-small-font []
+  (get (get-event-state :user-configuration) :small-font config/small-font))

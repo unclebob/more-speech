@@ -1,8 +1,8 @@
 (ns more-speech.ui.swing.edit-window
   (:require [more-speech.nostr.events :as events]
-            [more-speech.config :as config]
             [more-speech.ui.formatters :as formatters]
-            [more-speech.ui.swing.ui-context :refer :all])
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.user-configuration :as uconfig])
   (:use [seesaw core]))
 
 (defn make-edit-window [kind]
@@ -14,7 +14,7 @@
         edit-frame (frame :title (name kind)
                           :size [1000 :by 500]
                           :on-close :dispose)
-        edit-area (styled-text :font config/default-font
+        edit-area (styled-text :font (uconfig/get-default-font)
                                :wrap-lines? true)
         send-button (button :text "Send")
         event-map (get-event-state :text-event-map)
