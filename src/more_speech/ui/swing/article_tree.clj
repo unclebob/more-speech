@@ -10,7 +10,8 @@
     [more-speech.ui.swing.util :as swing-util]
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.ui.formatter-util :as f-util]
-    [more-speech.user-configuration :as uconfig])
+    [more-speech.user-configuration :as uconfig]
+    [more-speech.ui.swing.edit-window :as edit-window])
   (:use [seesaw core font tree color])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -60,6 +61,13 @@
     (when (some? petname)
       (trust-updater/entrust-and-send his-pubkey petname))))
 
+(defn dm-author [event _e]
+  (let [pubkey (:pubkey event)
+        content (str "D @" (formatters/get-best-name pubkey) " ")]
+    (edit-window/make-edit-window :send content)
+    )
+  )
+
 (defn mouse-pressed [e]
   (when (.isPopupTrigger e)
     (let [tree (.getComponent e)
@@ -83,6 +91,7 @@
                            (menu :text "Block author from tab" :items block-author-actions)
                            (menu :text "Add article to tab" :items add-article-actions)
                            (menu :text "Block article from tab" :items block-article-actions)
+                           (action :name "DM author..." :handler (partial dm-author event))
                            ])]
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))
     ))
