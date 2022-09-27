@@ -223,20 +223,20 @@
             (concat referent-path [:references])
             conj (:id event)))))))
 
-(defn add-event [event-state event url]
+(defn add-event [event-state event urls]
   (let [id (:id event)
         time (:created-at event)]
     (if (contains? (:text-event-map event-state) id)
-      (update-in event-state [:text-event-map id :relays] conj url)
+      (update-in event-state [:text-event-map id :relays] concat urls)
       (-> event-state
           (assoc-in [:text-event-map id] event)
-          (assoc-in [:text-event-map id :relays] [url])
+          (assoc-in [:text-event-map id :relays] urls)
           (update-in [:chronological-text-events] conj [id time])
           (update :days-changed conj (quot time 86400))
           (process-references event)))))
 
 (defn process-text-event [event-state event url]
-  (let [event-state (add-event event-state event url)]
+  (let [event-state (add-event event-state event [url])]
     (relays/add-recommended-relays-in-tags event)
     event-state))
 

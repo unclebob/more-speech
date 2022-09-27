@@ -63,8 +63,8 @@
 
 (defn load-events [old-events handler]
   (doseq [event old-events]
-    (let [url (first (:relays event))]
-      (swap! (:event-context @ui-context) events/add-event event url)
+    (let [urls (:relays event)]
+      (swap! (:event-context @ui-context) events/add-event event urls)
       (events/handle-text-event handler event))))
 
 (defn read-old-events [handler]

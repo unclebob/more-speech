@@ -112,22 +112,22 @@
     )
 
   (context "sorted set for handling events"
-    (it "adds one element"
-      (let [state (add-event @state {:id 10 :created-at 0} "url")]
+    (it "adds one element with two urls"
+      (let [state (add-event @state {:id 10 :created-at 0} ["url1" "url2"])]
         (should= #{[10 0]} (get-in state [:chronological-text-events]))
-        (should= {10 {:id 10 :created-at 0 :relays ["url"]}} (get-in state [:text-event-map]))))
+        (should= {10 {:id 10 :created-at 0 :relays ["url1" "url2"]}} (get-in state [:text-event-map]))))
 
     (it "adds two elements in chronological order, should be reversed"
-      (let [state (add-event @state {:id 10 :created-at 0} "url")
-            state (add-event state {:id 20 :created-at 1} "url")
+      (let [state (add-event @state {:id 10 :created-at 0} ["url"])
+            state (add-event state {:id 20 :created-at 1} ["url"])
             ]
         (should= [[20 1] [10 0]] (seq (get-in state [:chronological-text-events])))
         (should= {10 {:id 10 :created-at 0 :relays ["url"]}
                   20 {:id 20 :created-at 1 :relays ["url"]}} (get-in state [:text-event-map])))
       )
     (it "adds two elements in reverse chronological order, should remain."
-      (let [state (add-event @state {:id 10 :created-at 1} "url")
-            state (add-event state {:id 20 :created-at 0} "url")
+      (let [state (add-event @state {:id 10 :created-at 1} ["url"])
+            state (add-event state {:id 20 :created-at 0} ["url"])
             ]
         (should= [[10 1] [20 0]] (seq (get-in state [:chronological-text-events])))
         (should= {10 {:id 10 :created-at 1 :relays ["url"]}
@@ -136,8 +136,8 @@
       )
 
     (it "adds two elements with equal ids from two different relays"
-      (let [state (add-event @state {:id 10 :created-at 1} "url1")
-            state (add-event state {:id 10 :created-at 0} "url2")
+      (let [state (add-event @state {:id 10 :created-at 1} ["url1"])
+            state (add-event state {:id 10 :created-at 0} ["url2"])
             event-map (get-in state [:text-event-map])
             event (get event-map 10)]
         (should= [[10 1]] (seq (get-in state [:chronological-text-events])))
@@ -358,14 +358,9 @@
     (it "catches fake DMs with phoney #[xxx] in them."
               (let [event-context (:event-context @ui-context)
                     sender-private-key (util/make-private-key)
-                    recipient-private-key (util/make-private-key)
-                    sender-public-key (get-pub-key sender-private-key)
                     _ (reset! event-context {:keys {:private-key (bytes->num sender-private-key)}})
                     tags [[:p "dummy"]]
                     content "D #[223] hi."
-                    inbound-shared-secret (SECP256K1/calculateKeyAgreement
-                                            (bytes->num recipient-private-key)
-                                            (bytes->num sender-public-key))
                     [encrypted-message kind] (encrypt-if-direct-message content tags)]
                 (should= 1 kind)
                 (should= content encrypted-message)))

@@ -2,8 +2,7 @@
   (:require [speclj.core :refer :all]
             [more-speech.ui.formatters :refer :all]
             [more-speech.ui.formatter-util :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.nostr.util :as util]))
+            [more-speech.ui.swing.ui-context :refer :all]))
 
 (describe "Abbreviations."
   (it "abbreviates pubkeys"
@@ -53,14 +52,18 @@
           _ (reset! ui-context {:event-context event-context})
           event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
-                 :content "Four score and seven years ago
-our fathers brought forth upon this continent
-a new nation concieved in liberty and dedicated to
-the proposition that all men are created equal."
+                 :content (str "Four score and seven years ago\n"
+                               "our fathers brought forth upon this continent\n"
+                               "a new nation concieved in liberty and dedicated to\n"
+                               "the proposition that all men are created equal.")
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "          (1111111...) " timestamp " Four score and seven years ago~our fathers brought forth upon this continent~...\n") header)))
+      (should (.startsWith header
+                           (str "          (1111111...) "
+                                timestamp
+                                " Four score and seven years ago~our")))
+      (should (.endsWith header "...\n"))))
 
   (it "formats a message with a subject"
     (let [profiles {}
