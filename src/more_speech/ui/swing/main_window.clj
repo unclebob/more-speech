@@ -40,17 +40,17 @@
         _ (listen article-area :hyperlink open-link)
         header-tab-panel (tabbed-panel :tabs (tabs/make-tabs) :id :header-tab-panel)
         relay-panel (relay-panel/make-relay-panel)
-        header-panel (left-right-split (scrollable relay-panel)
-                                       header-tab-panel)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)
                                     :south (article-panel/make-control-panel))
-        main-panel (top-bottom-split
-                     header-panel
+        messages-panel (top-bottom-split
+                     header-tab-panel
                      article-panel
                      :divider-location 1/2)
+        main-tabs (tabbed-panel :tabs [{:title "Messages" :content messages-panel}
+                                       {:title "Relays" :content (scrollable relay-panel)}])
         timer (Timer. 100 nil)]
-    (config! main-frame :content main-panel)
+    (config! main-frame :content main-tabs)
     (listen timer :action timer-action)
     (listen main-frame :window-closing
             (fn [_]

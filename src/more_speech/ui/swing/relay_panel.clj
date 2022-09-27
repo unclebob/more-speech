@@ -9,12 +9,10 @@
         write-check-box (checkbox :text "W" :enabled? false :selected? (:write relay) :id :write)
         connected-check-box (checkbox :text "Connected" :enabled? false :selected? (some? (:connection relay)) :id :connected)
         subscribed-check-box (checkbox :text "Subscribed" :enabled? false :selected? (:subscribed relay) :id :subscribed)
-        relay-label (flow-panel :align :left
-                                :items [(label :text relay-url :halign :left)])
-        buttons (flow-panel :align :left
-                            :items [read-check-box write-check-box connected-check-box subscribed-check-box])
-        control-panel (vertical-panel :items [relay-label buttons (separator :border 1)])]
-    control-panel))
+        relay-panel (flow-panel :align :left
+                                :items [read-check-box write-check-box connected-check-box subscribed-check-box
+                                        (label :text relay-url :halign :left)])]
+    relay-panel))
 
 (defn make-relay-panel []
   (let [urls (keys @relays)
