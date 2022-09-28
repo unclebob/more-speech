@@ -7,7 +7,9 @@
             [more-speech.ui.swing.relay-panel :as relay-panel]
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.config :as config])
+            [more-speech.config :as config]
+            [more-speech.ui.formatter-util :as formatter-util]
+            [more-speech.nostr.util :as util])
   (:use [seesaw core])
   (:import (javax.swing Timer)
            (javax.swing.event HyperlinkEvent$EventType)))
@@ -32,6 +34,18 @@
   ;nothing for now.
   )
 
+(defn make-profile-line [id]
+  (let [profiles (get-event-state :profiles)
+        profile (get profiles id)
+        name (formatter-util/abbreviate (:name profile) 20)]
+    (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
+
+(defn make-author-list []
+  (let [profiles (get-event-state :profiles)
+        ids (keys profiles)
+        profile-lines (sort (map make-profile-line ids))]
+    (map #(label :font config/default-font :text %) profile-lines)))
+
 (defn make-main-window []
   (let [title (str "More-Speech:" (:name (get-event-state :keys)) " - " config/version)
         main-frame (frame :title title :size [1500 :by 1000])
@@ -44,11 +58,12 @@
                                     :center (scrollable article-area)
                                     :south (article-panel/make-control-panel))
         messages-panel (top-bottom-split
-                     header-tab-panel
-                     article-panel
-                     :divider-location 1/2)
+                         header-tab-panel
+                         article-panel
+                         :divider-location 1/2)
         main-tabs (tabbed-panel :tabs [{:title "Messages" :content messages-panel}
-                                       {:title "Relays" :content (scrollable relay-panel)}])
+                                       {:title "Relays" :content (scrollable relay-panel)}
+                                       {:title "Authors" :content (scrollable (vertical-panel :items (make-author-list)))}])
         timer (Timer. 100 nil)]
     (config! main-frame :content main-tabs)
     (listen timer :action timer-action)
