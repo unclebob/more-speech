@@ -9,7 +9,7 @@
                  [clojure.java-time "0.3.3"]
                  [javax.xml.bind/jaxb-api "2.4.0-b180830.0359"]
                  [seesaw "1.5.0"]
-                 [bcprov "1.7.1"]
+                 [org.bouncycastle/bcprov-jdk18on "1.72"]
                  ]
   :profiles {:dev {:dependencies [[speclj "3.4.1"]]}
              :uberjar {:aot :all}}
