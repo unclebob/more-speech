@@ -4,7 +4,8 @@
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all])
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.config :as config])
   (:import (ecdhJava SECP256K1)))
 
 (defrecord event-handler-dummy []
@@ -156,238 +157,241 @@
 
 (describe "Composing outgoing events"
   (context "composing metadata (kind:0) messages"
-    (it "composes using the keys data structure"
-      (let [private-key (num->bytes 64 314159)
-            public-key (get-pub-key private-key)
-            keys {:private-key (bytes->hex-string private-key)
-                  :public-key (bytes->hex-string public-key)
-                  :name "name"
-                  :about "about"
-                  :picture "picture"}
-            _ (reset! (:event-context @ui-context) {:keys keys})
-            now (quot (System/currentTimeMillis) 1000)
-            event (compose-metadata-event)
-            {:keys [pubkey created_at kind tags content id sig]} (second event)
-            ]
-        (should= "EVENT" (first event))
-        (should= (bytes->hex-string public-key) pubkey)
-        (should (<= 0 (- now created_at) 1))                ;within one second.
-        (should= 0 kind)
-        (should= [] tags)
-        (should= (to-json {:name "name" :about "about" :picture "picture"}) content)
-        (should (do-verify (hex-string->bytes id)
-                           public-key
-                           (hex-string->bytes sig))))
-      )
+    (with-redefs [config/proof-of-work-default 0]
+      (it "composes using the keys data structure"
+        (let [private-key (num->bytes 64 314159)
+              public-key (get-pub-key private-key)
+              keys {:private-key (bytes->hex-string private-key)
+                    :public-key (bytes->hex-string public-key)
+                    :name "name"
+                    :about "about"
+                    :picture "picture"}
+              _ (reset! (:event-context @ui-context) {:keys keys})
+              now (quot (System/currentTimeMillis) 1000)
+              event (compose-metadata-event)
+              {:keys [pubkey created_at kind content id sig]} (second event)
+              ]
+          (should= "EVENT" (first event))
+          (should= (bytes->hex-string public-key) pubkey)
+          (should (<= 0 (- now created_at) 10))             ;within ten seconds.
+          (should= 0 kind)
+          (should= (to-json {:name "name" :about "about" :picture "picture"}) content)
+          (should (do-verify (hex-string->bytes id)
+                             public-key
+                             (hex-string->bytes sig))))
+        ))
     )
   (context "composing Text (kind 1) messages"
-    (it "composes an original message with no subject."
-      (let [private-key (num->bytes 64 314159)
-            public-key (get-pub-key private-key)
-            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                           :public-key (bytes->hex-string public-key)}})
-            text "message text"
-            subject ""
-            event (compose-text-event subject text)
-            {:keys [pubkey created_at kind tags content id sig]} (second event)
-            now (quot (System/currentTimeMillis) 1000)]
-        (should= "EVENT" (first event))
-        (should= (bytes->hex-string public-key) pubkey)
-        (should (<= 0 (- now created_at) 1))                ;within one second.
-        (should= 1 kind)
-        (should (have-client-tag? tags))
-        (should= text content)
-        (should (do-verify (hex-string->bytes id)
-                           public-key
-                           (hex-string->bytes sig)))))
+    (with-redefs [config/proof-of-work-default 0]
+      (it "composes an original message with no subject."
+        (let [private-key (num->bytes 64 314159)
+              public-key (get-pub-key private-key)
+              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                             :public-key (bytes->hex-string public-key)}})
+              text "message text"
+              subject ""
+              event (compose-text-event subject text)
+              {:keys [pubkey created_at kind tags content id sig]} (second event)
+              now (quot (System/currentTimeMillis) 1000)]
+          (should= "EVENT" (first event))
+          (should= (bytes->hex-string public-key) pubkey)
+          (should (<= 0 (- now created_at) 10))             ;within ten seconds.
+          (should= 1 kind)
+          (should (have-client-tag? tags))
+          (should= text content)
+          (should (do-verify (hex-string->bytes id)
+                             public-key
+                             (hex-string->bytes sig)))))
 
-    (it "composes an original message with a subject."
-      (let [private-key (num->bytes 64 314159)
-            public-key (get-pub-key private-key)
-            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                           :public-key (bytes->hex-string public-key)}})
-            text "message text"
-            subject "subject"
-            event (compose-text-event subject text)
-            {:keys [pubkey created_at kind tags content id sig]} (second event)
-            now (quot (System/currentTimeMillis) 1000)]
-        (should= "EVENT" (first event))
-        (should= (bytes->hex-string public-key) pubkey)
-        (should (<= 0 (- now created_at) 1))                ;within one second.
-        (should= 1 kind)
-        (should= [[:subject "subject"]] (drop-last tags))
-        (should= text content)
-        (should (do-verify (hex-string->bytes id)
-                           public-key
-                           (hex-string->bytes sig)))))
+      (it "composes an original message with a subject."
+        (let [private-key (num->bytes 64 314159)
+              public-key (get-pub-key private-key)
+              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                             :public-key (bytes->hex-string public-key)}})
+              text "message text"
+              subject "subject"
+              event (compose-text-event subject text)
+              {:keys [pubkey created_at kind tags content id sig]} (second event)
+              now (quot (System/currentTimeMillis) 1000)]
+          (should= "EVENT" (first event))
+          (should= (bytes->hex-string public-key) pubkey)
+          (should (<= 0 (- now created_at) 10))             ;within ten seconds.
+          (should= 1 kind)
+          (should= [:subject "subject"] (first tags))
+          (should= text content)
+          (should (do-verify (hex-string->bytes id)
+                             public-key
+                             (hex-string->bytes sig)))))
 
-    (it "composes a reply to a root article."
-      (let [private-key (num->bytes 64 42)
-            public-key (get-pub-key private-key)
-            root-id 7734
-            root-id-hex (hexify root-id)
-            root-author 99
-            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                           :public-key (bytes->hex-string public-key)}
-                                                    :text-event-map {root-id {:pubkey root-author
-                                                                              :tags []}}
-                                                    :pubkey public-key})
-            text "message text"
-            event (compose-text-event "" text root-id)
-            {:keys [pubkey created_at kind tags content id sig]} (second event)
-            now (quot (System/currentTimeMillis) 1000)]
-        (should= "EVENT" (first event))
-        (should= (bytes->hex-string public-key) pubkey)
-        (should (<= 0 (- now created_at) 1))                ;within one second.
-        (should= 1 kind)
-        (should= [[:e root-id-hex "" "reply"]
-                  [:p (hexify root-author)]] (drop-last tags))
-        (should= text content)
-        (should (do-verify (hex-string->bytes id)
-                           public-key
-                           (hex-string->bytes sig)))))
+      (it "composes a reply to a root article."
+        (let [private-key (num->bytes 64 42)
+              public-key (get-pub-key private-key)
+              root-id 7734
+              root-id-hex (hexify root-id)
+              root-author 99
+              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                             :public-key (bytes->hex-string public-key)}
+                                                      :text-event-map {root-id {:pubkey root-author
+                                                                                :tags []}}
+                                                      :pubkey public-key})
+              text "message text"
+              event (compose-text-event "" text root-id)
+              {:keys [pubkey created_at kind tags content id sig]} (second event)
+              now (quot (System/currentTimeMillis) 1000)]
+          (should= "EVENT" (first event))
+          (should= (bytes->hex-string public-key) pubkey)
+          (should (<= 0 (- now created_at) 10))             ;within ten seconds.
+          (should= 1 kind)
+          (should= [[:e root-id-hex "" "reply"]
+                    [:p (hexify root-author)]] (take 2 tags))
+          (should= text content)
+          (should (do-verify (hex-string->bytes id)
+                             public-key
+                             (hex-string->bytes sig)))))
 
-    (it "composes a reply to a non-root article."
-      (let [private-key (num->bytes 64 42)
-            public-key (get-pub-key private-key)
-            root-child-id 7734
-            root-child-id-hex (hexify root-child-id)
-            root-child-author 88
-            root-id 1952
-            root-id-hex (hexify root-id)
-            root-author 99
-            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                           :public-key (bytes->hex-string public-key)}
-                                                    :pubkey public-key
-                                                    :text-event-map {root-child-id {:pubkey root-child-author
-                                                                                    :tags [[:e root-id-hex]
-                                                                                           [:p (hexify root-author)]]}
-                                                                     root-id {:pubkey root-author
-                                                                              :tags []}}})
-            text "message text"
-            event (compose-text-event "" text root-child-id)
-            {:keys [pubkey created_at kind tags content id sig]} (second event)
-            now (quot (System/currentTimeMillis) 1000)]
-        (should= "EVENT" (first event))
-        (should= (bytes->hex-string public-key) pubkey)
-        (should (<= 0 (- now created_at) 1))                ;within one second.
-        (should= 1 kind)
-        (should= [[:e root-id-hex "" "root"]
-                  [:e root-child-id-hex "" "reply"]
-                  [:p (hexify root-child-author)]
-                  [:p (hexify root-author)]] (drop-last tags))
-        (should= text content)
-        (should (do-verify (hex-string->bytes id)
-                           public-key
-                           (hex-string->bytes sig)))))
+      (it "composes a reply to a non-root article."
+        (let [private-key (num->bytes 64 42)
+              public-key (get-pub-key private-key)
+              root-child-id 7734
+              root-child-id-hex (hexify root-child-id)
+              root-child-author 88
+              root-id 1952
+              root-id-hex (hexify root-id)
+              root-author 99
+              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                             :public-key (bytes->hex-string public-key)}
+                                                      :pubkey public-key
+                                                      :text-event-map {root-child-id {:pubkey root-child-author
+                                                                                      :tags [[:e root-id-hex]
+                                                                                             [:p (hexify root-author)]]}
+                                                                       root-id {:pubkey root-author
+                                                                                :tags []}}})
+              text "message text"
+              event (compose-text-event "" text root-child-id)
+              {:keys [pubkey created_at kind tags content id sig]} (second event)
+              now (quot (System/currentTimeMillis) 1000)]
+          (should= "EVENT" (first event))
+          (should= (bytes->hex-string public-key) pubkey)
+          (should (<= 0 (- now created_at) 10))             ;within ten seconds.
+          (should= 1 kind)
+          (should= [[:e root-id-hex "" "root"]
+                    [:e root-child-id-hex "" "reply"]
+                    [:p (hexify root-child-author)]
+                    [:p (hexify root-author)]] (take 4 tags))
+          (should= text content)
+          (should (do-verify (hex-string->bytes id)
+                             public-key
+                             (hex-string->bytes sig)))))
 
-    (it "author is removed from replies"
-      (let [private-key (num->bytes 64 42)
-            public-key (get-pub-key private-key)
-            author (bytes->num public-key)
-            root-id 7734
-            root-id-hex (hexify root-id)
-            root-author 99
-            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                           :public-key (bytes->hex-string public-key)}
-                                                    :text-event-map {root-id {:pubkey root-author
-                                                                              :tags [[:p (hexify author)]]}}
-                                                    :pubkey public-key})
-            event (compose-text-event "" "message" root-id)
-            {:keys [tags]} (second event)]
+      (it "author is removed from replies"
+        (let [private-key (num->bytes 64 42)
+              public-key (get-pub-key private-key)
+              author (bytes->num public-key)
+              root-id 7734
+              root-id-hex (hexify root-id)
+              root-author 99
+              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                             :public-key (bytes->hex-string public-key)}
+                                                      :text-event-map {root-id {:pubkey root-author
+                                                                                :tags [[:p (hexify author)]]}}
+                                                      :pubkey public-key})
+              event (compose-text-event "" "message" root-id)
+              {:keys [tags]} (second event)]
 
-        (should= [[:e root-id-hex "" "reply"]
-                  [:p (hexify root-author)]] (drop-last tags))))
+          (should= [[:e root-id-hex "" "reply"]
+                    [:p (hexify root-author)]] (take 2 tags))))
 
-    (it "composes a message with a slash."
-      (let [private-key (num->bytes 64 42)
-            public-key (get-pub-key private-key)
-            _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                           :public-key (bytes->hex-string public-key)}})
-            text "message/text"
-            event (compose-text-event "" text)
-            {:keys [pubkey created_at kind tags content id sig]} (second event)
-            now (quot (System/currentTimeMillis) 1000)]
-        (should= "EVENT" (first event))
-        (should= (bytes->hex-string public-key) pubkey)
-        (should (<= 0 (- now created_at) 1))                ;within one second.
-        (should= 1 kind)
-        (should (have-client-tag? tags))
-        (should= text content)
-        (should (do-verify (hex-string->bytes id)
-                           public-key
-                           (hex-string->bytes sig)))))
+      (it "composes a message with a slash."
+        (let [private-key (num->bytes 64 42)
+              public-key (get-pub-key private-key)
+              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
+                                                             :public-key (bytes->hex-string public-key)}})
+              text "message/text"
+              event (compose-text-event "" text)
+              {:keys [pubkey created_at kind tags content id sig]} (second event)
+              now (quot (System/currentTimeMillis) 1000)]
+          (should= "EVENT" (first event))
+          (should= (bytes->hex-string public-key) pubkey)
+          (should (<= 0 (- now created_at) 10))             ;within ten seconds.
+          (should= 1 kind)
+          (should (have-client-tag? tags))
+          (should= text content)
+          (should (do-verify (hex-string->bytes id)
+                             public-key
+                             (hex-string->bytes sig))))))
     )
 
   (context "compose direct messages (kind 4)"
-    (it "does not encrypt a regular message"
-      (should= ["message" 1] (encrypt-if-direct-message "message" [])))
+    (with-redefs [config/proof-of-work-default 0]
+      (it "does not encrypt a regular message"
+        (should= ["message" 1] (encrypt-if-direct-message "message" [])))
 
-    (it "encrypts with shared keys"
-      (let [sender-private-key (util/make-private-key)
-            recipient-private-key (util/make-private-key)
-            sender-public-key (get-pub-key sender-private-key)
-            recipient-public-key (get-pub-key recipient-private-key)
-            outbound-shared-secret (SECP256K1/calculateKeyAgreement
-                            (bytes->num sender-private-key)
-                            (bytes->num recipient-public-key))
-            content "message"
-            encrypted-content (SECP256K1/encrypt outbound-shared-secret content)
-            inbound-shared-secret (SECP256K1/calculateKeyAgreement
-                                    (bytes->num recipient-private-key)
-                                    (bytes->num sender-public-key))]
-        (should= inbound-shared-secret outbound-shared-secret)
-        (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-content))))
+      (it "encrypts with shared keys"
+        (let [sender-private-key (util/make-private-key)
+              recipient-private-key (util/make-private-key)
+              sender-public-key (get-pub-key sender-private-key)
+              recipient-public-key (get-pub-key recipient-private-key)
+              outbound-shared-secret (SECP256K1/calculateKeyAgreement
+                                       (bytes->num sender-private-key)
+                                       (bytes->num recipient-public-key))
+              content "message"
+              encrypted-content (SECP256K1/encrypt outbound-shared-secret content)
+              inbound-shared-secret (SECP256K1/calculateKeyAgreement
+                                      (bytes->num recipient-private-key)
+                                      (bytes->num sender-public-key))]
+          (should= inbound-shared-secret outbound-shared-secret)
+          (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-content))))
 
-    (it "encrypts a direct message"
-          (let [event-context (:event-context @ui-context)
-                sender-private-key (util/make-private-key)
-                recipient-private-key (util/make-private-key)
-                sender-public-key (get-pub-key sender-private-key)
-                recipient-public-key (get-pub-key recipient-private-key)
-                _ (reset! event-context {:keys {:private-key (bytes->hex-string sender-private-key)}})
-                tags [[:p (bytes->hex-string recipient-public-key)]]
-                content "D #[0] hi."
-                inbound-shared-secret (SECP256K1/calculateKeyAgreement
-                                        (bytes->num recipient-private-key)
-                                        (bytes->num sender-public-key))
-                [encrypted-message kind] (encrypt-if-direct-message content tags)]
-            (should= 4 kind)
-            (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-message))))
+      (it "encrypts a direct message"
+        (let [event-context (:event-context @ui-context)
+              sender-private-key (util/make-private-key)
+              recipient-private-key (util/make-private-key)
+              sender-public-key (get-pub-key sender-private-key)
+              recipient-public-key (get-pub-key recipient-private-key)
+              _ (reset! event-context {:keys {:private-key (bytes->hex-string sender-private-key)}})
+              tags [[:p (bytes->hex-string recipient-public-key)]]
+              content "D #[0] hi."
+              inbound-shared-secret (SECP256K1/calculateKeyAgreement
+                                      (bytes->num recipient-private-key)
+                                      (bytes->num sender-public-key))
+              [encrypted-message kind] (encrypt-if-direct-message content tags)]
+          (should= 4 kind)
+          (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-message))))
 
-    (it "catches fake DMs with phoney #[xxx] in them."
-              (let [event-context (:event-context @ui-context)
-                    sender-private-key (util/make-private-key)
-                    _ (reset! event-context {:keys {:private-key (bytes->num sender-private-key)}})
-                    tags [[:p "dummy"]]
-                    content "D #[223] hi."
-                    [encrypted-message kind] (encrypt-if-direct-message content tags)]
-                (should= 1 kind)
-                (should= content encrypted-message)))
+      (it "catches fake DMs with phoney #[xxx] in them."
+        (let [event-context (:event-context @ui-context)
+              sender-private-key (util/make-private-key)
+              _ (reset! event-context {:keys {:private-key (bytes->num sender-private-key)}})
+              tags [[:p "dummy"]]
+              content "D #[223] hi."
+              [encrypted-message kind] (encrypt-if-direct-message content tags)]
+          (should= 1 kind)
+          (should= content encrypted-message))))
     )
 
   (context "compose kind-3 contact-list event"
-    (it "composes an simple contact list"
-      (let [private-key (num->bytes 64 42)
-            public-key (get-pub-key private-key)
-            event-context (:event-context @ui-context)
-            _ (reset! event-context {:keys {:private-key (bytes->hex-string private-key)
-                                            :public-key (bytes->hex-string public-key)}})
-            contact-list [{:pubkey 1}
-                          {:pubkey 2 :petname "petname"}]
-            event (compose-contact-list contact-list)
-            {:keys [pubkey created_at kind tags content id sig]} (second event)
-            now (quot (System/currentTimeMillis) 1000)
-            ]
-        (should= "EVENT" (first event))
-        (should= (bytes->hex-string public-key) pubkey)
-        (should (<= 0 (- now created_at) 1))                ;within one second.
-        (should= 3 kind)
-        (should= "more-speech contact list" content)
-        (should= [[:p (hexify 1) "" ""] [:p (hexify 2) "" "petname"]] tags)
-        (should (do-verify (hex-string->bytes id)
-                           public-key
-                           (hex-string->bytes sig)))))
+    (with-redefs [config/proof-of-work-default 0]
+      (it "composes an simple contact list"
+        (let [private-key (num->bytes 64 42)
+              public-key (get-pub-key private-key)
+              event-context (:event-context @ui-context)
+              _ (reset! event-context {:keys {:private-key (bytes->hex-string private-key)
+                                              :public-key (bytes->hex-string public-key)}})
+              contact-list [{:pubkey 1}
+                            {:pubkey 2 :petname "petname"}]
+              event (compose-contact-list contact-list)
+              {:keys [pubkey created_at kind tags content id sig]} (second event)
+              now (quot (System/currentTimeMillis) 1000)
+              ]
+          (should= "EVENT" (first event))
+          (should= (bytes->hex-string public-key) pubkey)
+          (should (<= 0 (- now created_at) 10))             ;within ten seconds.
+          (should= 3 kind)
+          (should= "more-speech contact list" content)
+          (should= [[:p (hexify 1) "" ""] [:p (hexify 2) "" "petname"]] (take 2 tags))
+          (should (do-verify (hex-string->bytes id)
+                             public-key
+                             (hex-string->bytes sig))))))
     )
   )
 
@@ -579,5 +583,51 @@
       (reset! ui-context {:event-context (atom event-state)})
       (should= 2 (find-user-id "petname"))
       (should= 2 (find-user-id "bob"))))
+  )
 
+(declare body)
+(describe "proof of work"
+  (with body {:pubkey 1 :created_at 1 :kind 1 :tags [] :content "hi"})
+  (it "makes id with no POW"
+    (let [[_id new-body] (make-id-with-pow 0 @body)]
+      (should= [[:nonce 0 0]] (:tags new-body))))
+
+  (it "makes id with small POW"
+    (let [[id new-body] (make-id-with-pow 4 @body)
+          high-bits (subs (bytes->hex-string id) 0 1)
+          [nonce-tag nonce pow-promise] (first (:tags new-body))]
+      (should= "0" high-bits)
+      (should= 1 (:pubkey new-body))
+      (should= 1 (:created_at new-body))
+      (should= 1 (:kind new-body))
+      (should= :nonce nonce-tag)
+      (should (number? nonce))
+      (should= 4 pow-promise)
+      (should= "hi" (:content new-body))))
+
+  (it "makes id with larger POW"
+    (let [[id new-body] (make-id-with-pow 8 @body)
+          high-bits (subs (bytes->hex-string id) 0 2)
+          [nonce-tag nonce pow-promise] (first (:tags new-body))]
+      (should= "00" high-bits)
+      (should= 1 (:pubkey new-body))
+      (should= 1 (:created_at new-body))
+      (should= 1 (:kind new-body))
+      (should= :nonce nonce-tag)
+      (should (number? nonce))
+      (should= 8 pow-promise)
+      (should= "hi" (:content new-body))))
+
+  (it "makes id with even larger POW"
+    (let [[id new-body] (make-id-with-pow 16 @body)
+          high-bits (subs (bytes->hex-string id) 0 4)
+          [nonce-tag nonce pow-promise] (first (:tags new-body))]
+      (should= "0000" high-bits)
+      (should= 1 (:pubkey new-body))
+      (should= 1 (:created_at new-body))
+      (should= 1 (:kind new-body))
+      (should= :nonce nonce-tag)
+      (should (number? nonce))
+      (should= 16 pow-promise)
+      (should= "hi" (:content new-body))))
   )

@@ -2,7 +2,7 @@
   (:require [clojure.spec.alpha :as s]
             [clojure.data.json :as json]
             [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.nostr.util :refer [hex-string->num]]
+            [more-speech.nostr.util :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]
             [clojure.core.async :as async]
             [more-speech.nostr.util :as util]
@@ -312,6 +312,22 @@
     id)
   )
 
+(defn pow2 [n] (reduce * (repeat n 2N)))
+
+(defn make-id-with-pow
+  "returns byte array and updated body of id given the clojure form of the body, and the
+  POW constraint given in the number of preceding binary zeroes."
+  [pow body]
+  (let [limit (pow2 (- 256 pow))]
+    (loop [nonce 0]
+      (let [body (update-in body [:tags] concat [[:nonce nonce pow]])
+            id (make-id body)
+            id-num (bytes->num id)]
+        (if (< id-num limit)
+          [id body]
+          (recur (inc nonce))))
+      )))
+
 (defn body->event
   "Adds pubkey, created-at, id, and sig to the partially composed body,
   which must include kind, tags, and content.  The body is put into an
@@ -323,7 +339,8 @@
         now (quot (System/currentTimeMillis) 1000)
         body (assoc body :pubkey (util/bytes->hex-string pubkey)
                          :created_at now)
-        id (make-id body)
+        [id body] (make-id-with-pow config/proof-of-work-default body)
+        ;id (make-id body)
         aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
         signature (ecc/do-sign id private-key aux-rand)
         event (assoc body :id (util/bytes->hex-string id)
