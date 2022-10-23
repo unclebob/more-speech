@@ -240,6 +240,15 @@
   (it "should replace newlines with br tag"
     (should= "xx<br>xx" (break-newlines "xx\nxx"))))
 
+(describe "Breaking spaces"
+  (it "should replace strings of spaces with non breaking spaces."
+    (should= "just one" (non-breaking-spaces "just one"))
+    (should= "two&nbsp spaces" (non-breaking-spaces "two  spaces"))
+    (should= "three&nbsp&nbsp spaces" (non-breaking-spaces "three   spaces"))
+    (should= "1 2&nbsp 3&nbsp&nbsp 4&nbsp&nbsp&nbsp ."
+      (non-breaking-spaces "1 2  3   4    ."))
+    ))
+
 (describe "Segment article content"
   (it "returns empty list if content is empty"
     (should= '() (segment-text-url "")))
@@ -262,6 +271,8 @@
              (reformat-article "<b>Clojure</b>: https://clojure.org/")))
   (it "should format replies and escape HTML entities properly"
     (should= "&gt;this is<br>&gt;a reply" (reformat-article ">this is >a reply")))
+  (it "should replace multiple spaces with &nbsp"
+    (should= "one two&nbsp three&nbsp&nbsp ." (reformat-article "one two  three   .")))
   )
 
 (describe "Format User ID"

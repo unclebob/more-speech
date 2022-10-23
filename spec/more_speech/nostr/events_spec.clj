@@ -157,8 +157,8 @@
 
 (describe "Composing outgoing events"
   (context "composing metadata (kind:0) messages"
-    (with-redefs [config/proof-of-work-default 0]
-      (it "composes using the keys data structure"
+    (it "composes using the keys data structure"
+      (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 314159)
               public-key (get-pub-key private-key)
               keys {:private-key (bytes->hex-string private-key)
@@ -182,8 +182,8 @@
         ))
     )
   (context "composing Text (kind 1) messages"
-    (with-redefs [config/proof-of-work-default 0]
-      (it "composes an original message with no subject."
+    (it "composes an original message with no subject."
+      (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 314159)
               public-key (get-pub-key private-key)
               _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
@@ -201,9 +201,10 @@
           (should= text content)
           (should (do-verify (hex-string->bytes id)
                              public-key
-                             (hex-string->bytes sig)))))
+                             (hex-string->bytes sig))))))
 
-      (it "composes an original message with a subject."
+    (it "composes an original message with a subject."
+      (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 314159)
               public-key (get-pub-key private-key)
               _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
@@ -221,9 +222,10 @@
           (should= text content)
           (should (do-verify (hex-string->bytes id)
                              public-key
-                             (hex-string->bytes sig)))))
+                             (hex-string->bytes sig))))))
 
-      (it "composes a reply to a root article."
+    (it "composes a reply to a root article."
+      (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
               root-id 7734
@@ -247,9 +249,10 @@
           (should= text content)
           (should (do-verify (hex-string->bytes id)
                              public-key
-                             (hex-string->bytes sig)))))
+                             (hex-string->bytes sig))))))
 
-      (it "composes a reply to a non-root article."
+    (it "composes a reply to a non-root article."
+      (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
               root-child-id 7734
@@ -281,9 +284,10 @@
           (should= text content)
           (should (do-verify (hex-string->bytes id)
                              public-key
-                             (hex-string->bytes sig)))))
+                             (hex-string->bytes sig))))))
 
-      (it "author is removed from replies"
+    (it "author is removed from replies"
+      (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
               author (bytes->num public-key)
@@ -299,9 +303,10 @@
               {:keys [tags]} (second event)]
 
           (should= [[:e root-id-hex "" "reply"]
-                    [:p (hexify root-author)]] (take 2 tags))))
+                    [:p (hexify root-author)]] (take 2 tags)))))
 
-      (it "composes a message with a slash."
+    (it "composes a message with a slash."
+      (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
               _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
@@ -322,11 +327,12 @@
     )
 
   (context "compose direct messages (kind 4)"
-    (with-redefs [config/proof-of-work-default 0]
-      (it "does not encrypt a regular message"
-        (should= ["message" 1] (encrypt-if-direct-message "message" [])))
+    (it "does not encrypt a regular message"
+      (with-redefs [config/proof-of-work-default 0]
+        (should= ["message" 1] (encrypt-if-direct-message "message" []))))
 
-      (it "encrypts with shared keys"
+    (it "encrypts with shared keys"
+      (with-redefs [config/proof-of-work-default 0]
         (let [sender-private-key (util/make-private-key)
               recipient-private-key (util/make-private-key)
               sender-public-key (get-pub-key sender-private-key)
@@ -340,9 +346,10 @@
                                       (bytes->num recipient-private-key)
                                       (bytes->num sender-public-key))]
           (should= inbound-shared-secret outbound-shared-secret)
-          (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-content))))
+          (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-content)))))
 
-      (it "encrypts a direct message"
+    (it "encrypts a direct message"
+      (with-redefs [config/proof-of-work-default 0]
         (let [event-context (:event-context @ui-context)
               sender-private-key (util/make-private-key)
               recipient-private-key (util/make-private-key)
@@ -356,9 +363,10 @@
                                       (bytes->num sender-public-key))
               [encrypted-message kind] (encrypt-if-direct-message content tags)]
           (should= 4 kind)
-          (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-message))))
+          (should= content (SECP256K1/decrypt inbound-shared-secret encrypted-message)))))
 
-      (it "catches fake DMs with phoney #[xxx] in them."
+    (it "catches fake DMs with phoney #[xxx] in them."
+      (with-redefs [config/proof-of-work-default 0]
         (let [event-context (:event-context @ui-context)
               sender-private-key (util/make-private-key)
               _ (reset! event-context {:keys {:private-key (bytes->num sender-private-key)}})
@@ -370,8 +378,8 @@
     )
 
   (context "compose kind-3 contact-list event"
-    (with-redefs [config/proof-of-work-default 0]
-      (it "composes an simple contact list"
+    (it "composes an simple contact list"
+      (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
               event-context (:event-context @ui-context)

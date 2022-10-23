@@ -122,6 +122,14 @@
 (defn break-newlines [content]
   (string/replace content "\n" "<br>"))
 
+(defn non-breaking-spaces [s]
+  (let [space-index (.indexOf s "  ")]
+    (if (neg? space-index)
+      s
+      (str (subs s 0 space-index)
+           "&nbsp"
+           (non-breaking-spaces (subs s (+ space-index 1)))))))
+
 (defn format-replies [content]
   (string/replace content " >" "\n>"))
 
@@ -152,7 +160,13 @@
         (cond
           (= seg-type :text)
           (str formatted-content
-               ((comp break-newlines html-escape format-replies) seg))
+               ((comp
+                  non-breaking-spaces
+                  break-newlines
+                  html-escape
+                  format-replies
+                  ) seg)
+               )
           (= seg-type :url)
           (str formatted-content (linkify seg))))
       ""
