@@ -248,7 +248,7 @@
       (concat [(keyword tag-type)] tag-args))))
 
 (defn process-tags [tags]
-  (map process-tag tags))
+  (remove nil? (map process-tag tags)))
 
 (defn translate-event [event]
   (let [id (hex-string->num (get event "id"))

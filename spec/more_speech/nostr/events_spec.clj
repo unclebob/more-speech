@@ -13,7 +13,7 @@
   (handle-text-event [_ _event-id])
   )
 
-(describe "process-tag"
+(describe "process-tag(s)"
   (it "handles tags with many arguments"
     (should= [:e 1 2 3 4] (process-tag ["e" 1 2 3 4]))
     (should= [:e 1 2] (process-tag ["e" 1 2]))
@@ -21,6 +21,8 @@
   (it "rejects tags without a valid tag name"
     (should-be-nil (process-tag ["" "" ""]))
     (should-be-nil (process-tag [nil])))
+  (it "accumulates processed tags"
+    (should= [[:e 1 2 3 4] [:e 1 2]] (process-tags [["e" 1 2 3 4]["e" 1 2]["" "" ""]])))
   )
 
 (describe "translate-event"
