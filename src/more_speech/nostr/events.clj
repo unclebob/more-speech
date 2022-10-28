@@ -241,7 +241,7 @@
     event-state))
 
 (defn process-tag [tag]
-  (when (seq tag)
+  (when (and (seq tag) (seq (first tag)))
     (let [tag-type (first tag)
           tag-args (rest tag)
           tag-type (.replace tag-type \: \-)]
@@ -320,7 +320,7 @@
   [pow body]
   (let [limit (pow2 (- 256 pow))]
     (loop [nonce 0]
-      (let [body (update-in body [:tags] concat [[:nonce nonce pow]])
+      (let [body (update-in body [:tags] concat [[:nonce (str nonce) (str pow)]])
             id (make-id body)
             id-num (bytes->num id)]
         (if (< id-num limit)

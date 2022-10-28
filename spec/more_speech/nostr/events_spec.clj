@@ -17,7 +17,11 @@
   (it "handles tags with many arguments"
     (should= [:e 1 2 3 4] (process-tag ["e" 1 2 3 4]))
     (should= [:e 1 2] (process-tag ["e" 1 2]))
-    ))
+    )
+  (it "rejects tags without a valid tag name"
+    (should-be-nil (process-tag ["" "" ""]))
+    (should-be-nil (process-tag [nil])))
+  )
 
 (describe "translate-event"
   (it "translates from strings to clojure values"
@@ -598,44 +602,41 @@
   (with body {:pubkey 1 :created_at 1 :kind 1 :tags [] :content "hi"})
   (it "makes id with no POW"
     (let [[_id new-body] (make-id-with-pow 0 @body)]
-      (should= [[:nonce 0 0]] (:tags new-body))))
+      (should= [[:nonce "0" "0"]] (:tags new-body))))
 
   (it "makes id with small POW"
     (let [[id new-body] (make-id-with-pow 4 @body)
           high-bits (subs (bytes->hex-string id) 0 1)
-          [nonce-tag nonce pow-promise] (first (:tags new-body))]
+          [nonce-tag _nonce pow-promise] (first (:tags new-body))]
       (should= "0" high-bits)
       (should= 1 (:pubkey new-body))
       (should= 1 (:created_at new-body))
       (should= 1 (:kind new-body))
       (should= :nonce nonce-tag)
-      (should (number? nonce))
-      (should= 4 pow-promise)
+      (should= "4" pow-promise)
       (should= "hi" (:content new-body))))
 
   (it "makes id with larger POW"
     (let [[id new-body] (make-id-with-pow 8 @body)
           high-bits (subs (bytes->hex-string id) 0 2)
-          [nonce-tag nonce pow-promise] (first (:tags new-body))]
+          [nonce-tag _nonce pow-promise] (first (:tags new-body))]
       (should= "00" high-bits)
       (should= 1 (:pubkey new-body))
       (should= 1 (:created_at new-body))
       (should= 1 (:kind new-body))
       (should= :nonce nonce-tag)
-      (should (number? nonce))
-      (should= 8 pow-promise)
+      (should= "8" pow-promise)
       (should= "hi" (:content new-body))))
 
   (it "makes id with even larger POW"
     (let [[id new-body] (make-id-with-pow 16 @body)
           high-bits (subs (bytes->hex-string id) 0 4)
-          [nonce-tag nonce pow-promise] (first (:tags new-body))]
+          [nonce-tag _nonce pow-promise] (first (:tags new-body))]
       (should= "0000" high-bits)
       (should= 1 (:pubkey new-body))
       (should= 1 (:created_at new-body))
       (should= 1 (:kind new-body))
       (should= :nonce nonce-tag)
-      (should (number? nonce))
-      (should= 16 pow-promise)
+      (should= "16" pow-promise)
       (should= "hi" (:content new-body))))
   )
