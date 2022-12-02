@@ -19,5 +19,18 @@ write tests for the code you write, and follow the conventions I've started here
  * **GUI:** [SeeSaw](https://github.com/clj-commons/seesaw/wiki)
  * **Tester:** [speclj](https://github.com/slagyr/speclj)
 
+### How to run
+
+Sample commands for Debian:
+
+```
+sudo apt install clojure leiningen
+
+git clone https://github.com/unclebob/more-speech
+cd more-speech
+
+lein run project.clj
+```
+
 ### For more
 Read the [wiki](https://github.com/unclebob/more-speech/wiki).
