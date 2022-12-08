@@ -108,7 +108,8 @@
 
 (defn write-changed-days []
   (let [days-changed (get-event-state :days-changed)
-        first-day-loaded (quot (get-event-state :earliest-loaded-time) 86400)
+        earliest-loaded-time (get-event-state :earliest-loaded-time)
+        first-day-loaded (quot earliest-loaded-time 86400)
         days-to-write (set (filter #(>= % first-day-loaded) days-changed))
         daily-partitions (partition-messages-by-day (get-event-state :text-event-map))
         changed-partitions (filter #(contains? days-to-write (first %)) daily-partitions)]
@@ -152,7 +153,13 @@
       (doseq [file-name (reverse file-names)]
         (prn 'reading file-name)
         (let [old-events (read-string (slurp (str @config/messages-directory "/" file-name)))]
-          (load-events old-events handler)))
-      (swap! (:event-context @ui-context) assoc :days-changed #{(quot last-time 86400)} :earliest-loaded-time first-time))
+          (try
+            (load-events old-events handler)
+            (catch Exception e
+              (prn 'EXCEPTION 'read-in-last-n-days 'reading file-name 'failed)
+              (prn e)))))
+      (swap! (:event-context @ui-context)
+             assoc :days-changed #{(quot last-time 86400)}
+             :earliest-loaded-time first-time))
     last-time))
 

@@ -134,12 +134,16 @@
     (listen header-tree :mouse-pressed mouse-pressed)
     header-tree))
 
+(defn valid-ptag? [ptag]
+  (= 64 (count (second ptag))))
+
 (defn should-add-event? [filters event]
   (let [selected (:selected filters)
         blocked (:blocked filters)
         [root _mentions _referent] (events/get-references event)
         tags (:tags event)
         ptags (filter #(= :p (first %)) tags)
+        ptags (filter valid-ptag? ptags)
         pubkey-citings (map #(util/hex-string->num (second %)) ptags)]
     (and
       (or

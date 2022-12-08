@@ -58,20 +58,18 @@
         (let [id-string (-> tags (nth index) second)
               id (util/hex-string->num id-string)
               name (get-best-name id)]
-          (str "@" name)
-          )
-        (catch Exception _e
+          (str "@" name))
+        (catch Exception e
           (prn `lookup-reference 'bad-id index tags)
-          "@-unknown-"
-          )))))
+          (prn (.getMessage e))
+          "@-unknown-")))))
 
 (defn replace-references [event]
   (let [padded-content (str " " (:content event) " ")
         references (re-seq config/reference-pattern padded-content)
         segments (string/split padded-content config/reference-pattern)
         referents (mapv (partial lookup-reference event) references)
-        referents (conj referents " ")
-        ]
+        referents (conj referents " ")]
     (string/trim (apply str (interleave segments referents)))))
 
 (defn get-subject [tags]
