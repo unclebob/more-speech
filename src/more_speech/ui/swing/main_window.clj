@@ -41,29 +41,41 @@
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
 (defn make-author-list []
+  (prn 'make-author-list 'started)
   (let [profiles (get-event-state :profiles)
         ids (keys profiles)
-        profile-lines (sort (map make-profile-line ids))]
-    (map #(label :font config/default-font :text %) profile-lines)))
+        _ (prn 'make-author-list 'sorting-authors)
+        profile-lines (sort (map make-profile-line ids))
+        _ (prn 'make-author-list 'formatting-authors)
+        author-list (map #(label :font config/default-font :text %) profile-lines)
+        _ (prn 'make-author-list 'done)]
+    author-list))
 
 (defn make-main-window []
+  (prn 'make-main-window)
   (let [title (str "More-Speech:" (:name (get-event-state :keys)) " - " config/version)
         main-frame (frame :title title :size [1500 :by 1000])
         _ (swap! ui-context assoc :frame main-frame)
+        _ (prn 'make-main-window 'making-article-area)
         article-area (article-panel/make-article-area)
         _ (listen article-area :hyperlink open-link)
         header-tab-panel (tabbed-panel :tabs (tabs/make-tabs) :id :header-tab-panel)
+        _ (prn 'make-main-window 'making-relay-panel)
         relay-panel (relay-panel/make-relay-panel)
+        _ (prn 'make-main-window 'relay-panel-complete)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)
                                     :south (article-panel/make-control-panel))
+        _ (prn 'make-main-window 'article-panel-complete)
         messages-panel (top-bottom-split
                          header-tab-panel
                          article-panel
                          :divider-location 1/2)
+        _ (prn 'make-main-window 'messages-panel-complete)
         main-tabs (tabbed-panel :tabs [{:title "Messages" :content messages-panel}
                                        {:title "Relays" :content (scrollable relay-panel)}
-                                       {:title "Authors" :content (scrollable (vertical-panel :items (make-author-list)))}])
+                                       ;{:title "Authors" :content (scrollable (vertical-panel :items (make-author-list)))}
+                                       ])
         timer (Timer. 100 nil)]
     (config! main-frame :content main-tabs)
     (listen timer :action timer-action)
@@ -73,11 +85,14 @@
               (let [send-chan (get-event-state :send-chan)]
                 (future (async/>!! send-chan [:closed])))
               (.dispose main-frame)))
+    (prn 'make-main-window 'showing-main-frame)
     (show! main-frame)
+    (prn 'make-main-window 'shown)
     (.start timer)))
 
 (defn setup-main-window []
   (invoke-now (make-main-window))
+  (prn 'setup-main-window 'creating-seesaw-handler)
   (->seesawHandler))
 
 

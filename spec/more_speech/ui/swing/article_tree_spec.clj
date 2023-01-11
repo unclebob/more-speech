@@ -498,8 +498,7 @@
   (it "adds an an unrooted article id to a tab"
     (let [message-id 1
           messages {message-id {:tags []}}
-          event-context (atom {:text-event-map messages})
-          ]
+          event-context (atom {:text-event-map messages})]
       (reset! ui-context {:event-context event-context})
       (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
                     swing-util/relaunch (stub :relaunch)]

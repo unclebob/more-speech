@@ -23,16 +23,22 @@
   )
 
 (defn ^:export -main [& args]
+  (prn 'main 'start)
   (migrator/migrate-to config/migration-level)
+  (prn 'main 'loading-configuration)
   (data-storage/load-configuration)
   (start-timer)
+  (prn 'main 'setting-up-gui)
   (let [event-context (:event-context @ui-context)
         handler (swing/setup-main-window)]
+    (prn 'main 'main-window-setup-complete)
     (swap! event-context assoc :send-chan send-chan :event-handler handler)
+    (prn 'main 'reading-in-last-n-days)
     (let [latest-old-message-time
           (if (not config/test-run?)
             (data-storage/read-in-last-n-days config/days-to-read handler)
             (-> (System/currentTimeMillis) (quot 1000) (- 86400)))
+          _ (prn 'main 'getting-events)
           exit-condition (protocol/get-events latest-old-message-time)]
 
       (when (not config/test-run?)

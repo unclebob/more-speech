@@ -6,7 +6,8 @@
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.user-configuration :as user-configuration]
             [clojure.string :as string]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [more-speech.ui.formatter-util :as fu])
   (:import (java.util Date TimeZone Locale)
            (java.text SimpleDateFormat)))
 
@@ -135,6 +136,7 @@
   (re-matches #"\d+\-\d+\w+\d+" file-name))
 
 (defn read-in-last-n-days [n handler]
+  (prn 'read-in-last-n-days 'starting)
   (let [message-directory (clojure.java.io/file @config/messages-directory)
         files (.listFiles message-directory)
         file-names (for [file files] (.getName file))
@@ -142,10 +144,12 @@
         file-names (take-last n (sort file-names))
         first-file-name (first file-names)
         last-file-name (last file-names)
+        _ (prn 'read-in-last-n-days 'last-file-name last-file-name)
         first-time (time-from-file-name first-file-name)
         last-time (if (nil? last-file-name)
                     nil
                     (get-last-event-time last-file-name))
+        _ (prn 'read-in-last-n-days 'last-time (fu/format-time last-time))
         now (quot (System/currentTimeMillis) 1000)
         last-time (if (nil? last-time) (- now 86400) last-time)
         first-time (if (nil? first-time) now first-time)]

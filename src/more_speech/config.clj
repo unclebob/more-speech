@@ -6,8 +6,8 @@
 
 (def article-width 120)
 
-(def days-to-read 10) ;how many daily message files to read in.
-(def read-contact-lists-days-ago 7)
+(def days-to-read 7) ;how many daily message files to read in.
+(def read-contact-lists-days-ago 2)
 
 (def migration-level 9)
 (def version "202212091526")

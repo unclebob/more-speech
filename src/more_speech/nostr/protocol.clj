@@ -63,7 +63,17 @@
   (or (= (:kind event) 1)
       (= (:kind event) 4)))
 
+(def event-counter (atom {:total 0}))
+(defn count-event [envelope url]
+  (let [source (second envelope)
+        key (str url "|" source)]
+    (swap! event-counter update :total inc)
+    (swap! event-counter update key #(inc (if (nil? %) 0 %)))
+    (when (zero? (mod (:total @event-counter) 1000))
+      (clojure.pprint/pprint @event-counter))))
+
 (defn record-and-display-event [_agent envelope url]
+  (count-event envelope url)
   (try
     (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
           event (events/translate-event inner-event)
@@ -83,6 +93,7 @@
         ))
     (catch Exception e
       (do (prn `record-and-display-event url (.getMessage e))
+          (prn "--on event: " envelope)
           (st/print-stack-trace e))
       )))
 

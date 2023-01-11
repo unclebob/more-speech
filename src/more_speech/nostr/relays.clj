@@ -53,11 +53,12 @@
 (defn validate-relay-url [url]
   (if (empty? url)
     nil
-    (let [lurl (.toLowerCase url)]
-      (if (and (re-matches config/url-pattern url)
-               (not (.startsWith lurl "http"))
+    (let [lurl (.trim (.toLowerCase url))]
+      (if (and (re-matches config/url-pattern lurl)
+               (or (.startsWith lurl "wss://")
+                   (.startsWith lurl "ws://"))
                (= -1 (.indexOf lurl "localhost")))
-        url
+        lurl
         nil)))
   )
 

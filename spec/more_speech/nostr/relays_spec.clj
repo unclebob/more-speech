@@ -64,6 +64,9 @@
       (doseq [url urls]
         (should-be-nil (validate-relay-url url)))))
 
+  (it "trims and lower cases urls"
+    (should= "wss://hi.com" (validate-relay-url " wss://HI.com\t")))
+
   )
 
 
