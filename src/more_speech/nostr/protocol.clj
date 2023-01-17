@@ -161,9 +161,13 @@
     (when-let [conn (get-in @relays [url :connection])]
       (.sendPing conn (ByteBuffer/allocate 4)))))
 
+(defn handle-relay-message [relay message]
+  (prn 'TILT))
+
 (defn connect-to-relays []
   (doseq [url (keys @relays)]
-    (let [relay-config (get @relays url)
+    (let [relay (ws-relay/make url handle-relay-message)
+          relay-config (get @relays url)
           should-connect? (or (:read relay-config) (:write relay-config))
           connection (if should-connect?
                        (connect-to-relay url)

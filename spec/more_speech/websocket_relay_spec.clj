@@ -25,13 +25,14 @@
   (it "can send and receive"
     (pending "be nice to relay.damus.io")
     (let [chan (async/chan)
-          recv-f (fn [msg] (async/>!! chan msg))
+          recv-f (fn [relay msg] (async/>!! chan [relay msg]))
           relay (ws-relay/make "wss://relay.damus.io" recv-f)
           relay-open (relay/open relay)
           _ (relay/send relay-open ["test"])
           f-reply (future (async/<!! chan))
-          reply (deref f-reply 1000 :timeout)
+          [relay-r reply] (deref f-reply 1000 :timeout)
           _ (relay/close relay-open)]
+      (should= relay relay-r )
       (should= ["NOTICE" "could not parse command"] reply)))
   )
 
