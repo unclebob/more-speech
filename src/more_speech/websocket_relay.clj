@@ -80,20 +80,22 @@
 
 (defmethod relay/close ::websocket [relay]
   (let [{::keys [socket timer]} relay]
-    (try
-      (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done"))
-      (catch Exception e
-        (prn 'on-send-close-error (:reason e))))
+    (when (and socket (not (.isOutputClosed socket)))
+      (try
+        (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done"))
+        (catch Exception e
+          (prn 'on-send-close-error (:reason e)))))
     (when timer (.cancel timer))
     (assoc relay ::open? false ::socket nil)))
 
 (defmethod relay/send ::websocket [relay message]
   (let [{::keys [socket url]} relay]
-    (try
-      (let [json (to-json message)]
-        (println "sending to:" url " " json)
-        (.sendText socket json true)
-        (.request socket 1))
-      (catch Exception e
-        (prn 'send-to (.getMessage e))))))
+    (when (and socket (not (.isOutputClosed socket)))
+      (try
+        (let [json (to-json message)]
+          (println "sending to:" url " " json)
+          (.sendText socket json true)
+          (.request socket 1))
+        (catch Exception e
+          (prn 'send-to (.getMessage e)))))))
 
