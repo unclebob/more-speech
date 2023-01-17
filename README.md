@@ -24,7 +24,7 @@ write tests for the code you write, and follow the conventions I've started here
 Sample commands for Debian:
 
 ```
-sudo apt install clojure leiningen
+sudo apt install clojure leiningen openjdk-17-jdk
 
 git clone https://github.com/unclebob/more-speech
 cd more-speech
