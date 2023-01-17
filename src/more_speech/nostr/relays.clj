@@ -1,9 +1,12 @@
 (ns more-speech.nostr.relays
   (:require [clojure.spec.alpha :as s]
-            [more-speech.config :as config]))
+            [more-speech
+             [config :as config]
+             [relay :as relay]
+             [websocket-relay :as ws-relay]]))
 
 (defn- connection? [c]
-  (= (type c) 'java.net.http.WebSocket))
+  (= (::relay/type c) ::ws-relay/websocket))
 (s/def ::read boolean?)
 (s/def ::write boolean?)
 (s/def ::subscribed boolean?)
@@ -29,7 +32,7 @@
                         (read-string relay-text))
         loaded-relays (set-relay-defaults loaded-relays)
         loaded-relays (if config/test-run?
-                        (apply hash-map (first loaded-relays))
+                        {"wss://relay.damus.io" {:read true :write true}}
                         loaded-relays)
         ]
     (reset! relays loaded-relays)))

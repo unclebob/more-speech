@@ -7,8 +7,9 @@
 (describe "Relays"
   (context "loads relays from the \"relays\" file and sets defaults."
     (it "loads a non-existent file"
+      (reset! relays {})
       (load-relays nil)
-      (should= @relays {})
+      (should= {} @relays )
       (should (s/conform ::relays/relays @relays)))
 
     (it "loads an empty file"

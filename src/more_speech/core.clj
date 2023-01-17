@@ -10,24 +10,15 @@
             [more-speech.migrator :as migrator]
             [more-speech.data-storage :as data-storage]
             [clojure.core.async :as async])
-  (:use [seesaw core])
-  (:import (java.util Timer TimerTask)))
+  (:use [seesaw core]))
 
 (def send-chan (async/chan))
-
-(defn start-timer []
-  (let [timer (Timer. "more-speech timer")
-        ping-task (proxy [TimerTask] []
-                      (run [] (protocol/send-ping)))]
-    (.schedule timer ping-task (long 30000) (long 30000)))
-  )
 
 (defn ^:export -main [& args]
   (prn 'main 'start)
   (migrator/migrate-to config/migration-level)
   (prn 'main 'loading-configuration)
   (data-storage/load-configuration)
-  (start-timer)
   (prn 'main 'setting-up-gui)
   (let [event-context (:event-context @ui-context)
         handler (swing/setup-main-window)]

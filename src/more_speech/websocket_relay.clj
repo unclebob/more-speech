@@ -3,7 +3,9 @@
              [relay :as relay]]
             [clojure.data.json :as json])
   (:import (java.net.http HttpClient WebSocket$Listener WebSocket)
-           (java.net URI)))
+           (java.net URI)
+           (java.util Timer TimerTask)
+           (java.nio ByteBuffer)))
 
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
@@ -47,6 +49,17 @@
     (prn 'websocket-listener-error (::url relay) error))
   )
 
+(defn send-ping [relay]
+  (let [{::keys [socket]} relay]
+    (.sendPing socket (ByteBuffer/allocate 4))))
+
+(defn start-timer [relay]
+  (let [timer (Timer. (format "Ping timer for %s" (::url relay)))
+        ping-task (proxy [TimerTask] []
+                    (run [] (send-ping relay)))]
+    (.schedule timer ping-task (long 30000) (long 30000))
+    timer))
+
 (defmethod relay/open ::websocket [relay]
   (let [{::keys [url]} relay]
     (try
@@ -59,17 +72,19 @@
           (do
             (prn 'connection-time-out url)
             (assoc relay ::open? false))
-          (assoc relay ::open? true ::socket ws)))
+          (let [open-relay (assoc relay ::open? true ::socket ws)]
+            (assoc open-relay :timer (start-timer open-relay)))))
       (catch Exception e
         (prn 'connect-to-relay-failed url (:reason e))
         (assoc relay ::open? false)))))
 
 (defmethod relay/close ::websocket [relay]
-  (let [{::keys [socket]} relay]
+  (let [{::keys [socket timer]} relay]
     (try
       (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done"))
       (catch Exception e
         (prn 'on-send-close-error (:reason e))))
+    (when timer (.cancel timer))
     (assoc relay ::open? false ::socket nil)))
 
 (defmethod relay/send ::websocket [relay message]
