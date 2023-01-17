@@ -9,14 +9,14 @@
   (it "can be made"
     (should= {::relay/type ::ws-relay/websocket
               ::ws-relay/url "url"
-              ::ws-relay/chan :some-channel
+              ::ws-relay/recv-f :some-f
               ::ws-relay/socket nil
               ::ws-relay/open? false}
-             (ws-relay/make "url" :some-channel)))
+             (ws-relay/make "url" :some-f)))
 
   (it "can open and close"
     (pending "be nice to relay.damus.io")
-    (let [relay (ws-relay/make "wss://relay.damus.io" :some-chan)
+    (let [relay (ws-relay/make "wss://relay.damus.io" :some-f)
           relay-open (relay/open relay)
           relay-closed (relay/close relay-open)]
       (should (::ws-relay/open? relay-open))
@@ -25,14 +25,13 @@
   (it "can send and receive"
     (pending "be nice to relay.damus.io")
     (let [chan (async/chan)
-          relay (ws-relay/make "wss://relay.damus.io" chan)
+          recv-f (fn [msg] (async/>!! chan msg))
+          relay (ws-relay/make "wss://relay.damus.io" recv-f)
           relay-open (relay/open relay)
           _ (relay/send relay-open ["test"])
           f-reply (future (async/<!! chan))
           reply (deref f-reply 1000 :timeout)
           _ (relay/close relay-open)]
-      (should= [["NOTICE" "could not parse command"]
-                "wss://relay.damus.io"]
-               reply)))
+      (should= ["NOTICE" "could not parse command"] reply)))
   )
 

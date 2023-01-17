@@ -1,7 +1,6 @@
 (ns more-speech.websocket-relay
   (:require [more-speech
              [relay :as relay]]
-            [clojure.core.async :as async]
             [clojure.data.json :as json])
   (:import (java.net.http HttpClient WebSocket$Listener WebSocket)
            (java.net URI)))
@@ -9,21 +8,20 @@
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
-(defn make [url relay-channel]
+(defn make [url recv-f]
   {::relay/type ::websocket
    ::url url
-   ::chan relay-channel
+   ::recv-f recv-f
    ::socket nil
    ::open? false})
 
 (defn handle-text [{:keys [buffer relay]} data last]
-  (let [{::keys [url chan]} relay]
+  (let [{::keys [url recv-f]} relay]
     (.append buffer (.toString data))
     (when last
       (try
         (let [envelope (json/read-str (.toString buffer))]
-          (async/>!! chan [envelope url])
-          )
+          (recv-f envelope))
         (catch Exception e
           (prn 'onText url (.getMessage e))
           (prn (.toString buffer))))

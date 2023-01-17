@@ -1,19 +1,20 @@
 (ns more-speech.nostr.protocol
   (:require [clojure.data.json :as json]
             [clojure.core.async :as async]
+            [clojure.stacktrace :as st]
+            [more-speech.relay :as relay]
+            [more-speech.websocket-relay :as ws-relay]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :refer [relays]]
             [more-speech.nostr.util :as util]
             [more-speech.user-configuration :as user-configuration]
-            [clojure.stacktrace :as st]
             [more-speech.config :as config])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.net.http WebSocket HttpClient WebSocket$Listener)
            (java.net URI)
            (java.nio ByteBuffer)))
-
 
 (defn send-to [^WebSocket conn msg]
   (try
@@ -162,8 +163,8 @@
 
 (defn connect-to-relays []
   (doseq [url (keys @relays)]
-    (let [relay (get @relays url)
-          should-connect? (or (:read relay) (:write relay))
+    (let [relay-config (get @relays url)
+          should-connect? (or (:read relay-config) (:write relay-config))
           connection (if should-connect?
                        (connect-to-relay url)
                        nil)]
