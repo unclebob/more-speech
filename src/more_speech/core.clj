@@ -4,7 +4,7 @@
 (ns more-speech.core
   (:gen-class)
   (:require [more-speech.config :as config]
-            [more-speech.nostr.protocol :as protocol]
+            [more-speech.nostr.main :as main]
             [more-speech.ui.swing.main-window :as swing]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.migrator :as migrator]
@@ -30,7 +30,7 @@
             (data-storage/read-in-last-n-days config/days-to-read handler)
             (-> (System/currentTimeMillis) (quot 1000) (- 86400)))
           _ (prn 'main 'getting-events)
-          exit-condition (protocol/get-events latest-old-message-time)]
+          exit-condition (main/start-nostr latest-old-message-time)]
 
       (when (not config/test-run?)
         (data-storage/write-configuration)

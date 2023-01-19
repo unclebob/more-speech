@@ -9,7 +9,9 @@
             [more-speech.nostr.relays :as relays]
             [clojure.string :as string]
             [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.config :as config])
+            [more-speech.config :as config]
+            [clojure.stacktrace :as st]
+            )
   (:import (java.nio.charset StandardCharsets)
            (ecdhJava SECP256K1)))
 
@@ -82,6 +84,7 @@
                 }
                event-context-map)))
 
+(def event-agent (agent nil))
 
 (defn decrypt-his-dm [event]
   (let [p-tags (filter #(= :p (first %)) (:tags event))
@@ -520,6 +523,51 @@
 
 (defn compose-and-send-contact-list [contact-list]
   (send-event (compose-contact-list contact-list)))
+
+(defn compute-id [event]
+  (util/bytes->num
+    (make-id
+      {:pubkey (get event "pubkey")
+       :created_at (get event "created_at")
+       :kind (get event "kind")
+       :tags (get event "tags")
+       :content (get event "content")})))
+
+(defn is-text-event? [event]
+  (or (= (:kind event) 1)
+      (= (:kind event) 4)))
+
+(def event-counter (atom {:total 0}))
+(defn count-event [envelope url]
+  (let [source (second envelope)
+        key (str url "|" source)]
+    (swap! event-counter update :total inc)
+    (swap! event-counter update key #(inc (if (nil? %) 0 %)))
+    (when (zero? (mod (:total @event-counter) 1000))
+      (clojure.pprint/pprint @event-counter))))
+
+(defn record-and-display-event [_agent envelope url]
+  (count-event envelope url)
+  (try
+    (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
+          event (translate-event inner-event)
+          id (:id event)
+          computed-id (compute-id inner-event)
+          ui-handler (get-event-state :event-handler)
+          dup? (contains? (get-event-state :text-event-map) id)]
+      (if (= id computed-id)
+        (let [event (decrypt-dm-event event)]
+          (when (not (:private event))
+            (swap! (:event-context @ui-context) process-event event url)
+            (when (and (not dup?)
+                       (is-text-event? event))
+              (handle-text-event ui-handler event))))
+        (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)))
+    (catch Exception e
+      (do (prn `record-and-display-event url (.getMessage e))
+          (prn "--on event: " envelope)
+          (st/print-stack-trace e)))))
+
 
 
 
