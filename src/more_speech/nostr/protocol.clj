@@ -8,7 +8,7 @@
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
-(defn format-time [time]
+(defn- format-time [time]
   (let [time (* time 1000)
         date (Date. (long time))]
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date))

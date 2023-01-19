@@ -1,5 +1,5 @@
 (ns more-speech.ui.swing.edit-window
-  (:require [more-speech.nostr.events :as events]
+  (:require [more-speech.nostr.event-composers :as composers]
             [more-speech.ui.formatters :as formatters]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.user-configuration :as uconfig])
@@ -34,7 +34,7 @@
                (fn [_]
                  (let [message (text edit-area)
                        subject (text subject-text)]
-                   (events/compose-and-send-text-event event subject message))
+                   (composers/compose-and-send-text-event event subject message))
                  (dispose! edit-frame)))
        (text! edit-area
               (if reply?

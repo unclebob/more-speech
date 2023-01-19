@@ -3,6 +3,7 @@
             [more-speech.ui.swing.ui-context :as context]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.nostr.events :as events]
+            [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.relays :as relays]
             [more-speech.relay :as relay]
             [clojure.core.async :as async]))
@@ -38,7 +39,7 @@
     (if (user-configuration/should-export-profile? now-in-seconds)
       (do
         (user-configuration/set-last-time-profile-exported now-in-seconds)
-        (future (events/compose-and-send-metadata-event)))
+        (future (composers/compose-and-send-metadata-event)))
       (println "Not time to export profile yet."))
     (let [exit-condition (process-send-channel)]
       (protocol/unsubscribe-from-relays subscription-id)

@@ -4,10 +4,8 @@
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]
-            [clojure.core.async :as async]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.relays :as relays]
-            [clojure.string :as string]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.config :as config]
             [clojure.stacktrace :as st]
@@ -86,17 +84,76 @@
 
 (def event-agent (agent nil))
 
-(defn select-event [event-state tab-index id]
-  (swap! ui-context assoc :selected-tab tab-index)
-  (if-not (:backing-up event-state)
-    (-> event-state
-        (update :read-event-ids conj id)
-        (update :event-history conj [tab-index id])
-        (assoc :selected-event id :back-count 0))
-    (-> event-state (assoc :selected-event id :backing-up false))))
-
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
+
+(defn make-id
+  "returns byte array of id given the clojure form of the body"
+  [{:keys [pubkey created_at kind tags content]}]
+  (let [id-event (to-json [0 pubkey created_at kind tags content])
+        id (util/sha-256 (.getBytes id-event StandardCharsets/UTF_8))]
+    id)
+  )
+
+(defn- pow2 [n] (reduce * (repeat n 2N)))
+
+(defn make-id-with-pow
+  "returns byte array and updated body of id given the clojure form of the body, and the
+  POW constraint given in the number of preceding binary zeroes."
+  [pow body]
+  (let [limit (pow2 (- 256 pow))]
+    (loop [nonce 0]
+      (let [body (update-in body [:tags] concat [[:nonce (str nonce) (str pow)]])
+            id (make-id body)
+            id-num (bytes->num id)]
+        (if (< id-num limit)
+          [id body]
+          (recur (inc nonce)))))))
+
+(defn get-unmarked-references [e-tags]
+  (let [refs (map second e-tags)
+        refs (map hex-string->num refs)
+        root (if (empty? refs) nil (first refs))
+        referent (last refs)
+        mentions (drop-last (rest refs))]
+    [root mentions referent])
+  )
+
+(defn get-marked-references [e-tags]
+  (loop [tags e-tags
+         root nil
+         referent nil
+         mentions []]
+    (if (empty? tags)
+      (if (nil? root)
+        [referent mentions referent]
+        [root mentions referent])
+      (let [tag (first tags)
+            id (hex-string->num (nth tag 1))]
+        (if (>= (count tag) 4)
+          (condp = (nth tag 3)
+            "reply" (recur (rest tags) root id mentions)
+            "root" (recur (rest tags) id referent mentions)
+            (recur (rest tags) root referent (conj mentions id)))
+          (recur (rest tags) root referent (conj mentions id)))))))
+
+(defn get-references
+  "returns [root mentions referent] as BigIntegers.
+  root is the root id of the thread.
+  referent is the id of the event being replied to.
+  mentions is a list of cited ids.
+  (See NIP-10)"
+  [event]
+  (try
+    (let [tags (:tags event)
+          e-tags (filter #(= :e (first %)) tags)
+          markers (set (map #(nth % 3) (filter #(>= (count %) 4) e-tags)))]
+      (if (contains? markers "reply")
+        (get-marked-references e-tags)
+        (get-unmarked-references e-tags)))
+    (catch Exception e
+      (prn 'get-references 'bad-tags-in-event (.getMessage e) event)
+      [nil nil nil])))
 
 (defn fix-name [name]
   (if (empty? name)
@@ -133,53 +190,6 @@
       (prn 'json-exception-process-name-event-ignored (.getMessage e))
       (prn event)
       event-state)))
-
-
-(defn get-unmarked-references [e-tags]
-  (let [refs (map second e-tags)
-        refs (map hex-string->num refs)
-        root (if (empty? refs) nil (first refs))
-        referent (last refs)
-        mentions (drop-last (rest refs))]
-    [root mentions referent])
-  )
-
-(defn get-marked-references [e-tags]
-  (loop [tags e-tags
-         root nil
-         referent nil
-         mentions []]
-    (if (empty? tags)
-      (if (nil? root)
-        [referent mentions referent]
-        [root mentions referent])
-      (let [tag (first tags)
-            id (hex-string->num (nth tag 1))]
-        (if (>= (count tag) 4)
-          (condp = (nth tag 3)
-            "reply" (recur (rest tags) root id mentions)
-            "root" (recur (rest tags) id referent mentions)
-            (recur (rest tags) root referent (conj mentions id)))
-          (recur (rest tags) root referent (conj mentions id)))))))
-
-
-(defn get-references
-  "returns [root mentions referent] as BigIntegers.
-  root is the root id of the thread.
-  referent is the id of the event being replied to.
-  mentions is a list of cited ids.
-  (See NIP-10)"
-  [event]
-  (try
-    (let [tags (:tags event)
-          e-tags (filter #(= :e (first %)) tags)
-          markers (set (map #(nth % 3) (filter #(>= (count %) 4) e-tags)))]
-      (if (contains? markers "reply")
-        (get-marked-references e-tags)
-        (get-unmarked-references e-tags)))
-    (catch Exception e
-      (prn 'get-references 'bad-tags-in-event (.getMessage e) event)
-      [nil nil nil])))
 
 (defn process-references [event-state event]
   (let [[_ _ referent] (get-references event)]
@@ -237,237 +247,6 @@
         7 (process-like event-state event)
         (do #_(prn "unknown event: " url event)
           event-state)))))
-
-(defn get-root-of-thread [id]
-  (let [messages (get-event-state :text-event-map)
-        event (get messages id)
-        [root _ _] (get-references event)]
-    (if (some? root) root id)))
-
-(defn chronological-event-comparator [[i1 t1] [i2 t2]]
-  (if (= i1 i2)
-    0
-    (compare t2 t1)))
-
-(defn make-chronological-text-events []
-  (sorted-set-by chronological-event-comparator))
-
-(defn make-id
-  "returns byte array of id given the clojure form of the body"
-  [{:keys [pubkey created_at kind tags content]}]
-  (let [id-event (to-json [0 pubkey created_at kind tags content])
-        id (util/sha-256 (.getBytes id-event StandardCharsets/UTF_8))]
-    id)
-  )
-
-(defn pow2 [n] (reduce * (repeat n 2N)))
-
-(defn make-id-with-pow
-  "returns byte array and updated body of id given the clojure form of the body, and the
-  POW constraint given in the number of preceding binary zeroes."
-  [pow body]
-  (let [limit (pow2 (- 256 pow))]
-    (loop [nonce 0]
-      (let [body (update-in body [:tags] concat [[:nonce (str nonce) (str pow)]])
-            id (make-id body)
-            id-num (bytes->num id)]
-        (if (< id-num limit)
-          [id body]
-          (recur (inc nonce))))
-      )))
-
-(defn body->event
-  "Adds pubkey, created-at, id, and sig to the partially composed body,
-  which must include kind, tags, and content.  The body is put into an
-  EVENT wrapper that is ready to send."
-  [body]
-  (let [keys (get-event-state :keys)
-        private-key (util/hex-string->bytes (:private-key keys))
-        pubkey (util/hex-string->bytes (:public-key keys))
-        now (quot (System/currentTimeMillis) 1000)
-        body (assoc body :pubkey (util/bytes->hex-string pubkey)
-                         :created_at now)
-        [id body] (make-id-with-pow config/proof-of-work-default body)
-        ;id (make-id body)
-        aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
-        signature (ecc/do-sign id private-key aux-rand)
-        event (assoc body :id (util/bytes->hex-string id)
-                          :sig (util/bytes->hex-string signature))
-        ]
-    ["EVENT" event])
-  )
-
-(defn compose-metadata-event []
-  (let [keys (get-event-state :keys)
-        content (to-json {:name (:name keys)
-                          :about (:about keys)
-                          :picture (:picture keys)})
-        body {:kind 0
-              :tags []
-              :content content}]
-    (body->event body))
-  )
-
-(defn make-contact-list-tag [contact-entry]
-  (let [petname (get contact-entry :petname "")
-        petname (if (nil? petname) "" petname)]
-    [:p (hexify (:pubkey contact-entry)) "" petname]))
-
-(defn make-contact-list-tags [contact-list]
-  (map make-contact-list-tag contact-list))
-
-(defn compose-contact-list [contact-list]
-  (let [tags (make-contact-list-tags contact-list)
-        body {:kind 3
-              :tags tags
-              :content "more-speech contact list"}
-        ]
-    (body->event body))
-  )
-
-(defn make-event-reference-tags
-  ([reply-to root]
-   (if (or (nil? root) (= root reply-to))
-     (make-event-reference-tags reply-to)
-     [[:e (hexify root) "" "root"] [:e (hexify reply-to) "" "reply"]]))
-
-  ([reply-to]
-   (if (nil? reply-to)
-     []
-     [[:e (hexify reply-to) "" "reply"]])))
-
-(defn make-people-reference-tags [pubkey reply-to-or-nil]
-  (if (nil? reply-to-or-nil)
-    []
-    (let [event-map (get-event-state :text-event-map)
-          parent-event-id reply-to-or-nil
-          parent-event (get event-map parent-event-id)
-          parent-tags (:tags parent-event)
-          people-ids (map second (filter #(= :p (first %)) parent-tags))
-          parent-author (:pubkey parent-event)
-          people-ids (conj people-ids (hexify parent-author))
-          people-ids (remove #(= (hexify pubkey) %) people-ids)]
-      (map #(vector :p %) people-ids))))
-
-(defn make-subject-tag [subject]
-  (if (empty? (.trim subject))
-    []
-    [[:subject subject]]))
-
-
-(defn get-reply-root [reply-to-or-nil]
-  (if (nil? reply-to-or-nil)
-    nil
-    (let [reply-id reply-to-or-nil
-          event-map (get-event-state :text-event-map)
-          replied-to-event (get event-map reply-id)
-          [root _mentions _referent] (get-references replied-to-event)]
-      root)))
-
-(defn find-user-id [user-name]
-  (let [pet-pubkey (contact-list/get-pubkey-from-petname user-name)]
-    (if (some? pet-pubkey)
-      pet-pubkey
-      (let [profiles (get-event-state :profiles)]
-        (loop [pairs (vec profiles)]
-          (if (empty? pairs)
-            nil
-            (let [pair (first pairs)]
-              (if (= user-name (:name (second pair)))
-                (first pair)
-                (recur (rest pairs))))))))))
-
-(defn abbreviate-pubkey [pubkey-string]
-  (let [pubkey (util/hex-string->num pubkey-string)
-        abbreviated-pubkey (str (subs pubkey-string 0 11) "-")
-        event-context (:event-context @ui-context)]
-    (swap! event-context assoc-in [:profiles pubkey] {:name abbreviated-pubkey})
-    pubkey))
-
-(defn make-emplacement [reference tags]
-  (let [tags (vec tags)                                     ;conj adds to end.
-        tag-index (count tags)
-        user-reference (subs reference 1)
-        user-id (find-user-id user-reference)
-        user-id (if (and (nil? user-id)
-                         (re-matches config/pubkey-pattern user-reference))
-                  (abbreviate-pubkey user-reference)
-                  user-id)]
-    (if (nil? user-id)
-      [reference tags]
-      (let [tag [:p (util/num32->hex-string user-id)]
-            emplacement (str "#[" tag-index "]")]
-        [emplacement (conj tags tag)]))))
-
-(defn make-emplacements [references tags]
-  (loop [references references
-         emplacements []
-         tags tags]
-    (if (empty? references)
-      [emplacements tags]
-      (let [reference (first references)
-            [emplacement tags] (make-emplacement reference tags)]
-        (recur (rest references)
-               (conj emplacements emplacement)
-               tags)))))
-
-(defn emplace-references [content tags]
-  (let [padded-content (str " " content " ")
-        pattern config/user-name-pattern
-        references (re-seq pattern padded-content)
-        segments (string/split padded-content pattern)
-        [emplacements tags] (make-emplacements references tags)]
-    [(string/trim (apply str (interleave segments (conj emplacements ""))))
-     tags]
-    ))
-
-(defn encrypt-if-direct-message [content tags]
-  (if (re-find #"^D \#\[\d+\]" content)
-    (let [reference-digits (re-find #"\d+" content)
-          reference-index (Integer/parseInt reference-digits)
-          p-tag (get tags reference-index)]
-      (if (nil? p-tag)
-        [content 1]
-        (let [recipient-key (hex-string->num (second p-tag))
-              sender-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
-              shared-secret (SECP256K1/calculateKeyAgreement sender-key recipient-key)
-              encrypted-content (SECP256K1/encrypt shared-secret content)]
-          [encrypted-content 4])))
-    [content 1])
-  )
-
-(defn compose-text-event
-  ([subject text]
-   (compose-text-event subject text nil))
-
-  ([subject text reply-to-or-nil]
-   (let [pubkey (get-event-state :pubkey)
-         root (get-reply-root reply-to-or-nil)
-         tags (concat (make-event-reference-tags reply-to-or-nil root)
-                      (make-people-reference-tags pubkey reply-to-or-nil)
-                      (make-subject-tag subject)
-                      [[:client (str "more-speech - " config/version)]])
-         [content tags] (emplace-references text tags)
-         [content kind] (encrypt-if-direct-message content tags)
-         body {:kind kind
-               :tags tags
-               :content content}]
-     (body->event body))))
-
-(defn send-event [event]
-  (let [send-chan (get-event-state :send-chan)]
-    (async/>!! send-chan [:event event])))
-
-(defn compose-and-send-text-event [source-event-or-nil subject message]
-  (let [reply-to-or-nil (:id source-event-or-nil)
-        event (compose-text-event subject message reply-to-or-nil)]
-    (send-event event)))
-
-(defn compose-and-send-metadata-event []
-  (send-event (compose-metadata-event)))
-
-(defn compose-and-send-contact-list [contact-list]
-  (send-event (compose-contact-list contact-list)))
 
 (defn decrypt-his-dm [event]
   (let [p-tags (filter #(= :p (first %)) (:tags event))
@@ -569,6 +348,29 @@
           (prn "--on event: " envelope)
           (st/print-stack-trace e)))))
 
+;--------called externally by article-tree
 
+(defn get-root-of-thread [id]
+  (let [messages (get-event-state :text-event-map)
+        event (get messages id)
+        [root _ _] (get-references event)]
+    (if (some? root) root id)))
 
+(defn select-event [event-state tab-index id]
+  (swap! ui-context assoc :selected-tab tab-index)
+  (if-not (:backing-up event-state)
+    (-> event-state
+        (update :read-event-ids conj id)
+        (update :event-history conj [tab-index id])
+        (assoc :selected-event id :back-count 0))
+    (-> event-state (assoc :selected-event id :backing-up false))))
 
+;-------- For Tests.
+
+(defn chronological-event-comparator [[i1 t1] [i2 t2]]
+  (if (= i1 i2)
+    0
+    (compare t2 t1)))
+
+(defn make-chronological-text-events []
+  (sorted-set-by chronological-event-comparator))

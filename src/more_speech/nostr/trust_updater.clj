@@ -1,6 +1,6 @@
 (ns more-speech.nostr.trust-updater
   (:require [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.nostr.events :as events]))
+            [more-speech.nostr.event-composers :as composers]))
 
 (defn entrust [his-pubkey his-petname]
   (let [event-context (:event-context @ui-context)
@@ -18,4 +18,4 @@
 
 (defn entrust-and-send [his-pubkey his-petname]
   (let [my-contact-list (entrust his-pubkey his-petname)]
-  (events/compose-and-send-contact-list my-contact-list)))
+  (composers/compose-and-send-contact-list my-contact-list)))
