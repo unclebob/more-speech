@@ -86,39 +86,6 @@
 
 (def event-agent (agent nil))
 
-(defn decrypt-his-dm [event]
-  (let [p-tags (filter #(= :p (first %)) (:tags event))
-        my-tag (filter #(= (hex-string->num (second %))
-                           (get-event-state :pubkey))
-                       p-tags)]
-    (if (empty? my-tag)
-      (assoc event :private true)
-      (let [his-key (:pubkey event)
-            priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
-            shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
-            decrypted-content (SECP256K1/decrypt shared-secret (:content event))
-            event (assoc event :content decrypted-content)]
-        event))))
-
-(defn decrypt-my-dm [event]
-  (let [p-tags (filter #(= :p (first %)) (:tags event))
-        p-tag (first p-tags)
-        his-key (hex-string->num (second p-tag))
-        priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
-        shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
-        decrypted-content (SECP256K1/decrypt shared-secret (:content event))
-        event (assoc event :content decrypted-content)]
-    event))
-
-(defn decrypt-dm-event [event]
-  (if (= 4 (:kind event))
-    (let [author-key (:pubkey event)
-          event (assoc event :dm true)]
-      (if (= author-key (get-event-state :pubkey))
-        (decrypt-my-dm event)
-        (decrypt-his-dm event)))
-    event))
-
 (defn select-event [event-state tab-index id]
   (swap! ui-context assoc :selected-tab tab-index)
   (if-not (:backing-up event-state)
@@ -242,28 +209,6 @@
   (let [event-state (add-event event-state event [url])]
     (relays/add-recommended-relays-in-tags event)
     event-state))
-
-(defn process-tag [tag]
-  (when (and (seq tag) (seq (first tag)))
-    (let [tag-type (first tag)
-          tag-args (rest tag)
-          tag-type (.replace tag-type \: \-)]
-      (concat [(keyword tag-type)] tag-args))))
-
-(defn process-tags [tags]
-  (remove nil? (map process-tag tags)))
-
-(defn translate-event [event]
-  (let [id (hex-string->num (get event "id"))
-        pubkey (hex-string->num (get event "pubkey"))
-        sig (hex-string->num (get event "sig"))]
-    {:id id
-     :pubkey pubkey
-     :created-at (get event "created_at")
-     :kind (get event "kind")
-     :content (get event "content")
-     :sig sig
-     :tags (process-tags (get event "tags"))}))
 
 (defn process-like [event-state _event]
   event-state)
@@ -524,6 +469,39 @@
 (defn compose-and-send-contact-list [contact-list]
   (send-event (compose-contact-list contact-list)))
 
+(defn decrypt-his-dm [event]
+  (let [p-tags (filter #(= :p (first %)) (:tags event))
+        my-tag (filter #(= (hex-string->num (second %))
+                           (get-event-state :pubkey))
+                       p-tags)]
+    (if (empty? my-tag)
+      (assoc event :private true)
+      (let [his-key (:pubkey event)
+            priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
+            shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
+            decrypted-content (SECP256K1/decrypt shared-secret (:content event))
+            event (assoc event :content decrypted-content)]
+        event))))
+
+(defn decrypt-my-dm [event]
+  (let [p-tags (filter #(= :p (first %)) (:tags event))
+        p-tag (first p-tags)
+        his-key (hex-string->num (second p-tag))
+        priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
+        shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
+        decrypted-content (SECP256K1/decrypt shared-secret (:content event))
+        event (assoc event :content decrypted-content)]
+    event))
+
+(defn decrypt-dm-event [event]
+  (if (= 4 (:kind event))
+    (let [author-key (:pubkey event)
+          event (assoc event :dm true)]
+      (if (= author-key (get-event-state :pubkey))
+        (decrypt-my-dm event)
+        (decrypt-his-dm event)))
+    event))
+
 (defn compute-id [event]
   (util/bytes->num
     (make-id
@@ -537,7 +515,30 @@
   (or (= (:kind event) 1)
       (= (:kind event) 4)))
 
+(defn process-tag [tag]
+  (when (and (seq tag) (seq (first tag)))
+    (let [tag-type (first tag)
+          tag-args (rest tag)
+          tag-type (.replace tag-type \: \-)]
+      (concat [(keyword tag-type)] tag-args))))
+
+(defn process-tags [tags]
+  (remove nil? (map process-tag tags)))
+
+(defn translate-event [event]
+  (let [id (hex-string->num (get event "id"))
+        pubkey (hex-string->num (get event "pubkey"))
+        sig (hex-string->num (get event "sig"))]
+    {:id id
+     :pubkey pubkey
+     :created-at (get event "created_at")
+     :kind (get event "kind")
+     :content (get event "content")
+     :sig sig
+     :tags (process-tags (get event "tags"))}))
+
 (def event-counter (atom {:total 0}))
+
 (defn count-event [envelope url]
   (let [source (second envelope)
         key (str url "|" source)]
