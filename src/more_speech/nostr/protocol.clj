@@ -3,6 +3,7 @@
             [more-speech.websocket-relay :as ws-relay]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.events :as events]
+            [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.relays :refer [relays]]
             [more-speech.config :as config])
   (:import (java.util Date)
@@ -39,7 +40,7 @@
 
 (defn handle-relay-message [relay message]
   (let [url (::ws-relay/url relay)]
-    (send events/event-agent events/record-and-display-event message url)))
+    (send events/event-agent handlers/handle-event message url)))
 
 (defn connect-to-relays []
   (let [urls (if config/test-run?

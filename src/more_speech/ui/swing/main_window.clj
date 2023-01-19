@@ -1,7 +1,7 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
             [clojure.java.browse :as browse]
-            [more-speech.nostr.events :as events]
+            [more-speech.nostr.event-handlers :as handlers]
             [more-speech.ui.swing.article-tree :as article-tree]
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.relay-panel :as relay-panel]
@@ -15,7 +15,7 @@
            (javax.swing.event HyperlinkEvent$EventType)))
 
 (defrecord seesawHandler []
-  events/event-handler
+  handlers/event-handler
   (handle-text-event [_handler event]
     (invoke-now (article-tree/add-event event)))
   (update-relay-panel [_handler]

@@ -1,16 +1,14 @@
 (ns more-speech.migrator
   (:require [clojure.java.io :as io]
             [clojure.set :as set]
-            [more-speech.nostr.util :as util]
             [more-speech.config :refer [migration-filename]]
             [more-speech.config :as config]
-            [more-speech.nostr.util :as util]
-            [more-speech.nostr.elliptic-signature :as ecc]
-            [more-speech.nostr.events :as events]
+            [more-speech.nostr
+             [util :as util]
+             [elliptic-signature :as ecc]
+             [event-handlers :as handlers]]
             [more-speech.data-storage :as data-storage]
-            [more-speech.data-storage :as data-storage]
-            [more-speech.user-configuration :as user-configuration])
-  )
+            [more-speech.user-configuration :as user-configuration]))
 
 (defn file-exists? [fname]
   (.exists (io/file fname)))
@@ -21,8 +19,6 @@
 (defn delete-file [fname]
   (when (file-exists? fname)
     (io/delete-file fname)))
-
-
 
 ;---The Migrations
 
@@ -61,7 +57,7 @@
 
 (defn migration-2-fix-names []
   (let [nicknames (read-string (slurp @config/nicknames-filename))
-        fixed-nicknames (apply hash-map (flatten (map (fn [v] (vector (first v) (events/fix-name (second v)))) nicknames)))]
+        fixed-nicknames (apply hash-map (flatten (map (fn [v] (vector (first v) (handlers/fix-name (second v)))) nicknames)))]
     (spit @config/nicknames-filename fixed-nicknames)
     ))
 

@@ -3,6 +3,7 @@
             [more-speech.nostr.util :as util]
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.event-composers :refer :all]
+            [more-speech.nostr.event-handlers :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.ui.swing.ui-context :refer :all]

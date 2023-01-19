@@ -2,7 +2,7 @@
   (:require [more-speech.nostr.protocol :as protocol]
             [more-speech.ui.swing.ui-context :as context]
             [more-speech.user-configuration :as user-configuration]
-            [more-speech.nostr.events :as events]
+            [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.relays :as relays]
             [more-speech.relay :as relay]
@@ -35,7 +35,7 @@
       (protocol/request-metadata-from-relays metadata-request-id)
       (user-configuration/set-last-time-metadata-imported now-in-seconds))
     (protocol/subscribe-to-relays subscription-id subscription-time)
-    (events/update-relay-panel event-handler)
+    (handlers/update-relay-panel event-handler)
     (if (user-configuration/should-export-profile? now-in-seconds)
       (do
         (user-configuration/set-last-time-profile-exported now-in-seconds)

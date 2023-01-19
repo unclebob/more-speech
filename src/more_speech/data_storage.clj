@@ -2,6 +2,7 @@
   (:require [more-speech.config :as config]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.events :as events]
+            [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.relays :as relays]
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.user-configuration :as user-configuration]
@@ -65,8 +66,8 @@
 (defn load-events [old-events handler]
   (doseq [event old-events]
     (let [urls (:relays event)]
-      (swap! (:event-context @ui-context) events/add-event event urls)
-      (events/handle-text-event handler event))))
+      (swap! (:event-context @ui-context) handlers/add-event event urls)
+      (handlers/handle-text-event handler event))))
 
 (defn read-old-events [handler]
   (let [old-events (vals (read-string (slurp @config/messages-filename)))
