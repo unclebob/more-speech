@@ -1,5 +1,7 @@
 (ns more-speech.ui.swing.ui-context
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory]))
 
 (def ui-context (atom {:frame nil
                        :event-context nil
@@ -17,3 +19,7 @@
   ([field]
    (get @(:event-context @ui-context) field))
   )
+
+(defn get-db []
+  {::gateway/type ::in-memory/type
+   :data (:event-context @ui-context)})

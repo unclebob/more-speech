@@ -24,7 +24,7 @@
     (should-be-nil (process-tag ["" "" ""]))
     (should-be-nil (process-tag [nil])))
   (it "accumulates processed tags"
-    (should= [[:e 1 2 3 4] [:e 1 2]] (process-tags [["e" 1 2 3 4]["e" 1 2]["" "" ""]])))
+    (should= [[:e 1 2 3 4] [:e 1 2]] (process-tags [["e" 1 2 3 4] ["e" 1 2] ["" "" ""]])))
   )
 
 (describe "translate-event"
@@ -93,7 +93,9 @@
          }
         )
   (it "creates the map of text events by id"
-    (let [state (process-text-event @state @event "url")
+    (let [db {:data (atom @state)}
+          _ (process-text-event db @event "url")
+          state @(:data db)
           event-map (get-in state [:text-event-map])
           text-events (get-in state [:chronological-text-events])
           event (get event-map 0xdeadbeef :not-in-map)]
@@ -161,7 +163,7 @@
   (let [[[tag-id tag-content]] tags]
     (and
       (= tag-id :client)
-      (re-matches #"more\-speech \- \d+" tag-content))))
+      (re-matches #"more\-speech \- [\d-:T]+" tag-content)))) ;allow #inst format
 
 (describe "Composing outgoing events"
   (context "composing metadata (kind:0) messages"
@@ -575,12 +577,12 @@
 
 (describe "process-name-event"
   (it "loads profiles"
-    (let [event-state (process-name-event
-                        {:profiles {}}
-                        {:pubkey 1
-                         :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})]
-      (should= {1 {:name "bob" :about "about" :picture "picture"}}
-               (:profiles event-state)))))
+    (process-name-event
+      (get-db)
+      {:pubkey 1
+       :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})
+    (should= {:name "bob" :about "about" :picture "picture"}
+             (get (:profiles (get-event-state)) 1))))
 
 (describe "find-user-id"
   (it "finds the id from a profile name"

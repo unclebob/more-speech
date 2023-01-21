@@ -1,5 +1,6 @@
 (ns more-speech.nostr.event-handlers
   (:require [clojure.data.json :as json]
+            [more-speech.db.gateway :as gateway]
             [more-speech.nostr.events :as events]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.util :refer :all]
@@ -36,21 +37,20 @@
       name
       (str name (rand-int 1000)))))
 
-(defn process-name-event [event-state {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
+(defn process-name-event [db {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
     (let [profile (json/read-str content)
           name (get profile "name" "tilt")
           about (get profile "about" "")
           picture (get profile "picture" "")
-          name (add-suffix-for-duplicate pubkey (fix-name name))]
-      (-> event-state
-          (update-in [:profiles] assoc pubkey {:name name
-                                               :about about
-                                               :picture picture})))
+          name (add-suffix-for-duplicate pubkey (fix-name name))
+          profile {:name name
+                   :about about
+                   :picture picture}]
+      (gateway/add-profile db pubkey profile))
     (catch Exception e
       (prn 'json-exception-process-name-event-ignored (.getMessage e))
-      (prn event)
-      event-state)))
+      (prn event))))
 
 (defn process-references [event-state event]
   (let [[_ _ referent] (events/get-references event)]
@@ -76,10 +76,9 @@
           (update :days-changed conj (quot time 86400))
           (process-references event)))))
 
-(defn process-text-event [event-state event url]
-  (let [event-state (add-event event-state event [url])]
-    (relays/add-recommended-relays-in-tags event)
-    event-state))
+(defn process-text-event [db event url]
+  (swap! (:data db) add-event event [url])
+  (relays/add-recommended-relays-in-tags event))
 
 (defn process-like [event-state _event]
   event-state)
@@ -88,26 +87,22 @@
   (relays/add-relay (:content event))
   event-state)
 
-(defn process-event [{:keys [profiles] :as event-state} event url]
-  (let [_name-of (fn [pubkey] (get-in profiles [pubkey :name] pubkey))
+(defn process-event [event url]
+  (let [db (get-db)
         {:keys [id pubkey _created-at kind _tags _content sig]} event
         valid? (ecc/do-verify (util/num->bytes 32 id)
                               (util/num->bytes 32 pubkey)
-                              (util/num->bytes 64 sig))
-        ]
+                              (util/num->bytes 64 sig))]
     (if (not valid?)
-      (do
-        (prn 'signature-verification-failed url event)
-        event-state)
+      (prn 'signature-verification-failed url event)
       (condp = kind
-        0 (process-name-event event-state event)
-        1 (process-text-event event-state event url)
-        2 (process-server-recommendation event-state event)
-        3 (contact-list/process-contact-list event-state event url)
-        4 (process-text-event event-state event url)
-        7 (process-like event-state event)
-        (do #_(prn "unknown event: " url event)
-          event-state)))))
+        0 (process-name-event db event)
+        1 (process-text-event db event url)
+        2 (swap! (:data db) process-server-recommendation event)
+        3 (swap! (:data db) contact-list/process-contact-list event url)
+        4 (swap! (:data db) process-text-event event url)
+        7 (swap! (:data db) process-like event)
+        nil))))
 
 (defn decrypt-his-dm [event]
   (let [p-tags (filter #(= :p (first %)) (:tags event))
@@ -115,7 +110,7 @@
                            (get-event-state :pubkey))
                        p-tags)]
     (if (empty? my-tag)
-      (assoc event :private true)
+      (assoc event :private true)                           ;I'm not the recipient.
       (let [his-key (:pubkey event)
             priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
             shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
@@ -187,24 +182,29 @@
     (when (zero? (mod (:total @event-counter) 1000))
       (clojure.pprint/pprint @event-counter))))
 
+(defn handle-notification [envelope url]
+  (prn 'NOTICE url envelope))
+
 (defn handle-event [_agent envelope url]
   (count-event envelope url)
-  (try
-    (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
-          event (translate-event inner-event)
-          id (:id event)
-          computed-id (compute-id inner-event)
-          ui-handler (get-event-state :event-handler)
-          dup? (contains? (get-event-state :text-event-map) id)]
-      (if (= id computed-id)
-        (let [event (decrypt-dm-event event)]
-          (when (not (:private event))
-            (swap! (:event-context @ui-context) process-event event url)
-            (when (and (not dup?)
-                       (is-text-event? event))
-              (handle-text-event ui-handler event))))
-        (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)))
-    (catch Exception e
-      (do (prn `handle-event url (.getMessage e))
-          (prn "--on event: " envelope)
-          (st/print-stack-trace e)))))
+  (if (not= "EVENT" (first envelope))
+    (handle-notification envelope url)
+    (try
+      (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
+            event (translate-event inner-event)
+            id (:id event)
+            computed-id (compute-id inner-event)
+            ui-handler (get-event-state :event-handler)
+            dup? (contains? (get-event-state :text-event-map) id)]
+        (if (= id computed-id)
+          (let [event (decrypt-dm-event event)]
+            (when (not (:private event))
+              (process-event event url)
+              (when (and (not dup?)
+                         (is-text-event? event))
+                (handle-text-event ui-handler event))))
+          (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)))
+      (catch Exception e
+        (do (prn `handle-event url (.getMessage e))
+            (prn "--on event: " envelope)
+            (st/print-stack-trace e))))))
