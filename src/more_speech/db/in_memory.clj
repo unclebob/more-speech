@@ -18,3 +18,7 @@
 (defmethod gateway/add-reference-to-event ::type [db id reference]
   (swap! (:data db)
          update-in [:text-event-map id :references] conj reference))
+
+(defmethod gateway/add-user-contacts ::type [db user-id contacts]
+  (swap! (:data db) assoc-in [:contact-lists user-id] contacts))
+

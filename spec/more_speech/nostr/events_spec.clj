@@ -164,7 +164,6 @@
     )
   )
 
-(declare mem)
 (describe "relay recommendation event kind 2"
   (with now (int (/ (System/currentTimeMillis) 1000)))
   (it "adds a relay recommendation"

@@ -1,6 +1,7 @@
 (ns more-speech.nostr.contact-list
   (:require [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.ui-context :refer :all]))
+            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.db.gateway :as gateway]))
 
 
 (defn make-contact-from-tag [[_p pubkey relay petname]]
@@ -19,12 +20,10 @@
         contacts (remove nil? contacts)]
     [pubkey contacts]))
 
-(defn process-contact-list [event-state event _url]
+(defn process-contact-list [db event]
   (let [[pubkey contacts] (unpack-contact-list-event event)]
-    (if (seq contacts)
-      (assoc-in event-state [:contact-lists pubkey] contacts)
-      event-state))
-  )
+    (when (seq contacts)
+      (gateway/add-user-contacts db pubkey contacts))))
 
 (defn is-trusted? [candidate-pubkey]
   (let [event-state @(:event-context @ui-context)
