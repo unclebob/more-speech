@@ -1,5 +1,7 @@
 (ns more-speech.nostr.events_spec
   (:require [speclj.core :refer :all]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.event-composers :refer :all]
@@ -75,7 +77,7 @@
                 :sig sig}
                (translate-event event)))))
 
-(declare now event state)
+(declare now event state db)
 (describe "Processing Text events (Kind 1)"
   (with now (int (/ (System/currentTimeMillis) 1000)))
   (with event {:id 0xdeadbeef
@@ -89,13 +91,13 @@
   (with state
         {:text-event-map {}
          :chronological-text-events (make-chronological-text-events)
-         :event-handler (->event-handler-dummy)
-         }
-        )
+         :event-handler (->event-handler-dummy)})
+
+  (with db {:data (atom @state) ::gateway/type ::in-memory/type})
+
   (it "creates the map of text events by id"
-    (let [db {:data (atom @state)}
-          _ (process-text-event db @event "url")
-          state @(:data db)
+    (let [_ (process-text-event @db @event "url")
+          state @(:data @db)
           event-map (get-in state [:text-event-map])
           text-events (get-in state [:chronological-text-events])
           event (get event-map 0xdeadbeef :not-in-map)]
@@ -113,10 +115,9 @@
                 [:e "0002" "anotherurl"]] (:tags event))))
 
   (it "adds references to tagged articles."
-    (let [state (assoc-in @state
-                          [:text-event-map 2]
-                          {:id 2})
-          state (process-references state @event)
+    (let [_ (swap! (:data @db) assoc-in [:text-event-map 2] {:id 2})
+          _ (add-cross-reference @db @event)
+          state @(:data @db)
           text-event-map (get-in state [:text-event-map])
           article (get text-event-map 2)]
       (should= [0xdeadbeef] (:references article)))
@@ -124,22 +125,23 @@
 
   (context "sorted set for handling events"
     (it "adds one element with two urls"
-      (let [state (add-event @state {:id 10 :created-at 0} ["url1" "url2"])]
+      (let [_ (add-event @db {:id 10 :created-at 0} ["url1" "url2"])
+            state @(:data @db)]
         (should= #{[10 0]} (get-in state [:chronological-text-events]))
         (should= {10 {:id 10 :created-at 0 :relays ["url1" "url2"]}} (get-in state [:text-event-map]))))
 
     (it "adds two elements in chronological order, should be reversed"
-      (let [state (add-event @state {:id 10 :created-at 0} ["url"])
-            state (add-event state {:id 20 :created-at 1} ["url"])
-            ]
+      (let [_ (add-event @db {:id 10 :created-at 0} ["url"])
+            _ (add-event @db {:id 20 :created-at 1} ["url"])
+            state @(:data @db)]
         (should= [[20 1] [10 0]] (seq (get-in state [:chronological-text-events])))
         (should= {10 {:id 10 :created-at 0 :relays ["url"]}
                   20 {:id 20 :created-at 1 :relays ["url"]}} (get-in state [:text-event-map])))
       )
     (it "adds two elements in reverse chronological order, should remain."
-      (let [state (add-event @state {:id 10 :created-at 1} ["url"])
-            state (add-event state {:id 20 :created-at 0} ["url"])
-            ]
+      (let [_ (add-event @db {:id 10 :created-at 1} ["url"])
+            _ (add-event @db {:id 20 :created-at 0} ["url"])
+            state @(:data @db)]
         (should= [[10 1] [20 0]] (seq (get-in state [:chronological-text-events])))
         (should= {10 {:id 10 :created-at 1 :relays ["url"]}
                   20 {:id 20 :created-at 0 :relays ["url"]}}
@@ -147,8 +149,10 @@
       )
 
     (it "adds two elements with equal ids from two different relays"
-      (let [state (add-event @state {:id 10 :created-at 1} ["url1"])
-            state (add-event state {:id 10 :created-at 0} ["url2"])
+      (let [db {:data (atom @state) ::gateway/type ::in-memory/type}
+            _ (add-event db {:id 10 :created-at 1} ["url1"])
+            _ (add-event db {:id 10 :created-at 0} ["url2"])
+            state @(:data db)
             event-map (get-in state [:text-event-map])
             event (get event-map 10)]
         (should= [[10 1]] (seq (get-in state [:chronological-text-events])))

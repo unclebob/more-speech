@@ -52,32 +52,25 @@
       (prn 'json-exception-process-name-event-ignored (.getMessage e))
       (prn event))))
 
-(defn process-references [event-state event]
+(defn add-cross-reference [db event]
   (let [[_ _ referent] (events/get-references event)]
-    (if (nil? referent)
-      event-state
-      (let [referent-path [:text-event-map referent]]
-        (if (nil? (get-in event-state referent-path))
-          event-state
-          (update-in
-            event-state
-            (concat referent-path [:references])
-            conj (:id event)))))))
+    (when (and (some? referent)
+               (gateway/event-exists? db referent))
+      (gateway/add-reference-to-event db referent (:id event)))))
 
-(defn add-event [event-state event urls]
+(defn add-event [db event urls]
   (let [id (:id event)
-        time (:created-at event)]
-    (if (contains? (:text-event-map event-state) id)
-      (update-in event-state [:text-event-map id :relays] concat urls)
-      (-> event-state
-          (assoc-in [:text-event-map id] event)
-          (assoc-in [:text-event-map id :relays] urls)
-          (update-in [:chronological-text-events] conj [id time])
-          (update :days-changed conj (quot time 86400))
-          (process-references event)))))
+        time (:created-at event)
+        event-atom (:data db)]
+    (when-not (gateway/event-exists? db id)
+      (gateway/add-event db id event)
+      (add-cross-reference db event)
+      (swap! event-atom update :days-changed conj (quot time 86400)))
+    (gateway/add-relays-to-event db id urls)
+    ))
 
 (defn process-text-event [db event url]
-  (swap! (:data db) add-event event [url])
+  (add-event db event [url])
   (relays/add-recommended-relays-in-tags event))
 
 (defn process-like [event-state _event]

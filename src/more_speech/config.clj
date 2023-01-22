@@ -12,7 +12,7 @@
 (def migration-level 9)
 (def version "2023-01-19T10:55")
 
-(def test-run? true)
+(def test-run? false)
 ;---configuration files
 (def private-directory (atom "private"))
 (def migration-filename (atom "private/migration"))
