@@ -9,6 +9,7 @@
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.nostr.relays :refer [relays]]
             [more-speech.config :as config])
   (:import (ecdhJava SECP256K1)))
 
@@ -162,6 +163,21 @@
       )
     )
   )
+
+(declare mem)
+(describe "relay recommendation event kind 2"
+  (with now (int (/ (System/currentTimeMillis) 1000)))
+  (it "adds a relay recommendation"
+    (reset! relays {})
+    (let [event {:id 1
+                 :pubkey 1
+                 :created-at @now
+                 :kind 2
+                 :tags []
+                 :content "wss://relay-url"
+                 :sig 0xdddddd}]
+      (process-server-recommendation event)
+      (should= {"wss://relay-url" {:read false, :write false}} @relays))))
 
 (defn have-client-tag? [tags]
   (let [[[tag-id tag-content]] tags]

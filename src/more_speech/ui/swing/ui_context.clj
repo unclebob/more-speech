@@ -23,3 +23,6 @@
 (defn get-db []
   {::gateway/type ::in-memory/type
    :data (:event-context @ui-context)})
+
+(defn get-mem []
+  ((:event-context @ui-context)))

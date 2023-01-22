@@ -76,9 +76,8 @@
 (defn process-like [event-state _event]
   event-state)
 
-(defn process-server-recommendation [event-state event]
-  (relays/add-relay (:content event))
-  event-state)
+(defn process-server-recommendation [event]
+  (relays/add-relay (:content event)))
 
 (defn process-event [event url]
   (let [db (get-db)
@@ -91,7 +90,7 @@
       (condp = kind
         0 (process-name-event db event)
         1 (process-text-event db event url)
-        2 (swap! (:data db) process-server-recommendation event)
+        2 (process-server-recommendation event)
         3 (swap! (:data db) contact-list/process-contact-list event url)
         4 (swap! (:data db) process-text-event event url)
         7 (swap! (:data db) process-like event)
