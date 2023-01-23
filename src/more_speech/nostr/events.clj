@@ -3,7 +3,8 @@
             [clojure.data.json :as json]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.util :refer :all]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [more-speech.db.gateway :as gateway])
   (:import (java.nio.charset StandardCharsets)))
 
 (s/def ::id number?)
@@ -144,8 +145,8 @@
 ;--------called externally by article-tree
 
 (defn get-root-of-thread [id]
-  (let [messages (get-event-state :text-event-map)
-        event (get messages id)
+  (let [
+        event (gateway/get-event (get-db) id)
         [root _ _] (get-references event)]
     (if (some? root) root id)))
 

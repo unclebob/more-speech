@@ -22,4 +22,3 @@
 
 (defmethod gateway/add-user-contacts ::type [db user-id contacts]
   (swap! (:data db) assoc-in [:contact-lists user-id] contacts))
-

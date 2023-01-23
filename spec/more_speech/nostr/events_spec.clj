@@ -89,7 +89,8 @@
         {:text-event-map {}
          :event-handler (->event-handler-dummy)})
 
-  (with db {:data (atom @state) ::gateway/type ::in-memory/type})
+  (with db {:data (atom nil) ::gateway/type ::in-memory/type})
+  (before (reset! (:data @db) @state))
 
   (it "adds one simple element"
     (process-text-event @db @event "url")
