@@ -25,7 +25,6 @@
                                 ::references]
                        :opt-un [::relays]))
 
-(s/def ::chronological-text-events (s/coll-of ::id))
 (s/def ::text-event-map (s/map-of :id :event))
 (s/def ::name string?)
 (s/def ::about string?)
@@ -45,8 +44,7 @@
 (s/def ::back-count number?)
 (s/def ::backing-up boolean?)
 
-(s/def ::event-context (s/keys :req-un [::chronological-text-events
-                                        ::text-event-map
+(s/def ::event-context (s/keys :req-un [::text-event-map
                                         ::profiles
                                         ::keys
                                         ::read-event-ids
@@ -57,8 +55,7 @@
                                         ::backing-up]))
 
 (defn make-event-context [event-context-map]
-  (atom (merge {:chronological-text-events []
-                :text-event-map {}
+  (atom (merge {:text-event-map {}
                 :profiles {}
                 :keys {}
                 :read-event-ids #{}
@@ -160,13 +157,3 @@
         (update :event-history conj [tab-index id])
         (assoc :selected-event id :back-count 0))
     (-> event-state (assoc :selected-event id :backing-up false))))
-
-;-------- For Tests.
-
-(defn chronological-event-comparator [[i1 t1] [i2 t2]]
-  (if (= i1 i2)
-    0
-    (compare t2 t1)))
-
-(defn make-chronological-text-events []
-  (sorted-set-by chronological-event-comparator))

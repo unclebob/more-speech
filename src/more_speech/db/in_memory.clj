@@ -8,9 +8,10 @@
   (contains? (:text-event-map @(:data db)) id))
 
 (defmethod gateway/add-event ::type [db id event]
-  (let [time (:created-at event)]
-    (swap! (:data db) assoc-in [:text-event-map id] event)
-    (swap! (:data db) update-in [:chronological-text-events] conj [id time])))
+  (swap! (:data db) assoc-in [:text-event-map id] event))
+
+(defmethod gateway/get-event ::type [db id]
+  (get-in @(:data db) [:text-event-map id]))
 
 (defmethod gateway/add-relays-to-event ::type [db id relays]
   (swap! (:data db) update-in [:text-event-map id :relays] concat relays))

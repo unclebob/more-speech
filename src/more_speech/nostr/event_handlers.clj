@@ -73,8 +73,8 @@
   (add-event db event [url])
   (relays/add-recommended-relays-in-tags event))
 
-(defn process-like [event-state _event]
-  event-state)
+(defn process-like [_db _event]
+  )
 
 (defn process-server-recommendation [event]
   (relays/add-relay (:content event)))
@@ -92,8 +92,8 @@
         1 (process-text-event db event url)
         2 (process-server-recommendation event)
         3 (contact-list/process-contact-list db event)
-        4 (swap! (:data db) process-text-event event url)
-        7 (swap! (:data db) process-like event)
+        4 (process-text-event db event url)
+        7 (process-like db event)
         nil))))
 
 (defn decrypt-his-dm [event]
