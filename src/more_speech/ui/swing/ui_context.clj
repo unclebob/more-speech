@@ -25,4 +25,4 @@
    :data (:event-context @ui-context)})
 
 (defn get-mem []
-  ((:event-context @ui-context)))
+  (:event-context @ui-context))

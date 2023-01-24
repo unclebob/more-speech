@@ -145,8 +145,7 @@
 ;--------called externally by article-tree
 
 (defn get-root-of-thread [id]
-  (let [
-        event (gateway/get-event (get-db) id)
+  (let [event (gateway/get-event (get-db) id)
         [root _ _] (get-references event)]
     (if (some? root) root id)))
 

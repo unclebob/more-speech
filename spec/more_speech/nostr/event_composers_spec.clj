@@ -1,5 +1,7 @@
 (ns more-speech.nostr.event-composers-spec
   (:require [speclj.core :refer :all]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.event-composers :refer :all]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.events :refer :all]
@@ -18,7 +20,12 @@
       (= tag-id :client)
       (re-matches #"more\-speech \- [\d-:T]+" tag-content)))) ;allow #inst format
 
+(declare db)
+
 (describe "Composing outgoing events"
+  (with db {:data (get-mem) ::gateway/type ::in-memory/type})
+  ;(before (reset! (:data @db) {}))
+
   (context "composing metadata (kind:0) messages"
     (it "composes using the keys data structure"
       (with-redefs [config/proof-of-work-default 0]
@@ -29,7 +36,7 @@
                     :name "name"
                     :about "about"
                     :picture "picture"}
-              _ (reset! (:event-context @ui-context) {:keys keys})
+              _ (reset! (get-mem) {:keys keys})
               now (quot (System/currentTimeMillis) 1000)
               event (compose-metadata-event)
               {:keys [pubkey created_at kind content id sig]} (second event)
@@ -41,16 +48,15 @@
           (should= (to-json {:name "name" :about "about" :picture "picture"}) content)
           (should (do-verify (hex-string->bytes id)
                              public-key
-                             (hex-string->bytes sig))))
-        ))
-    )
+                             (hex-string->bytes sig)))))))
+
   (context "composing Text (kind 1) messages"
     (it "composes an original message with no subject."
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 314159)
               public-key (get-pub-key private-key)
-              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                             :public-key (bytes->hex-string public-key)}})
+              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
+                                          :public-key (bytes->hex-string public-key)}})
               text "message text"
               subject ""
               event (compose-text-event subject text)
@@ -70,8 +76,8 @@
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 314159)
               public-key (get-pub-key private-key)
-              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                             :public-key (bytes->hex-string public-key)}})
+              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
+                                          :public-key (bytes->hex-string public-key)}})
               text "message text"
               subject "subject"
               event (compose-text-event subject text)
@@ -94,11 +100,12 @@
               root-id 7734
               root-id-hex (hexify root-id)
               root-author 99
-              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                             :public-key (bytes->hex-string public-key)}
-                                                      :text-event-map {root-id {:pubkey root-author
-                                                                                :tags []}}
-                                                      :pubkey public-key})
+              root-event {:pubkey root-author :tags []}
+              _ (reset! (get-mem)
+                        {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}
+                         :pubkey public-key})
+              _ (gateway/add-event @db root-id root-event)
               text "message text"
               event (compose-text-event "" text root-id)
               {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -124,14 +131,16 @@
               root-id 1952
               root-id-hex (hexify root-id)
               root-author 99
-              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                             :public-key (bytes->hex-string public-key)}
-                                                      :pubkey public-key
-                                                      :text-event-map {root-child-id {:pubkey root-child-author
-                                                                                      :tags [[:e root-id-hex]
-                                                                                             [:p (hexify root-author)]]}
-                                                                       root-id {:pubkey root-author
-                                                                                :tags []}}})
+              root-event {:pubkey root-author :tags []}
+              root-child-event {:pubkey root-child-author
+                                :tags [[:e root-id-hex]
+                                       [:p (hexify root-author)]]}
+              _ (reset! (get-mem)
+                        {:keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)}
+                         :pubkey public-key})
+              _ (gateway/add-event @db root-id root-event)
+              _ (gateway/add-event @db root-child-id root-child-event)
               text "message text"
               event (compose-text-event "" text root-child-id)
               {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -157,11 +166,11 @@
               root-id 7734
               root-id-hex (hexify root-id)
               root-author 99
-              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                             :public-key (bytes->hex-string public-key)}
-                                                      :text-event-map {root-id {:pubkey root-author
-                                                                                :tags [[:p (hexify author)]]}}
-                                                      :pubkey public-key})
+              root-event {:pubkey root-author :tags [[:p (hexify author)]]}
+              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
+                                          :public-key (bytes->hex-string public-key)}
+                                   :pubkey public-key})
+              _ (gateway/add-event @db root-id root-event)
               event (compose-text-event "" "message" root-id)
               {:keys [tags]} (second event)]
 
@@ -172,8 +181,8 @@
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
-              _ (reset! (:event-context @ui-context) {:keys {:private-key (bytes->hex-string private-key)
-                                                             :public-key (bytes->hex-string public-key)}})
+              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
+                                          :public-key (bytes->hex-string public-key)}})
               text "message/text"
               event (compose-text-event "" text)
               {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -213,12 +222,11 @@
 
     (it "encrypts a direct message"
       (with-redefs [config/proof-of-work-default 0]
-        (let [event-context (:event-context @ui-context)
-              sender-private-key (util/make-private-key)
+        (let [sender-private-key (util/make-private-key)
               recipient-private-key (util/make-private-key)
               sender-public-key (get-pub-key sender-private-key)
               recipient-public-key (get-pub-key recipient-private-key)
-              _ (reset! event-context {:keys {:private-key (bytes->hex-string sender-private-key)}})
+              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string sender-private-key)}})
               tags [[:p (bytes->hex-string recipient-public-key)]]
               content "D #[0] hi."
               inbound-shared-secret (SECP256K1/calculateKeyAgreement
@@ -230,9 +238,8 @@
 
     (it "catches fake DMs with phoney #[xxx] in them."
       (with-redefs [config/proof-of-work-default 0]
-        (let [event-context (:event-context @ui-context)
-              sender-private-key (util/make-private-key)
-              _ (reset! event-context {:keys {:private-key (bytes->num sender-private-key)}})
+        (let [sender-private-key (util/make-private-key)
+              _ (reset! (get-mem) {:keys {:private-key (bytes->num sender-private-key)}})
               tags [[:p "dummy"]]
               content "D #[223] hi."
               [encrypted-message kind] (encrypt-if-direct-message content tags)]
@@ -245,9 +252,8 @@
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
-              event-context (:event-context @ui-context)
-              _ (reset! event-context {:keys {:private-key (bytes->hex-string private-key)
-                                              :public-key (bytes->hex-string public-key)}})
+              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
+                                          :public-key (bytes->hex-string public-key)}})
               contact-list [{:pubkey 1}
                             {:pubkey 2 :petname "petname"}]
               event (compose-contact-list contact-list)
@@ -276,8 +282,7 @@
       (let [tags []
             user-id 99
             profiles {user-id {:name "username"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
+            _ (reset! (get-mem) {:profiles profiles})
             content "hello @username."]
         (should= ["hello #[0]." [[:p (hexify user-id)]]] (emplace-references content tags))))
 
@@ -287,8 +292,7 @@
             user-id-2 88
             profiles {user-id-1 {:name "user-1"}
                       user-id-2 {:name "user-2"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
+            _ (reset! (get-mem) {:profiles profiles})
             content "hello @user-1 and @user-2."]
         (should= ["hello #[1] and #[2]." [[:e "blah"]
                                           [:p (hexify user-id-1)]
@@ -301,8 +305,7 @@
             user-id-2 88
             profiles {user-id-1 {:name "user-1"}
                       user-id-2 {:name "user-2"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
+            _ (reset! (get-mem) {:profiles profiles})
             content "hello @user-3."]
         (should= ["hello @user-3." [[:e "blah"]]]
                  (emplace-references content tags))))
@@ -312,8 +315,7 @@
             user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
             pubkey (num32->hex-string user-id)
             profiles {}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
+            _ (reset! (get-mem) {:profiles profiles})
             content (str "hello @" pubkey ".")]
         (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
                  (emplace-references content tags))
@@ -323,8 +325,7 @@
     (it "does not recognize pubkeys that aren't 32 bytes"
       (let [tags [[:e "blah"]]
             profiles {}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
+            _ (reset! (get-mem) {:profiles profiles})
             content "hello @01234567abc."]
         (should= ["hello @01234567abc." [[:e "blah"]]]
                  (emplace-references content tags))
@@ -332,19 +333,16 @@
 
 (describe "find-user-id"
   (it "finds the id from a profile name"
-    (let [event-state {:profiles {1 {:name "bob"}}}]
-      (reset! ui-context {:event-context (atom event-state)})
-      (should= 1 (find-user-id "bob"))
-      (should= nil (find-user-id "bill"))))
+    (reset! (get-mem) {:profiles {1 {:name "bob"}}})
+    (should= 1 (find-user-id "bob"))
+    (should= nil (find-user-id "bill")))
 
   (it "finds the id from a trusted pet-name"
     (let [my-pubkey 1
           profiles {2 {:name "bob"}}
-          contact-lists {my-pubkey [{:pubkey 2 :petname "petname"}]}
-          event-state {:profiles profiles
-                       :pubkey my-pubkey
-                       :contact-lists contact-lists}]
-      (reset! ui-context {:event-context (atom event-state)})
+          contact-lists {my-pubkey [{:pubkey 2 :petname "petname"}]}]
+      (reset! (get-mem) {:profiles profiles
+                         :pubkey my-pubkey
+                         :contact-lists contact-lists})
       (should= 2 (find-user-id "petname"))
-      (should= 2 (find-user-id "bob"))))
-  )
+      (should= 2 (find-user-id "bob")))))
