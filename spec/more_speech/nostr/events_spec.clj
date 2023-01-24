@@ -12,8 +12,7 @@
 
 (defrecord event-handler-dummy []
   event-handler
-  (handle-text-event [_ _event-id])
-  )
+  (handle-text-event [_ _event-id]))
 
 (describe "process-tag(s)"
   (it "handles tags with many arguments"
@@ -75,7 +74,7 @@
                 :sig sig}
                (translate-event event)))))
 
-(declare now event state db)
+(declare now event db)
 (describe "Processing Text events (Kind 1)"
   (with now (int (/ (System/currentTimeMillis) 1000)))
   (with event {:id 0xdeadbeef
@@ -86,12 +85,12 @@
                       [:e "0002" "anotherurl"]]
                :content "the content"
                :sig 0xdddddd})
-  (with state
-        {:text-event-map {}
-         :event-handler (->event-handler-dummy)})
+  (with db (get-db))
 
-  (with db {:data (atom nil) ::gateway/type ::in-memory/type})
-  (before (reset! (:data @db) @state))
+  (before
+    (swap! (get-mem) assoc :event-handler (->event-handler-dummy))
+    (in-memory/clear-events @db)
+    (in-memory/clear-profiles @db))
 
   (it "adds one simple element"
     (process-text-event @db @event "url")
@@ -221,19 +220,15 @@
       (should= "dud-12" (fix-name ""))))
 
   (it "should put a suffix on duplicate names."
-    (let [profiles {1 {:name "unclebob"}}
-          event-context (atom {:profiles profiles})]
-      (reset! ui-context {:event-context event-context})
-      (let [new-name (add-suffix-for-duplicate 2 "unclebob")]
-        (prn new-name)
-        (should (re-matches #"unclebob\d+" new-name)))))
+    (gateway/add-profile (get-db) 1 {:name "unclebob"})
+    (let [new-name (add-suffix-for-duplicate 2 "unclebob")]
+      (prn new-name)
+      (should (re-matches #"unclebob\d+" new-name))))
 
   (it "should put not put a suffix on previously existing names."
-    (let [profiles {1 {:name "unclebob"}}
-          event-context (atom {:profiles profiles})]
-      (reset! ui-context {:event-context event-context})
-      (let [new-name (add-suffix-for-duplicate 1 "unclebob")]
-        (should= "unclebob" new-name))))
+    (gateway/add-profile (get-db) 1 {:name "unclebob"})
+    (let [new-name (add-suffix-for-duplicate 1 "unclebob")]
+      (should= "unclebob" new-name)))
   )
 
 (describe "process-name-event"
@@ -243,7 +238,7 @@
       {:pubkey 1
        :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})
     (should= {:name "bob" :about "about" :picture "picture"}
-             (get (:profiles (get-event-state)) 1))))
+             (gateway/get-profile (get-db) 1))))
 
 (declare body)
 (describe "proof of work"

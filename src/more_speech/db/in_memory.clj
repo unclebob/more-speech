@@ -26,3 +26,10 @@
 (defmethod gateway/add-user-contacts ::type [db user-id contacts]
   (swap! (:data db) assoc-in [:contact-lists user-id] contacts))
 
+;----------methods for tests
+
+(defn clear-events [db]
+  (swap! (:data db) assoc :text-event-map {}))
+
+(defn clear-profiles [db]
+  (swap! (:data db) assoc :profiles {}))
