@@ -1,7 +1,6 @@
 (ns more-speech.nostr.event-composers-spec
   (:require [speclj.core :refer :all]
             [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.event-composers :refer :all]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.events :refer :all]
@@ -11,7 +10,7 @@
             [more-speech.nostr.util :refer :all]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.relays :refer [relays]]
-            [more-speech.config :as config])
+            [more-speech.config :as config :refer [get-db]])
   (:import (ecdhJava SECP256K1)))
 
 (defn have-client-tag? [tags]
@@ -20,12 +19,8 @@
       (= tag-id :client)
       (re-matches #"more\-speech \- [\d-:T]+" tag-content)))) ;allow #inst format
 
-(declare db)
 
 (describe "Composing outgoing events"
-  (with db {:data (get-mem) ::gateway/type ::in-memory/type})
-  ;(before (reset! (:data @db) {}))
-
   (context "composing metadata (kind:0) messages"
     (it "composes using the keys data structure"
       (with-redefs [config/proof-of-work-default 0]
@@ -105,7 +100,7 @@
                         {:keys {:private-key (bytes->hex-string private-key)
                                 :public-key (bytes->hex-string public-key)}
                          :pubkey public-key})
-              _ (gateway/add-event @db root-id root-event)
+              _ (gateway/add-event (get-db) root-id root-event)
               text "message text"
               event (compose-text-event "" text root-id)
               {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -139,8 +134,8 @@
                         {:keys {:private-key (bytes->hex-string private-key)
                                 :public-key (bytes->hex-string public-key)}
                          :pubkey public-key})
-              _ (gateway/add-event @db root-id root-event)
-              _ (gateway/add-event @db root-child-id root-child-event)
+              _ (gateway/add-event (get-db) root-id root-event)
+              _ (gateway/add-event (get-db) root-child-id root-child-event)
               text "message text"
               event (compose-text-event "" text root-child-id)
               {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -170,7 +165,7 @@
               _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
                                           :public-key (bytes->hex-string public-key)}
                                    :pubkey public-key})
-              _ (gateway/add-event @db root-id root-event)
+              _ (gateway/add-event (get-db) root-id root-event)
               event (compose-text-event "" "message" root-id)
               {:keys [tags]} (second event)]
 
@@ -281,8 +276,7 @@
     (it "emplaces @username in newly created message"
       (let [tags []
             user-id 99
-            profiles {user-id {:name "username"}}
-            _ (reset! (get-mem) {:profiles profiles})
+            _ (gateway/add-profile (get-db) user-id {:name "username"})
             content "hello @username."]
         (should= ["hello #[0]." [[:p (hexify user-id)]]] (emplace-references content tags))))
 
@@ -290,9 +284,8 @@
       (let [tags (seq [[:e "blah"]])
             user-id-1 99
             user-id-2 88
-            profiles {user-id-1 {:name "user-1"}
-                      user-id-2 {:name "user-2"}}
-            _ (reset! (get-mem) {:profiles profiles})
+            _ (gateway/add-profile (get-db) user-id-1 {:name "user-1"})
+            _ (gateway/add-profile (get-db) user-id-2 {:name "user-2"})
             content "hello @user-1 and @user-2."]
         (should= ["hello #[1] and #[2]." [[:e "blah"]
                                           [:p (hexify user-id-1)]
@@ -303,9 +296,8 @@
       (let [tags [[:e "blah"]]
             user-id-1 99
             user-id-2 88
-            profiles {user-id-1 {:name "user-1"}
-                      user-id-2 {:name "user-2"}}
-            _ (reset! (get-mem) {:profiles profiles})
+            _ (gateway/add-profile (get-db) user-id-1 {:name "user-1"})
+            _ (gateway/add-profile (get-db) user-id-2 {:name "user-2"})
             content "hello @user-3."]
         (should= ["hello @user-3." [[:e "blah"]]]
                  (emplace-references content tags))))
@@ -314,35 +306,30 @@
       (let [tags [[:e "blah"]]
             user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
             pubkey (num32->hex-string user-id)
-            profiles {}
-            _ (reset! (get-mem) {:profiles profiles})
             content (str "hello @" pubkey ".")]
         (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
                  (emplace-references content tags))
-        (should= {user-id {:name "0123456789a-"}}
-                 (:profiles @(:event-context @ui-context)))))
+        (should= {:name "0123456789a-"}
+                 (gateway/get-profile (get-db) user-id))))
 
     (it "does not recognize pubkeys that aren't 32 bytes"
       (let [tags [[:e "blah"]]
-            profiles {}
-            _ (reset! (get-mem) {:profiles profiles})
             content "hello @01234567abc."]
         (should= ["hello @01234567abc." [[:e "blah"]]]
                  (emplace-references content tags))
-        (should= {} (:profiles @(:event-context @ui-context)))))))
+        (should-be-nil (gateway/get-profile (get-db) 0x01234567abc))))))
 
 (describe "find-user-id"
   (it "finds the id from a profile name"
-    (reset! (get-mem) {:profiles {1 {:name "bob"}}})
+    (gateway/add-profile (get-db) 1 {:name "bob"})
     (should= 1 (find-user-id "bob"))
     (should= nil (find-user-id "bill")))
 
   (it "finds the id from a trusted pet-name"
     (let [my-pubkey 1
-          profiles {2 {:name "bob"}}
           contact-lists {my-pubkey [{:pubkey 2 :petname "petname"}]}]
-      (reset! (get-mem) {:profiles profiles
-                         :pubkey my-pubkey
+      (reset! (get-mem) {:pubkey my-pubkey
                          :contact-lists contact-lists})
+      (gateway/add-profile (get-db) 2 {:name "bob"})
       (should= 2 (find-user-id "petname"))
       (should= 2 (find-user-id "bob")))))

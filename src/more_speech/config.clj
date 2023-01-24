@@ -1,4 +1,7 @@
-(ns more-speech.config)
+(ns more-speech.config
+  (:require [more-speech.ui.swing.ui-context :refer [ui-context]]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory]))
 
 (def default-font "COURIER-PLAIN-14")
 (def bold-font "COURIER-BOLD-14")
@@ -38,4 +41,6 @@
 ;; https://daringfireball.net/2010/07/improved_regex_for_matching_urls
 (def url-pattern #"(?i)\b(?:(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\))+(?:\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))")
 
-
+(defn get-db []
+  {::gateway/type ::in-memory/type
+   :data (:event-context @ui-context)})

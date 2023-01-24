@@ -1,6 +1,7 @@
 (ns more-speech.nostr.events
   (:require [clojure.spec.alpha :as s]
             [clojure.data.json :as json]
+            [more-speech.config :refer [get-db]]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.nostr.util :as util]

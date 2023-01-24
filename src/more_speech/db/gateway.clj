@@ -1,6 +1,7 @@
 (ns more-speech.db.gateway)
 
 (defmulti add-profile (fn [db _id _profile] (::type db)))
+(defmulti get-profile (fn [db _id] (::type db)))
 (defmulti event-exists? (fn [db _id] (::type db)))
 (defmulti add-event (fn [db _id _event] (::type db)))
 (defmulti get-event (fn [db _id] (::type db)))

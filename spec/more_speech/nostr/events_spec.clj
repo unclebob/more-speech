@@ -1,5 +1,6 @@
 (ns more-speech.nostr.events_spec
   (:require [speclj.core :refer :all]
+            [more-speech.config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.events :refer :all]

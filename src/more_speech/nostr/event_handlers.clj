@@ -8,7 +8,7 @@
             [more-speech.nostr.util :as util]
             [more-speech.nostr.relays :as relays]
             [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.config :as config]
+            [more-speech.config :as config :refer [get-db]]
             [clojure.stacktrace :as st]
             )
   (:import (ecdhJava SECP256K1)))

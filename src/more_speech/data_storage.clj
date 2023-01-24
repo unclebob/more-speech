@@ -1,5 +1,5 @@
 (ns more-speech.data-storage
-  (:require [more-speech.config :as config]
+  (:require [more-speech.config :as config :refer [get-db]]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.event-handlers :as handlers]

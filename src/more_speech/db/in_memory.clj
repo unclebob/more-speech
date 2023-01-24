@@ -4,6 +4,9 @@
 (defmethod gateway/add-profile ::type [db id profile]
   (swap! (:data db) update-in [:profiles] assoc id profile))
 
+(defmethod gateway/get-profile ::type [db id]
+  (get-in @(:data db) [:profiles id]))
+
 (defmethod gateway/event-exists? ::type [db id]
   (contains? (:text-event-map @(:data db)) id))
 
