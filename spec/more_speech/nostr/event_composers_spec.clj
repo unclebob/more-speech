@@ -326,10 +326,9 @@
     (should= nil (find-user-id "bill")))
 
   (it "finds the id from a trusted pet-name"
-    (let [my-pubkey 1
-          contact-lists {my-pubkey [{:pubkey 2 :petname "petname"}]}]
-      (reset! (get-mem) {:pubkey my-pubkey
-                         :contact-lists contact-lists})
+    (let [my-pubkey 1]
+      (reset! (get-mem) {:pubkey my-pubkey})
+      (gateway/add-user-contacts (get-db) my-pubkey [{:pubkey 2 :petname "petname"}])
       (gateway/add-profile (get-db) 2 {:name "bob"})
       (should= 2 (find-user-id "petname"))
       (should= 2 (find-user-id "bob")))))
