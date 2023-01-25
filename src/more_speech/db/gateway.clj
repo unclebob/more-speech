@@ -8,4 +8,6 @@
 (defmulti add-relays-to-event (fn [db _id _relays] (::type db)))
 (defmulti add-reference-to-event (fn [db _id _reference] (::type db)))
 (defmulti add-contacts (fn [db _user-id _contacts] (::type db)))
+(defmulti get-contacts (fn [db _user-id] (::type db)))
+(defmulti get-id-from-petname (fn [db _user-id _petname] (::type db)))
 

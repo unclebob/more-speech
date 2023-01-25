@@ -1,7 +1,8 @@
 (ns more-speech.nostr.contact-list
   (:require [more-speech.nostr.util :as util]
             [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.db.gateway :as gateway]))
+            [more-speech.db.gateway :as gateway]
+            [more-speech.config :refer [get-db]]))
 
 
 (defn make-contact-from-tag [[_p pubkey relay petname]]
@@ -36,10 +37,10 @@
 
 (defn trusted-by-contact [candidate-pubkey]
   (let [event-state @(:event-context @ui-context)
-          my-pubkey (:pubkey event-state)
-          contact-lists (:contact-lists event-state)
-          my-contacts (get contact-lists my-pubkey)
-          my-contact-ids (map :pubkey my-contacts)]
+        my-pubkey (:pubkey event-state)
+        contact-lists (:contact-lists event-state)
+        my-contacts (get contact-lists my-pubkey)
+        my-contact-ids (map :pubkey my-contacts)]
     (loop [my-contact-ids my-contact-ids]
       (if (empty? my-contact-ids)
         nil
@@ -59,17 +60,7 @@
     (:petname his-entry)))
 
 (defn get-pubkey-from-petname [petname]
-  (let [event-state @(:event-context @ui-context)
-          my-pubkey (:pubkey event-state)
-          contact-lists (:contact-lists event-state)
-          my-contacts (get contact-lists my-pubkey)]
-    (loop [contacts my-contacts]
-      (if (seq contacts)
-        (if (= petname (:petname (first contacts)))
-          (:pubkey (first contacts))
-          (recur (rest contacts)))
-        nil))
-      ) )
+  (gateway/get-id-from-petname (get-db) (get-mem :pubkey) petname))
 
 
 

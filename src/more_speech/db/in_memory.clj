@@ -27,6 +27,17 @@
 (defmethod gateway/add-contacts ::type [db user-id contacts]
   (swap! (:data db) assoc-in [:contact-lists user-id] contacts))
 
+(defmethod gateway/get-contacts ::type [db user-id]
+  (get-in @(:data db) [:contact-lists user-id]))
+
+(defmethod gateway/get-id-from-petname ::type [db user-id petname]
+  (loop [contacts (gateway/get-contacts db user-id)]
+    (if (seq contacts)
+      (if (= petname (:petname (first contacts)))
+        (:pubkey (first contacts))
+        (recur (rest contacts)))
+      nil)))
+
 ;----------methods for tests
 
 (defn get-db [] {:data (get-mem) ::gateway/type ::type})

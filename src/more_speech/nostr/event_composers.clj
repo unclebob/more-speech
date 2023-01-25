@@ -5,9 +5,10 @@
             [more-speech.nostr.elliptic-signature :as ecc]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.config :as config]
+            [more-speech.config :as config :refer [get-db]]
             [clojure.string :as string]
-            [clojure.core.async :as async])
+            [clojure.core.async :as async]
+            [more-speech.db.gateway :as gateway])
   (:import (ecdhJava SECP256K1)))
 
 (defn body->event
@@ -68,9 +69,9 @@
 (defn make-people-reference-tags [pubkey reply-to-or-nil]
   (if (nil? reply-to-or-nil)
     []
-    (let [event-map (get-event-state :text-event-map)
+    (let [
           parent-event-id reply-to-or-nil
-          parent-event (get event-map parent-event-id)
+          parent-event (gateway/get-event (get-db) parent-event-id)
           parent-tags (:tags parent-event)
           people-ids (map second (filter #(= :p (first %)) parent-tags))
           parent-author (:pubkey parent-event)
@@ -87,8 +88,7 @@
   (if (nil? reply-to-or-nil)
     nil
     (let [reply-id reply-to-or-nil
-          event-map (get-event-state :text-event-map)
-          replied-to-event (get event-map reply-id)
+          replied-to-event (gateway/get-event (get-db) reply-id)
           [root _mentions _referent] (events/get-references replied-to-event)]
       root)))
 
