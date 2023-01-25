@@ -31,7 +31,7 @@
             (-> (System/currentTimeMillis) (quot 1000) (- 3600)))
           _ (prn 'main 'getting-events)
           exit-condition (main/start-nostr latest-old-message-time)]
-
+      (prn 'starting-exit-process)
       (when (not config/test-run?)
         (data-storage/write-configuration)
         (data-storage/write-changed-days))

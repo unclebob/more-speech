@@ -56,7 +56,7 @@
           sig (rand-int 1000000)
           created_at (rand-int 10000)
           content "the content"
-          tags [["e:" 1 2 3] ["p:p:" 4 5 6 7]]
+          tags [["e:" 1 2 3] ["p:p:" 4 5 6 7] [" " "empty"]]
           event {"id" (hexify id)
                  "pubkey" (hexify pubkey)
                  "created_at" created_at
@@ -68,7 +68,7 @@
                 :pubkey pubkey
                 :created-at created_at
                 :kind 1
-                :tags [[:e- 1 2 3] [:p-p- 4 5 6 7]]
+                :tags [[:e- 1 2 3] [:p-p- 4 5 6 7] [:blank "empty"]]
                 :content content
                 :sig sig}
                (translate-event event)))))

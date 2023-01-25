@@ -14,25 +14,35 @@
 
 
 (defn write-configuration []
-
+  (prn 'writing-profiles)
   (spit @config/profiles-filename
         (with-out-str
           (clojure.pprint/pprint (get-event-state :profiles))))
+  (prn 'writing-read-events)
   (spit @config/read-event-ids-filename
         (with-out-str
           (clojure.pprint/pprint (get-event-state :read-event-ids))))
+
+  (prn 'writing-relays)
   (spit @config/relays-filename
         (with-out-str
           (clojure.pprint/pprint (relays/relays-for-writing))))
+
+  (prn 'writing-tabs)
   (spit @config/tabs-list-filename
         (with-out-str
           (clojure.pprint/pprint (get-event-state :tabs-list))))
+
+  (prn 'writing-user-configuration)
   (spit @config/user-configuration-filename
         (with-out-str
           (clojure.pprint/pprint (get-event-state :user-configuration))))
+
+  (prn 'writing-contact-lists)
   (spit @config/contact-lists-filename
         (with-out-str
           (clojure.pprint/pprint (get-event-state :contact-lists))))
+  (prn 'configuration-written)
   )
 
 (defn write-messages []
@@ -64,10 +74,21 @@
     (relays/load-relays-from-file @config/relays-filename)))
 
 (defn load-events [old-events handler]
-  (doseq [event old-events]
-    (let [urls (:relays event)]
-      (handlers/add-event (get-db) event urls)
-      (handlers/handle-text-event handler event))))
+  (loop [events old-events
+         event-count 0]
+    (if (empty? events)
+      (prn 'done-loading-events)
+      (let [event (first events)
+            urls (:relays event)]
+        (when (zero? (rem event-count 100))
+          (prn event-count 'events-loaded (fu/format-time (:created-at event))))
+        (try
+          (handlers/add-event (get-db) event urls)
+          (handlers/handle-text-event handler event)
+          (catch Exception e
+            (prn 'EXCEPTION 'load-events)
+            (prn e)))
+        (recur (rest events) (inc event-count))))))
 
 (defn read-old-events [handler]
   (let [old-events (vals (read-string (slurp @config/messages-filename)))
@@ -109,8 +130,10 @@
                    (second day-partition)))))))))
 
 (defn write-changed-days []
+  (prn 'writing-events-for-changed-days)
   (let [days-changed (get-event-state :days-changed)
         earliest-loaded-time (get-event-state :earliest-loaded-time)
+        _ (prn 'earliest-loaded-time earliest-loaded-time)
         first-day-loaded (quot earliest-loaded-time 86400)
         days-to-write (set (filter #(>= % first-day-loaded) days-changed))
         daily-partitions (partition-messages-by-day (get-event-state :text-event-map))
@@ -154,17 +177,21 @@
         now (quot (System/currentTimeMillis) 1000)
         last-time (if (nil? last-time) (- now 86400) last-time)
         first-time (if (nil? first-time) now first-time)]
+
+    (set-mem :days-changed #{(quot last-time 86400)})
+    (set-mem :earliest-loaded-time first-time)
     (future
       (doseq [file-name (reverse file-names)]
         (prn 'reading file-name)
-        (let [old-events (read-string (slurp (str @config/messages-directory "/" file-name)))]
-          (try
+        (try
+          (let [file-data (slurp (str @config/messages-directory "/" file-name))
+                old-events (read-string file-data)]
+            (prn 'done-reading file-name 'loading-events)
             (load-events old-events handler)
-            (catch Exception e
-              (prn 'EXCEPTION 'read-in-last-n-days 'reading file-name 'failed)
-              (prn e)))))
-      (swap! (:event-context @ui-context)
-             assoc :days-changed #{(quot last-time 86400)}
-             :earliest-loaded-time first-time))
+            (prn 'done-loading-events file-name))
+          (catch Exception e
+            (prn 'EXCEPTION 'read-in-last-n-days 'reading file-name 'failed)
+            (prn e))))
+      (prn 'reading-files-complete))
     last-time))
 

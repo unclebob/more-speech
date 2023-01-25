@@ -145,6 +145,7 @@
 (defn process-tag [tag]
   (when (and (seq tag) (seq (first tag)))
     (let [tag-type (first tag)
+          tag-type (if (clojure.string/blank? tag-type) "blank" tag-type)
           tag-args (rest tag)
           tag-type (.replace tag-type \: \-)]
       (concat [(keyword tag-type)] tag-args))))
