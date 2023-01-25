@@ -1,6 +1,5 @@
 (ns more-speech.nostr.events_spec
   (:require [speclj.core :refer :all]
-            [more-speech.config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.events :refer :all]
@@ -85,7 +84,7 @@
                       [:e "0002" "anotherurl"]]
                :content "the content"
                :sig 0xdddddd})
-  (with db (get-db))
+  (with db (in-memory/get-db))
 
   (before
     (swap! (get-mem) assoc :event-handler (->event-handler-dummy))
@@ -208,6 +207,7 @@
   )
 
 (describe "fixing names"
+  (with db (in-memory/get-db))
   (it "should not fix a good name"
     (should= "name" (fix-name "name")))
 
@@ -220,25 +220,26 @@
       (should= "dud-12" (fix-name ""))))
 
   (it "should put a suffix on duplicate names."
-    (gateway/add-profile (get-db) 1 {:name "unclebob"})
+    (gateway/add-profile @db 1 {:name "unclebob"})
     (let [new-name (add-suffix-for-duplicate 2 "unclebob")]
       (prn new-name)
       (should (re-matches #"unclebob\d+" new-name))))
 
   (it "should put not put a suffix on previously existing names."
-    (gateway/add-profile (get-db) 1 {:name "unclebob"})
+    (gateway/add-profile @db 1 {:name "unclebob"})
     (let [new-name (add-suffix-for-duplicate 1 "unclebob")]
       (should= "unclebob" new-name)))
   )
 
 (describe "process-name-event"
+  (with db (in-memory/get-db))
   (it "loads profiles"
     (process-name-event
-      (get-db)
+      @db
       {:pubkey 1
        :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})
     (should= {:name "bob" :about "about" :picture "picture"}
-             (gateway/get-profile (get-db) 1))))
+             (gateway/get-profile @db 1))))
 
 (declare body)
 (describe "proof of work"

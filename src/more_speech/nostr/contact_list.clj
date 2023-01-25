@@ -23,7 +23,7 @@
 (defn process-contact-list [db event]
   (let [[pubkey contacts] (unpack-contact-list-event event)]
     (when (seq contacts)
-      (gateway/add-user-contacts db pubkey contacts))))
+      (gateway/add-contacts db pubkey contacts))))
 
 (defn is-trusted? [candidate-pubkey]
   (let [event-state @(:event-context @ui-context)

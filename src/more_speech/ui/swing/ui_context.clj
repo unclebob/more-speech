@@ -18,5 +18,16 @@
    (get @(:event-context @ui-context) field))
   )
 
-(defn get-mem []
+(defn get-mem
+  ([]
   (:event-context @ui-context))
+
+  ([field]
+     (get @(:event-context @ui-context) field))
+  )
+
+(defn set-mem [key value]
+  (swap! (get-mem) assoc key value))
+
+(defn clear-mem []
+  (reset! (get-mem) {}))

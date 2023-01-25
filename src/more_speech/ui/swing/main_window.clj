@@ -1,13 +1,14 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
             [clojure.java.browse :as browse]
+            [more-speech.db.gateway :as gateway]
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.ui.swing.article-tree :as article-tree]
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.relay-panel :as relay-panel]
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.config :as config]
+            [more-speech.config :as config :refer [get-db]]
             [more-speech.ui.formatter-util :as formatter-util]
             [more-speech.nostr.util :as util])
   (:use [seesaw core])
@@ -35,20 +36,15 @@
   )
 
 (defn make-profile-line [id]
-  (let [profiles (get-event-state :profiles)
-        profile (get profiles id)
+  (let [profile (gateway/get-profile (get-db) id)
         name (formatter-util/abbreviate (:name profile) 20)]
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
 (defn make-author-list []
-  (prn 'make-author-list 'started)
   (let [profiles (get-event-state :profiles)
         ids (keys profiles)
-        _ (prn 'make-author-list 'sorting-authors)
         profile-lines (sort (map make-profile-line ids))
-        _ (prn 'make-author-list 'formatting-authors)
-        author-list (map #(label :font config/default-font :text %) profile-lines)
-        _ (prn 'make-author-list 'done)]
+        author-list (map #(label :font config/default-font :text %) profile-lines)]
     author-list))
 
 (defn make-main-window []

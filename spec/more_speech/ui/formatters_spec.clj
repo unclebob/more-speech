@@ -1,5 +1,7 @@
 (ns more-speech.ui.formatters-spec
   (:require [speclj.core :refer :all]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory]
             [more-speech.ui.formatters :refer :all]
             [more-speech.ui.formatter-util :refer :all]
             [more-speech.ui.swing.ui-context :refer :all]))
@@ -275,71 +277,55 @@
     (should= "one two&nbsp three&nbsp&nbsp ." (reformat-article "one two  three   .")))
   )
 
+(declare db)
 (describe "Format User ID"
+  (with db (in-memory/get-db))
+
+  (before (in-memory/clear-db @db)
+          (clear-mem))
   (it "shows untrusted pubkey if no profile or petname"
-    (let [profiles {}
-          contact-lists {}
-          event-state {:profiles profiles :contact-lists contact-lists}]
-      (reset! ui-context {:event-context (atom event-state)}))
     (let [pubkey 16rdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef]
       (should= "(deadbee...)" (format-user-id pubkey 30))))
 
   (it "shows untrusted profile name if no petname"
-    (let [profiles {1 {:name "the name"}}
-          contact-lists {}
-          event-state {:profiles profiles :contact-lists contact-lists}]
-      (reset! ui-context {:event-context (atom event-state)}))
-    (let [pubkey 1]
-      (should= "(the name)" (format-user-id pubkey 30))))
+    (gateway/add-profile @db 1 {:name "the name"})
+    (should= "(the name)" (format-user-id 1 30)))
 
   (it "shows trusted petname if present"
     (let [my-pubkey 99
-          his-pubkey 1
-          profiles {his-pubkey {:name "his name"}}
-          contact-lists {my-pubkey [{:pubkey his-pubkey :petname "pet name"}]}
-          event-state {:pubkey my-pubkey
-                       :profiles profiles
-                       :contact-lists contact-lists}]
-      (reset! ui-context {:event-context (atom event-state)})
+          his-pubkey 1]
+      (gateway/add-profile @db his-pubkey {:name "his name"})
+      (gateway/add-contacts @db my-pubkey [{:pubkey his-pubkey :petname "pet name"}])
+      (set-mem :pubkey my-pubkey)
       (should= "pet name" (format-user-id his-pubkey))))
 
   (it "shows trusted profile name if trusted, but not pet name"
     (let [my-pubkey 99
-          his-pubkey 1
-          profiles {his-pubkey {:name "his name"}}
-          contact-lists {my-pubkey [{:pubkey his-pubkey}]}
-          event-state {:pubkey my-pubkey
-                       :profiles profiles
-                       :contact-lists contact-lists}]
-      (reset! ui-context {:event-context (atom event-state)})
+          his-pubkey 1]
+      (gateway/add-profile @db his-pubkey {:name "his name"})
+      (gateway/add-contacts @db my-pubkey [{:pubkey his-pubkey}])
+      (set-mem :pubkey my-pubkey)
       (should= "his name" (format-user-id his-pubkey))))
 
   (it "shows second degree of trust for user trusted by trusted user"
     (let [my-pubkey 99
           trusted-user 1
-          trusted-by-trusted-user 2
-          profiles {trusted-user {:name "trusted"}
-                    trusted-by-trusted-user {:name "2-deg"}}
-          contact-lists {my-pubkey [{:pubkey trusted-user}]
-                         trusted-user [{:pubkey trusted-by-trusted-user}]}
-          event-state {:pubkey my-pubkey
-                       :profiles profiles
-                       :contact-lists contact-lists}]
-      (reset! ui-context {:event-context (atom event-state)})
+          trusted-by-trusted-user 2]
+      (gateway/add-profile @db trusted-user {:name "trusted"})
+      (gateway/add-profile @db trusted-by-trusted-user {:name "2-deg"})
+      (gateway/add-contacts @db my-pubkey [{:pubkey trusted-user}])
+      (gateway/add-contacts @db trusted-user [{:pubkey trusted-by-trusted-user}])
+      (set-mem :pubkey my-pubkey)
       (should= "2-deg<-trusted" (format-user-id trusted-by-trusted-user))))
 
   (it "shows second degree of trust petname for user trusted by trusted user"
     (let [my-pubkey 99
           trusted-user 1
-          trusted-by-trusted-user 2
-          profiles {trusted-user {:name "trusted"}
-                    trusted-by-trusted-user {:name "2-deg"}}
-          contact-lists {my-pubkey [{:pubkey trusted-user
-                                     :petname "trusted-pet"}]
-                         trusted-user [{:pubkey trusted-by-trusted-user}]}
-          event-state {:pubkey my-pubkey
-                       :profiles profiles
-                       :contact-lists contact-lists}]
-      (reset! ui-context {:event-context (atom event-state)})
+          trusted-by-trusted-user 2]
+      (gateway/add-profile @db trusted-user {:name "trusted"})
+      (gateway/add-profile @db trusted-by-trusted-user {:name "2-deg"})
+      (gateway/add-contacts @db my-pubkey [{:pubkey trusted-user :petname "trusted-pet"}])
+      (gateway/add-contacts @db trusted-user [{:pubkey trusted-by-trusted-user}])
+      (set-mem :pubkey my-pubkey)
       (should= "2-deg<-trusted-pet" (format-user-id trusted-by-trusted-user))))
   )

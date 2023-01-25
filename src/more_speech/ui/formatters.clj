@@ -5,7 +5,8 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.ui.formatter-util :refer :all]
-            [more-speech.config :as config])
+            [more-speech.config :as config :refer [get-db]]
+            [more-speech.db.gateway :as gateway])
   )
 
 
@@ -17,30 +18,32 @@
    (format-user-id user-id 20))
 
   ([user-id length]
-   (let [profiles (get-event-state :profiles)]
-     (if (nil? user-id)
-       ""
-       (let [trusted? (contact-list/is-trusted? user-id)
-             trusted-by (contact-list/trusted-by-contact user-id)
-             petname (contact-list/get-petname user-id)
-             id-string (abbreviate (util/num32->hex-string user-id) 10)
-             profile-name (get-in profiles [user-id :name] id-string)]
-         (cond
-           (seq petname)
-           (abbreviate petname length)
+   (if (nil? user-id)
+     ""
+     (let [trusted? (contact-list/is-trusted? user-id)
+           trusted-by (contact-list/trusted-by-contact user-id)
+           petname (contact-list/get-petname user-id)
+           id-string (abbreviate (util/num32->hex-string user-id) 10)
+           profile (gateway/get-profile (get-db) user-id)
+           profile-name (get profile :name id-string)
+           ]
+       (cond
+         (seq petname)
+         (abbreviate petname length)
 
-           trusted?
-           (abbreviate profile-name length)
+         trusted?
+         (abbreviate profile-name length)
 
-           (some? trusted-by)
-           (let [trusted-id-string (abbreviate (util/num32->hex-string trusted-by) 10)
-                 trusted-profile-name (get-in profiles [trusted-by :name] trusted-id-string)
-                 trusted-pet-name (contact-list/get-petname trusted-by)
-                 trusted-name (if (seq trusted-pet-name) trusted-pet-name trusted-profile-name)]
-             (abbreviate (str profile-name "<-" trusted-name) length))
+         (some? trusted-by)
+         (let [trusted-id-string (abbreviate (util/num32->hex-string trusted-by) 10)
+               trusted-profile (gateway/get-profile (get-db) trusted-by)
+               trusted-profile-name (get trusted-profile :name trusted-id-string)
+               trusted-pet-name (contact-list/get-petname trusted-by)
+               trusted-name (if (seq trusted-pet-name) trusted-pet-name trusted-profile-name)]
+           (abbreviate (str profile-name "<-" trusted-name) length))
 
-           :else
-           (str "(" (abbreviate profile-name (- length 2)) ")")))))))
+         :else
+         (str "(" (abbreviate profile-name (- length 2)) ")"))))))
 
 (defn get-best-name [id]
   (let [name (contact-list/get-petname id)

@@ -1,5 +1,6 @@
 (ns more-speech.db.in-memory
-  (:require [more-speech.db.gateway :as gateway]))
+  (:require [more-speech.db.gateway :as gateway]
+            [more-speech.ui.swing.ui-context :refer [get-mem]]))
 
 (defmethod gateway/add-profile ::type [db id profile]
   (swap! (:data db) update-in [:profiles] assoc id profile))
@@ -23,13 +24,23 @@
   (swap! (:data db)
          update-in [:text-event-map id :references] conj reference))
 
-(defmethod gateway/add-user-contacts ::type [db user-id contacts]
+(defmethod gateway/add-contacts ::type [db user-id contacts]
   (swap! (:data db) assoc-in [:contact-lists user-id] contacts))
 
 ;----------methods for tests
+
+(defn get-db [] {:data (get-mem) ::gateway/type ::type})
 
 (defn clear-events [db]
   (swap! (:data db) assoc :text-event-map {}))
 
 (defn clear-profiles [db]
   (swap! (:data db) assoc :profiles {}))
+
+(defn clear-contacts [db]
+  (swap! (:data db) assoc :contact-lists {}))
+
+(defn clear-db [db]
+  (clear-events db)
+  (clear-profiles db)
+  (clear-contacts db))
