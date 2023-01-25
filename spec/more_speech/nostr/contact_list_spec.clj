@@ -90,7 +90,7 @@
         (gateway/add-profile @db trusted-by-trusted-user {:name "second-degree"})
         (gateway/add-contacts @db my-pubkey [{:pubkey trusted-user}])
         (gateway/add-contacts @db trusted-user [{:pubkey trusted-by-trusted-user}])
-        (should= trusted-user (trusted-by-contact trusted-by-trusted-user))
+        (should= trusted-user (which-contact-trusts trusted-by-trusted-user))
         ))
 
     (it "gets my petname for a trusted user"

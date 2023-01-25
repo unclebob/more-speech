@@ -2,7 +2,7 @@
   (:require [clojure.spec.alpha :as s]))
 
 (def ui-context (atom {:frame nil
-                       :event-context nil
+                       :event-context (atom nil)
                        :node-map {}
                        :orphaned-references {}
                        :selected-tab nil}))

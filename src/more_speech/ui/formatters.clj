@@ -21,7 +21,7 @@
    (if (nil? user-id)
      ""
      (let [trusted? (contact-list/is-trusted? user-id)
-           trusted-by (contact-list/trusted-by-contact user-id)
+           trusted-by (contact-list/which-contact-trusts user-id)
            petname (contact-list/get-petname user-id)
            id-string (abbreviate (util/num32->hex-string user-id) 10)
            profile (gateway/get-profile (get-db) user-id)
