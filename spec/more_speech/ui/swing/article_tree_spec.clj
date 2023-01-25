@@ -6,7 +6,9 @@
             [more-speech.nostr.util :as util]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.ui.swing.article-panel :as article-panel]
-            [more-speech.ui.swing.util :as swing-util])
+            [more-speech.ui.swing.util :as swing-util]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory])
   (:import (javax.swing.tree DefaultMutableTreeNode)))
 
 (defn hexify [n] (util/num32->hex-string n))
@@ -363,19 +365,12 @@
         root (.getRoot model)]
     (depict-node root)))
 
-(defn make-event-map [event-list]
-  (loop [event-list event-list
-         event-map {}]
-    (if (empty? event-list)
-      event-map
-      (let [event (first event-list)]
-        (recur (rest event-list) (assoc event-map (:id event) event))))))
-
-(defn add-events [event-list]
+(defn add-events [db event-list]
   (doseq [event event-list]
+    (gateway/add-event db (:id event) event)
     (add-event event)))
 
-(defn events->tree [event-list]
+(defn events->tree [db event-list]
   (with-redefs [render-event (stub :render-event)]
     (let [tab-id :tab
           tab {:name tab-id
@@ -383,33 +378,31 @@
                :blocked []}
           header-tree (make-header-tree tab-id)
           _ (config! header-tree :id :0 :user-data 0)
-          frame (frame :content header-tree)
-          event-map (make-event-map event-list)
-          event-state {:tabs-list [tab]
-                       :text-event-map event-map}
-          event-context (atom event-state)]
-      (reset! ui-context {:frame frame
-                          :event-context event-context})
-      (add-events event-list)
+          frame (frame :content header-tree)]
+      (swap! ui-context assoc :frame frame)
+      (set-mem :tabs-list [tab])
+      (add-events db event-list)
       (depict-tree header-tree))))
 
+(declare db)
 (describe "adding events"
   (with-stubs)
-
+  (with db (in-memory/get-db))
+  (before (reset! ui-context {:event-context (atom nil)}))
   (it "adds one event"
     (should= ["Root" [99]]
-             (events->tree
+             (events->tree @db
                [{:id 99}])))
 
   (it "adds two events"
     (should= ["Root" [99] [88]]
-             (events->tree
+             (events->tree @db
                [{:id 99 :created-at 2}
                 {:id 88 :created-at 1}])))
 
   (it "adds four events and keeps them in reverse chronological order"
     (should= ["Root" [66] [77] [88] [99]]
-             (events->tree
+             (events->tree @db
                [{:id 99 :created-at 1}
                 {:id 88 :created-at 2}
                 {:id 77 :created-at 3}
@@ -417,19 +410,19 @@
 
   (it "adds an event, and a reply when received in order."
     (should= ["Root" [88] [99 [88]]]
-             (events->tree
+             (events->tree @db
                [{:id 99 :created-at 1}
                 {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}])))
 
   (it "adds an event, and a reply when received out of order."
     (should= ["Root" [88] [99 [88]]]
-             (events->tree
+             (events->tree @db
                [{:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
                 {:id 99 :created-at 1}])))
 
   (it "adds a complex chain of replies in order."
     (should= ["Root" [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]]
-             (events->tree
+             (events->tree @db
                [{:id 99 :created-at 1}
                 {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
                 {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
@@ -438,14 +431,14 @@
 
   (it "adds a chain of three replies in order."
     (should= ["Root" [77] [88 [77]] [99 [88 [77]]]]
-             (events->tree
+             (events->tree @db
                [{:id 99 :created-at 1}
                 {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
                 {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in reverse order."
     (should= ["Root" [77] [88 [77]] [99 [88 [77]]]]
-             (events->tree
+             (events->tree @db
                (reverse
                  [{:id 99 :created-at 1}
                   {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
@@ -453,7 +446,7 @@
 
   (it "adds a complex chain of replies in reverse order."
     (should= ["Root" [55] [66] [77 [66]] [88 [55] [77 [66]]] [99 [88 [55] [77 [66]]]]]
-             (events->tree
+             (events->tree @db
                (reverse
                  [{:id 99 :created-at 1}
                   {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
