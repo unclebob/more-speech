@@ -392,67 +392,67 @@
   (it "adds one event"
     (should= ["Root" [99]]
              (events->tree @db
-               [{:id 99}])))
+                           [{:id 99}])))
 
   (it "adds two events"
     (should= ["Root" [99] [88]]
              (events->tree @db
-               [{:id 99 :created-at 2}
-                {:id 88 :created-at 1}])))
+                           [{:id 99 :created-at 2}
+                            {:id 88 :created-at 1}])))
 
   (it "adds four events and keeps them in reverse chronological order"
     (should= ["Root" [66] [77] [88] [99]]
              (events->tree @db
-               [{:id 99 :created-at 1}
-                {:id 88 :created-at 2}
-                {:id 77 :created-at 3}
-                {:id 66 :created-at 4}])))
+                           [{:id 99 :created-at 1}
+                            {:id 88 :created-at 2}
+                            {:id 77 :created-at 3}
+                            {:id 66 :created-at 4}])))
 
   (it "adds an event, and a reply when received in order."
     (should= ["Root" [88] [99 [88]]]
              (events->tree @db
-               [{:id 99 :created-at 1}
-                {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}])))
+                           [{:id 99 :created-at 1}
+                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}])))
 
   (it "adds an event, and a reply when received out of order."
     (should= ["Root" [88] [99 [88]]]
              (events->tree @db
-               [{:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                {:id 99 :created-at 1}])))
+                           [{:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                            {:id 99 :created-at 1}])))
 
   (it "adds a complex chain of replies in order."
     (should= ["Root" [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]]
              (events->tree @db
-               [{:id 99 :created-at 1}
-                {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
-                {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
-                {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}])))
+                           [{:id 99 :created-at 1}
+                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                            {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
+                            {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
+                            {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in order."
     (should= ["Root" [77] [88 [77]] [99 [88 [77]]]]
              (events->tree @db
-               [{:id 99 :created-at 1}
-                {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}])))
+                           [{:id 99 :created-at 1}
+                            {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                            {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in reverse order."
     (should= ["Root" [77] [88 [77]] [99 [88 [77]]]]
              (events->tree @db
-               (reverse
-                 [{:id 99 :created-at 1}
-                  {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                  {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}]))))
+                           (reverse
+                             [{:id 99 :created-at 1}
+                              {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                              {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}]))))
 
   (it "adds a complex chain of replies in reverse order."
     (should= ["Root" [55] [66] [77 [66]] [88 [55] [77 [66]]] [99 [88 [55] [77 [66]]]]]
              (events->tree @db
-               (reverse
-                 [{:id 99 :created-at 1}
-                  {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
-                  {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
-                  {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
-                  {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}]))))
+                           (reverse
+                             [{:id 99 :created-at 1}
+                              {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
+                              {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}
+                              {:id 66 :created-at 4 :tags [[:e (hexify 77) "" "reply"]]}
+                              {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}]))))
   )
 
 (describe "copy-node copies a node and all its children"
@@ -488,28 +488,25 @@
 
 (describe "adding ids to tabs"
   (with-stubs)
+  (with db (in-memory/get-db))
+
+  (before (in-memory/clear-db @db))
+
   (it "adds an an unrooted article id to a tab"
-    (let [message-id 1
-          messages {message-id {:tags []}}
-          event-context (atom {:text-event-map messages})]
-      (reset! ui-context {:event-context event-context})
+    (gateway/add-event @db 1 {:tags []})
+    (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
+                  swing-util/relaunch (stub :relaunch)]
+      (add-article-to-tab 1 "tab" nil)
+      (should-have-invoked :relaunch)
+      (should-have-invoked :add-id-to-tab {:with ["tab" :selected 1]})))
+
+  (it "adds the root id of a thread to a tab"
+    (let [root-id 100
+          event {:tags [[:e (hexify root-id) "" "root"]]}]
+      (gateway/add-event @db 1 event)
       (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
                     swing-util/relaunch (stub :relaunch)]
         (add-article-to-tab 1 "tab" nil)
         (should-have-invoked :relaunch)
-        (should-have-invoked :add-id-to-tab {:with ["tab" :selected 1]}))))
-
-  (it "adds the root id of a thread to a tab"
-    (let [message-id 1
-          root-id 100
-          messages {message-id {:tags [[:e (hexify root-id) "" "root"]]}}
-          event-context (atom {:text-event-map messages})
-          ]
-      (reset! ui-context {:event-context event-context})
-      (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
-                    swing-util/relaunch (stub :relaunch)]
-        (add-article-to-tab message-id "tab" nil)
-        (should-have-invoked :relaunch)
-        (should-have-invoked :add-id-to-tab {:with ["tab" :selected root-id]})
-        )))
+        (should-have-invoked :add-id-to-tab {:with ["tab" :selected root-id]}))))
   )
