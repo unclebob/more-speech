@@ -7,7 +7,9 @@
             [more-speech.ui.swing.article-tree-util :as article-tree-util]
             [more-speech.ui.swing.edit-window :as edit-window]
             [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]])
+            [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.config :refer [get-db]])
   (:use [seesaw core border]))
 
 (defn bold-label [s]
@@ -99,8 +101,7 @@
 
 (defn load-article-info [selected-id]
   (let [main-frame (:frame @ui-context)
-        text-map (get-event-state :text-event-map)
-        event (get text-map selected-id)
+        event (gateway/get-event (get-db) selected-id)
         [root-id _ referent] (events/get-references event)
         reply-to (select main-frame [:#reply-to-label])
         citing (select main-frame [:#citing-label])
@@ -123,7 +124,7 @@
              :user-data (:id event)
              :text (util/num32->hex-string (:id event)))
     (if (some? referent)
-      (let [replied-event (get text-map referent)]
+      (let [replied-event (gateway/get-event (get-db) referent)]
         (text! reply-to (formatters/format-user-id (:pubkey replied-event) 50))
         (config! citing
                  :user-data referent
