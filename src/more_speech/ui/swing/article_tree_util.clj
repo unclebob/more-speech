@@ -1,17 +1,19 @@
 (ns more-speech.ui.swing.article-tree-util
   (:use [seesaw core])
   (:require [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.ui.swing.util :as util])
+            [more-speech.ui.swing.util :as util]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.config :refer [get-db]])
   (:import (java.util Collections)
            (javax.swing.tree DefaultMutableTreeNode TreePath)))
 
 (defn find-chronological-insertion-point
   "Searches first level of the header tree (not including any of the children) for
   the best place to chronologically insert a new event.  Returns the index."
-  [root event-id event-map]
+  [root event-id]
   (let [comparator (fn [node1 node2]
-                     (let [v1 (->> node1 .getUserObject (get event-map) :created-at)
-                           v2 (->> node2 .getUserObject (get event-map) :created-at)]
+                     (let [v1 (->> node1 .getUserObject (gateway/get-event (get-db)) :created-at)
+                           v2 (->> node2 .getUserObject (gateway/get-event (get-db)) :created-at)]
                        (compare v2 v1)))
         children (enumeration-seq (.children root))
         dummy-node (DefaultMutableTreeNode. event-id)

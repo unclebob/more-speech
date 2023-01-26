@@ -11,7 +11,9 @@
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.ui.formatter-util :as f-util]
     [more-speech.user-configuration :as uconfig]
-    [more-speech.ui.swing.edit-window :as edit-window])
+    [more-speech.ui.swing.edit-window :as edit-window]
+    [more-speech.db.gateway :as gateway]
+    [more-speech.config :refer [get-db]])
   (:use [seesaw core font tree color])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -74,8 +76,7 @@
           path (.getPathForLocation tree (.getX e) (.getY e))
           node (.getLastPathComponent path)
           event-id (.getUserObject ^DefaultMutableTreeNode node)
-          event-map (get-event-state :text-event-map)
-          event (get event-map event-id)
+          event (gateway/get-event (get-db) event-id)
           public-key (:pubkey event)
           tab-names (vec (remove #(= "all" %) (map :name (get-event-state :tabs-list))))
           tab-names (conj tab-names "<new-tab>")
@@ -113,10 +114,9 @@
 (defn render-event [widget info]
   (if (seqable? (:value info))
     (text! widget "Articles")
-    (let [event-map (get-event-state :text-event-map)
-          node (:value info)
+    (let [node (:value info)
           event-id (.getUserObject node)
-          event (get event-map event-id)
+          event (gateway/get-event (get-db) event-id)
           read? (contains? (get-event-state :read-event-ids) event-id)
           font (if read? (uconfig/get-default-font) (uconfig/get-bold-font))
           color (if (= (:kind event) 4) :blue :black)]
@@ -234,8 +234,8 @@
 
 (defn add-event [event]
   (let [frame (:frame @ui-context)
-        event-map (get-event-state :text-event-map)
-        event-id (:id event)]
+        event-id (:id event)
+        ]
     (loop [tabs (get-event-state :tabs-list)
            index 0]
       (if (empty? tabs)
@@ -245,7 +245,7 @@
           (when (should-add-event? (first tabs) event)
             (let [model (config tree :model)
                   root (.getRoot model)
-                  insertion-point (find-chronological-insertion-point root event-id event-map)
+                  insertion-point (find-chronological-insertion-point root event-id)
                   child (DefaultMutableTreeNode. event-id)]
               (.insertNodeInto model child root insertion-point)
               (.makeVisible tree (TreePath. (.getPath child)))
