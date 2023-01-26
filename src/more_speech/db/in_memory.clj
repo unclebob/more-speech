@@ -17,6 +17,9 @@
 (defmethod gateway/get-event ::type [db id]
   (get-in @(:data db) [:text-event-map id]))
 
+(defmethod gateway/update-event-as-read ::type [db id]
+  (swap! (:data db) assoc-in [:text-event-map id :read] true))
+
 (defmethod gateway/add-relays-to-event ::type [db id relays]
   (swap! (:data db) update-in [:text-event-map id :relays] concat relays))
 

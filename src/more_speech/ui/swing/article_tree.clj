@@ -99,9 +99,8 @@
 
 (defn select-article
   [tab-index selected-node]
-  (let [selected-id (.getUserObject selected-node)
-        event-context (:event-context @ui-context)]
-    (swap! event-context events/select-event tab-index selected-id)
+  (let [selected-id (.getUserObject selected-node)]
+    (events/select-event tab-index selected-id)
     (article-panel/load-article-info selected-id)))
 
 (defn node-selected [tab-index e]
@@ -117,7 +116,7 @@
     (let [node (:value info)
           event-id (.getUserObject node)
           event (gateway/get-event (get-db) event-id)
-          read? (contains? (get-event-state :read-event-ids) event-id)
+          read? (:read event)
           font (if read? (uconfig/get-default-font) (uconfig/get-bold-font))
           color (if (= (:kind event) 4) :blue :black)]
       (config! widget :font font :foreground color)

@@ -18,10 +18,6 @@
   (spit @config/profiles-filename
         (with-out-str
           (clojure.pprint/pprint (get-event-state :profiles))))
-  (prn 'writing-read-events)
-  (spit @config/read-event-ids-filename
-        (with-out-str
-          (clojure.pprint/pprint (get-event-state :read-event-ids))))
 
   (prn 'writing-relays)
   (spit @config/relays-filename
@@ -54,7 +50,6 @@
 (defn load-configuration []
   (let [keys (read-string (slurp @config/keys-filename))
         pubkey (util/hex-string->num (:public-key keys))
-        read-event-ids (read-string (slurp @config/read-event-ids-filename))
         profiles (read-string (slurp @config/profiles-filename))
         tabs-list (tabs/ensure-tab-list-has-all
                     (read-string (slurp @config/tabs-list-filename)))
@@ -65,7 +60,6 @@
         event-context (events/make-event-context {:keys keys
                                                   :pubkey pubkey
                                                   :profiles profiles
-                                                  :read-event-ids read-event-ids
                                                   :tabs-list tabs-list
                                                   :user-configuration user-configuration
                                                   :contact-lists contact-lists

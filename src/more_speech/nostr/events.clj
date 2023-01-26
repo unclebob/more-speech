@@ -36,7 +36,6 @@
 (s/def ::public-key string?)
 (s/def ::private-key string?)
 (s/def ::keys (s/keys :req-un [::name ::about ::picture ::public-key ::private-key]))
-(s/def ::read-event-ids (s/coll-of ::id :kind set?))
 (s/def ::selected (s/coll-of ::id))
 (s/def ::blocked (s/coll-of ::id))
 (s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
@@ -49,7 +48,6 @@
 (s/def ::event-context (s/keys :req-un [::text-event-map
                                         ::profiles
                                         ::keys
-                                        ::read-event-ids
                                         ::tabs-list
                                         ::selected-event
                                         ::event-history
@@ -60,7 +58,6 @@
   (atom (merge {:text-event-map {}
                 :profiles {}
                 :keys {}
-                :read-event-ids #{}
                 :tabs-list []
                 :event-history []
                 :back-count 0
@@ -150,11 +147,18 @@
         [root _ _] (get-references event)]
     (if (some? root) root id)))
 
-(defn select-event [event-state tab-index id]
+(defn update-event-history [item]
+  (set-mem :event-history (conj (get-mem :event-history) item)))
+
+(defn select-event [tab-index id]
   (swap! ui-context assoc :selected-tab tab-index)
-  (if-not (:backing-up event-state)
-    (-> event-state
-        (update :read-event-ids conj id)
-        (update :event-history conj [tab-index id])
-        (assoc :selected-event id :back-count 0))
-    (-> event-state (assoc :selected-event id :backing-up false))))
+  (if-not (get-mem :backing-up)
+    (do
+      (gateway/update-event-as-read (get-db) id)
+      (update-event-history [tab-index id])
+      (set-mem :selected-event id)
+      (set-mem :back-count 0)
+      )
+    (do
+      (set-mem :selected-event id)
+      (set-mem :backing-up false))))

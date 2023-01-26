@@ -331,26 +331,26 @@
 
   (context "selecting nodes"
     (with-stubs)
+    (with db (in-memory/get-db))
+    (before (in-memory/clear-db @db))
+
     (it "remembers which articles have been read and loads article"
       (with-redefs
         [article-panel/load-article-info
          (stub :load-article-info {:return nil})]
-        (let [event-context (atom {:read-event-ids #{}
-                                   :selected-event nil
-                                   :event-history []
-                                   :back-count 1})
-              _ (reset! ui-context {:event-context event-context})
-              selected-event-id 1
+
+        (let [selected-event-id 1
+              _ (set-mem :back-count 1)
+              _ (gateway/add-event @db selected-event-id {:content "event"})
               selected-node (DefaultMutableTreeNode. selected-event-id)
               tab-index 0
               _ (select-article tab-index selected-node)
-              event-state @event-context
-              read-event-ids (:read-event-ids event-state)
-              selected-event (:selected-event event-state)
-              event-history (:event-history event-state)
-              back-count (:back-count event-state)]
+              selected-event (get-mem :selected-event)
+              event-history (get-mem :event-history)
+              back-count (get-mem :back-count)
+              event (gateway/get-event @db selected-event-id)]
+          (should (:read event))
           (should-have-invoked :load-article-info {:with [selected-event-id]})
-          (should= read-event-ids #{selected-event-id})
           (should= selected-event selected-event-id)
           (should= [[tab-index selected-event-id]] event-history)
           (should= 0 back-count))))))
