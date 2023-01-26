@@ -5,6 +5,17 @@
 
 (describe "user configuration"
   (with-stubs)
+  (context "basic functions"
+    (before (reset! ui-context {:event-context (atom {})}))
+    (it "sets and gets a config"
+      (set-config :test "test")
+      (should= "test" (get-config :test)))
+
+    (it "sets and gets a nested config"
+      (set-config [:test :nest] "nest")
+      (should= "nest" (get-config [:test :nest])))
+    )
+
   (context "export user profile"
     (it "creates if empty"
       (let [uc (validate {})]

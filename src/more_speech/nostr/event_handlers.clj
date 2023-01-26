@@ -60,14 +60,12 @@
 
 (defn add-event [db event urls]
   (let [id (:id event)
-        time (:created-at event)
-        event-atom (:data db)]
+        time (:created-at event)]
     (when-not (gateway/event-exists? db id)
       (gateway/add-event db id event)
       (add-cross-reference db event)
-      (swap! event-atom update :days-changed conj (quot time 86400)))
-    (gateway/add-relays-to-event db id urls)
-    ))
+      (set-mem :days-changed (conj (get-mem :days-changed) (quot time 86400))))
+    (gateway/add-relays-to-event db id urls)))
 
 (defn process-text-event [db event url]
   (add-event db event [url])
