@@ -188,7 +188,8 @@
             id (:id event)
             computed-id (compute-id inner-event)
             ui-handler (get-event-state :event-handler)
-            dup? (contains? (get-event-state :text-event-map) id)]
+            dup? (some? (gateway/get-event (get-db) id))
+            ]
         (if (= id computed-id)
           (let [event (decrypt-dm-event event)]
             (when (not (:private event))

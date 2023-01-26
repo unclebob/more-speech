@@ -44,7 +44,7 @@
 
 (defn connect-to-relays []
   (let [urls (if config/test-run?
-               ["wss://relay.damus.io"]
+               [config/test-relay]
                (keys @relays))]
     (doseq [url urls]
       (let [relay (ws-relay/make url handle-relay-message)

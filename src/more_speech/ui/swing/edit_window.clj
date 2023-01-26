@@ -2,7 +2,9 @@
   (:require [more-speech.nostr.event-composers :as composers]
             [more-speech.ui.formatters :as formatters]
             [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.user-configuration :as uconfig])
+            [more-speech.user-configuration :as uconfig]
+            [more-speech.config :refer [get-db]]
+            [more-speech.db.gateway :as gateway])
   (:use [seesaw core]))
 
 (defn make-edit-window
@@ -21,9 +23,11 @@
          edit-area (styled-text :font (uconfig/get-default-font)
                                 :wrap-lines? true)
          send-button (button :text "Send")
-         event-map (get-event-state :text-event-map)
-         selected-id (if reply? (get-event-state :selected-event) nil)
-         event (if reply? (get event-map selected-id) nil)]
+         selected-id (if reply? (get-mem :selected-event) nil)
+         db (get-db)
+         event (if reply?
+                 (gateway/get-event db selected-id)
+                 nil)]
      (when (or (not reply?)
                (and reply? (some? event)))
        (when reply?

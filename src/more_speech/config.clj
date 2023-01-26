@@ -16,6 +16,7 @@
 (def version "2023-01-19T10:55")
 
 (def test-run? false)
+(def test-relay "wss://nostr-pub.wellorder.net")
 ;---configuration files
 (def private-directory (atom "private"))
 (def migration-filename (atom "private/migration"))

@@ -32,7 +32,7 @@
                         (read-string relay-text))
         loaded-relays (set-relay-defaults loaded-relays)
         loaded-relays (if config/test-run?
-                        {"wss://relay.damus.io" {:read true :write true}}
+                        {config/test-relay {:read true :write true}}
                         loaded-relays)
         ]
     (reset! relays loaded-relays)))
