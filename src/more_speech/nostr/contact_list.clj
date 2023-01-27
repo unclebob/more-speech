@@ -2,16 +2,20 @@
   (:require [more-speech.nostr.util :as util]
             [more-speech.ui.swing.ui-context :refer :all]
             [more-speech.db.gateway :as gateway]
-            [more-speech.config :refer [get-db]]))
+            [more-speech.bech32 :as bech32]
+            [more-speech.config :refer [get-db]]
+            [more-speech.config :as config]))
 
 
 (defn make-contact-from-tag [[_p pubkey relay petname]]
   (try
-    {:pubkey (util/hex-string->num pubkey) :relay relay :petname petname}
+    (let [pubkey (if (re-matches config/pubkey-pattern pubkey)
+                   (util/hex-string->num pubkey)
+                   (bech32/address->number (.trim pubkey)))]
+      {:pubkey pubkey :relay relay :petname petname})
     (catch Exception e
       (prn 'make-contact-from-tag 'exception [pubkey relay petname] (.getMessage e))
-      nil))
-  )
+      nil)))
 
 (defn unpack-contact-list-event [event]
   (let [pubkey (:pubkey event)
@@ -44,8 +48,7 @@
               his-contact-ids (set (map :pubkey his-contacts))]
           (if (contains? his-contact-ids candidate-pubkey)
             my-contact
-            (recur (rest my-contact-ids)))))))
-  )
+            (recur (rest my-contact-ids))))))))
 
 (defn get-petname [his-pubkey]
   (let [my-pubkey (get-mem :pubkey)

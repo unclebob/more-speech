@@ -9,7 +9,7 @@
 
 (def article-width 120)
 
-(def days-to-read 7) ;how many daily message files to read in.
+(def days-to-read 3) ;how many daily message files to read in.
 (def read-contact-lists-days-ago 2)
 
 (def migration-level 9)
