@@ -66,8 +66,19 @@
 
       (should-not (verify-checksum? (parse-address "A1G7SGD8")))))
 
-  (context "Address to number"
+  (context "conversions between numbers and addresses"
     (it "converts addresses to numbers"
       (should= 0x82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2
-               (address->number "npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m"))))
+               (address->number "npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m")))
+
+    (it "converts numbers to addresses"
+      (should= "npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m"
+               (encode "npub" 0x82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2)))
+
+    (it "can encode smaller numbers"
+      (should= 32768 (address->number (encode "xxx" 32768)))
+      (should= "xxx1sqqqh8ke4q" (encode "xxx" 32768)))
+
+
+    )
   )

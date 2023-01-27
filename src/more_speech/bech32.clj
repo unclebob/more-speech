@@ -93,6 +93,36 @@
         result (polymod (concat hrp-values data-values cksum-values))]
     (= 1 result)))
 
+(defn create-checksum [hrp data]
+  (let [hrp-data (hrp-expand hrp)
+        pmod (polymod (concat hrp-data data [0 0 0 0 0 0]))
+        pmod (bit-xor pmod 1)
+        cksum-data (map #(-> pmod
+                             (bit-shift-right (* 5 (- 5 %)))
+                             (bit-and 31))
+                        (range 6))]
+    cksum-data))
+
+(defn trim-leading-zeros [data]
+  (if (= (repeat 8 0) (take 8 data))
+    (recur (drop 8 data))
+    data))
+
+(defn encode
+  "create bech32 address assume id is 64 byte integer"
+  [hrp id]
+  (let [byte-correction 16
+        data (loop [id (* byte-correction id)
+                    data []
+                    chars 52]
+               (if (zero? chars)
+                 (trim-leading-zeros (reverse data))
+                 (recur (quot id 32) (conj data (int (rem id 32))) (dec chars))))
+        cksum-data (create-checksum hrp data)
+        ]
+    (str hrp "1" (apply str (map to-char (concat data cksum-data))))
+    ))
+
 (defn address->number [address]
   (let [[hrp data cksum] (parse-address address)
         valid? (verify-checksum? [hrp data cksum])
