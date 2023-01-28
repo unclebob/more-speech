@@ -40,16 +40,9 @@
         name (formatter-util/abbreviate (:name profile) 20)]
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
-(defn make-author-list []
-  (let [profiles (get-event-state :profiles)
-        ids (keys profiles)
-        profile-lines (sort (map make-profile-line ids))
-        author-list (map #(label :font config/default-font :text %) profile-lines)]
-    author-list))
-
 (defn make-main-window []
   (prn 'make-main-window)
-  (let [title (str "More-Speech:" (:name (get-event-state :keys)) " - " config/version)
+  (let [title (str "More-Speech:" (:name (get-mem :keys)) " - " config/version)
         main-frame (frame :title title :size [1500 :by 1000])
         _ (swap! ui-context assoc :frame main-frame)
         _ (prn 'make-main-window 'making-article-area)
@@ -69,16 +62,14 @@
                          :divider-location 1/2)
         _ (prn 'make-main-window 'messages-panel-complete)
         main-tabs (tabbed-panel :tabs [{:title "Messages" :content messages-panel}
-                                       {:title "Relays" :content (scrollable relay-panel)}
-                                       ;{:title "Authors" :content (scrollable (vertical-panel :items (make-author-list)))}
-                                       ])
+                                       {:title "Relays" :content (scrollable relay-panel)}])
         timer (Timer. 100 nil)]
     (config! main-frame :content main-tabs)
     (listen timer :action timer-action)
     (listen main-frame :window-closing
             (fn [_]
               (.stop timer)
-              (let [send-chan (get-event-state :send-chan)]
+              (let [send-chan (get-mem :send-chan)]
                 (future (async/>!! send-chan [:closed])))
               (.dispose main-frame)))
     (prn 'make-main-window 'showing-main-frame)

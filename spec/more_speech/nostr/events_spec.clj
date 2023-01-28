@@ -208,6 +208,8 @@
 
 (describe "fixing names"
   (with db (in-memory/get-db))
+  (before (in-memory/clear-db @db))
+
   (it "should not fix a good name"
     (should= "name" (fix-name "name")))
 
@@ -225,7 +227,7 @@
       (prn new-name)
       (should (re-matches #"unclebob\d+" new-name))))
 
-  (it "should put not put a suffix on previously existing names."
+  (it "should not put a suffix on previously existing names."
     (gateway/add-profile @db 1 {:name "unclebob"})
     (let [new-name (add-suffix-for-duplicate 1 "unclebob")]
       (should= "unclebob" new-name)))
@@ -233,13 +235,28 @@
 
 (describe "process-name-event"
   (with db (in-memory/get-db))
+  (before (in-memory/clear-db @db))
+
   (it "loads profiles"
     (process-name-event
       @db
       {:pubkey 1
        :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})
     (should= {:name "bob" :about "about" :picture "picture"}
-             (gateway/get-profile @db 1))))
+             (gateway/get-profile @db 1)))
+
+  (it "adds suffixes to duplicate names."
+    (gateway/add-profile @db 7734 {:name "name"})
+    (process-name-event
+      @db
+      {:pubkey 1
+       :content "{\"name\": \"name\", \"about\": \"about\", \"picture\": \"picture\"}"})
+    (let [{:keys [name about picture]} (gateway/get-profile @db 1)]
+      (should= "about" about)
+      (should= "picture" picture)
+      (should (re-matches #"name\d+" name))))
+
+  )
 
 (declare body)
 (describe "proof of work"

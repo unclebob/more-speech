@@ -1,6 +1,7 @@
 (ns more-speech.bech32-spec
   (:require [speclj.core :refer :all]
-            [more-speech.bech32 :refer :all]))
+            [more-speech.bech32 :refer :all]
+            [more-speech.nostr.util :as util]))
 
 (describe "bech32"
   (context "charset translations"
@@ -52,7 +53,7 @@
   (context "validating checksum"
     (it "computes expanded hrp"
       (should= [3, 3, 3, 3, 0, 14, 16, 21, 2]
-             (hrp-expand "npub")))
+               (hrp-expand "npub")))
 
     (it "validates checksums"
       (should (verify-checksum? (parse-address "A12UEL5L")))
@@ -79,6 +80,11 @@
       (should= 32768 (address->number (encode "xxx" 32768)))
       (should= "xxx1sqqqh8ke4q" (encode "xxx" 32768)))
 
-
+    (it "encodes my public key"
+      (let [pubkey (util/hex-string->num "2ef93f01cd2493e04235a6b87b10d3c4a74e2a7eb7c3caf168268f6af73314b5")]
+        (should= "npub19mun7qwdyjf7qs3456u8kyxncjn5u2n7klpu4utgy68k4aenzj6synjnft"
+                 (encode "npub" pubkey))
+        (should= pubkey (address->number "npub19mun7qwdyjf7qs3456u8kyxncjn5u2n7klpu4utgy68k4aenzj6synjnft")))
+      )
     )
   )

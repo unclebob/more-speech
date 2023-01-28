@@ -91,10 +91,10 @@
 
 (defn go-back-by [n]
   (let [event-context (:event-context @ui-context)
-        event-history (get-event-state :event-history)]
+        event-history (get-mem :event-history)]
     (when-not (empty? event-history)
       (swap! event-context adjust-back-count n)
-      (let [back-count (get-event-state :back-count)
+      (let [back-count (get-mem :back-count)
             event-position (- (count event-history) back-count 1)
             [tab-index event-id] (nth event-history event-position)]
         (display-event tab-index event-id)))))

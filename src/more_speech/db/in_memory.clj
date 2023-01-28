@@ -41,6 +41,16 @@
         (recur (rest contacts)))
       nil)))
 
+(defmethod gateway/get-id-from-username ::type [db user-name]
+  (let [profiles (:profiles @(:data db))]
+    (loop [pairs (vec profiles)]
+      (if (empty? pairs)
+        nil
+        (let [pair (first pairs)]
+          (if (= user-name (:name (second pair)))
+            (first pair)
+            (recur (rest pairs))))))))
+
 ;----------methods for tests
 
 (defn get-db [] {:data (get-mem) ::gateway/type ::type})

@@ -17,7 +17,7 @@
   (prn 'writing-profiles)
   (spit @config/profiles-filename
         (with-out-str
-          (clojure.pprint/pprint (get-event-state :profiles))))
+          (clojure.pprint/pprint (get-mem :profiles))))
 
   (prn 'writing-relays)
   (spit @config/relays-filename
@@ -27,25 +27,24 @@
   (prn 'writing-tabs)
   (spit @config/tabs-list-filename
         (with-out-str
-          (clojure.pprint/pprint (get-event-state :tabs-list))))
+          (clojure.pprint/pprint (get-mem :tabs-list))))
 
   (prn 'writing-user-configuration)
   (spit @config/user-configuration-filename
         (with-out-str
-          (clojure.pprint/pprint (get-event-state :user-configuration))))
+          (clojure.pprint/pprint (user-configuration/get-config))))
 
   (prn 'writing-contact-lists)
   (spit @config/contact-lists-filename
         (with-out-str
-          (clojure.pprint/pprint (get-event-state :contact-lists))))
+          (clojure.pprint/pprint (get-mem :contact-lists))))
   (prn 'configuration-written)
   )
 
 (defn write-messages []
-  (let [event-context (:event-context @ui-context)]
-    (spit @config/messages-filename
-          (with-out-str
-            (clojure.pprint/pprint (:text-event-map @event-context))))))
+  (spit @config/messages-filename
+        (with-out-str
+          (clojure.pprint/pprint (get-mem :text-event-map)))))
 
 (defn load-configuration []
   (let [keys (read-string (slurp @config/keys-filename))
@@ -125,12 +124,12 @@
 
 (defn write-changed-days []
   (prn 'writing-events-for-changed-days)
-  (let [days-changed (get-event-state :days-changed)
-        earliest-loaded-time (get-event-state :earliest-loaded-time)
+  (let [days-changed (get-mem :days-changed)
+        earliest-loaded-time (get-mem :earliest-loaded-time)
         _ (prn 'earliest-loaded-time earliest-loaded-time)
         first-day-loaded (quot earliest-loaded-time 86400)
         days-to-write (set (filter #(>= % first-day-loaded) days-changed))
-        daily-partitions (partition-messages-by-day (get-event-state :text-event-map))
+        daily-partitions (partition-messages-by-day (get-mem :text-event-map))
         changed-partitions (filter #(contains? days-to-write (first %)) daily-partitions)]
     (write-messages-by-day changed-partitions)))
 

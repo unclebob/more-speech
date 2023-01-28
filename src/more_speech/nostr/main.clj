@@ -6,10 +6,11 @@
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.relays :as relays]
             [more-speech.relay :as relay]
+            [more-speech.ui.swing.ui-context :refer [get-mem]]
             [clojure.core.async :as async]))
 
 (defn process-send-channel []
-  (let [send-chan (context/get-event-state :send-chan)
+  (let [send-chan (context/get-mem :send-chan)
         urls (keys @relays/relays)
         send-urls (filter #(:write (get @relays/relays %)) urls)
         writeable-relays (map #(get-in @relays/relays [% :connection]) send-urls)
@@ -27,7 +28,7 @@
   (let [subscription-id "more-speech"
         metadata-request-id "more-speech-metadata"
         contact-lists-request-id "more-speech-contact-lists"
-        event-handler (context/get-event-state :event-handler)
+        event-handler (get-mem :event-handler)
         now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (protocol/connect-to-relays)
     (protocol/request-contact-lists-from-relays contact-lists-request-id)

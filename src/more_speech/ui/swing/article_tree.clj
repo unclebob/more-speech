@@ -55,8 +55,7 @@
 
 (defn trust-this-author [event _e]
   (let [his-pubkey (:pubkey event)
-        profiles (get-event-state :profiles)
-        profile (get profiles his-pubkey)
+        profile (gateway/get-profile (get-db) his-pubkey)
         petname (input "Name this author"
                        :value (:name profile)
                        :title (str "Entrust " (f-util/abbreviate (util/num32->hex-string his-pubkey) 10)))]
@@ -78,7 +77,7 @@
           event-id (.getUserObject ^DefaultMutableTreeNode node)
           event (gateway/get-event (get-db) event-id)
           public-key (:pubkey event)
-          tab-names (vec (remove #(= "all" %) (map :name (get-event-state :tabs-list))))
+          tab-names (vec (remove #(= "all" %) (map :name (get-mem :tabs-list))))
           tab-names (conj tab-names "<new-tab>")
           add-author-actions (map #(action :name % :handler (partial add-author-to-tab public-key %)) tab-names)
           block-author-actions (map #(action :name % :handler (partial block-author-from-tab public-key %)) tab-names)
@@ -235,7 +234,7 @@
   (let [frame (:frame @ui-context)
         event-id (:id event)
         ]
-    (loop [tabs (get-event-state :tabs-list)
+    (loop [tabs (get-mem :tabs-list)
            index 0]
       (if (empty? tabs)
         nil

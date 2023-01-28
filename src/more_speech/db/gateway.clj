@@ -11,4 +11,6 @@
 (defmulti add-contacts (fn [db _user-id _contacts] (::type db)))
 (defmulti get-contacts (fn [db _user-id] (::type db)))
 (defmulti get-id-from-petname (fn [db _user-id _petname] (::type db)))
+(defmulti get-id-from-username (fn [db _user-name] (::type db)))
+
 

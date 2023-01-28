@@ -93,8 +93,7 @@
         (reset! ui-context {:event-context event-context}))
       (set-last-time-metadata-imported 99)
 
-        (should= 99 (get-in (get-event-state)
-                            [:user-configuration :import-metadata :last-time-imported]))
+        (should= 99 (get-config [:import-metadata :last-time-imported]))
       )
     )
   )

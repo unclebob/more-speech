@@ -29,13 +29,13 @@
         fixed-name))))
 
 (defn add-suffix-for-duplicate [pubkey name]
-  (let [profiles (get-event-state :profiles)
-        others-profiles (dissoc profiles pubkey)
-        profile-vals (vals others-profiles)
-        dups (filter #(= name (:name %)) profile-vals)]
-    (if (empty? dups)
-      name
-      (str name (rand-int 1000)))))
+  (let [id-of-name (gateway/get-id-from-username (get-db) name)]
+    (if (or (nil? id-of-name)
+            (= id-of-name pubkey))
+      (do (prn 'name name)
+          name)
+      (str name (rand-int 1000))))
+  )
 
 (defn process-name-event [db {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
@@ -97,12 +97,12 @@
 (defn decrypt-his-dm [event]
   (let [p-tags (filter #(= :p (first %)) (:tags event))
         my-tag (filter #(= (hex-string->num (second %))
-                           (get-event-state :pubkey))
+                           (get-mem :pubkey))
                        p-tags)]
     (if (empty? my-tag)
       (assoc event :private true)                           ;I'm not the recipient.
       (let [his-key (:pubkey event)
-            priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
+            priv-key (hex-string->num (get-mem [:keys :private-key]))
             shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
             decrypted-content (SECP256K1/decrypt shared-secret (:content event))
             event (assoc event :content decrypted-content)]
@@ -112,7 +112,7 @@
   (let [p-tags (filter #(= :p (first %)) (:tags event))
         p-tag (first p-tags)
         his-key (hex-string->num (second p-tag))
-        priv-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
+        priv-key (hex-string->num (get-mem [:keys :private-key]))
         shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
         decrypted-content (SECP256K1/decrypt shared-secret (:content event))
         event (assoc event :content decrypted-content)]
@@ -122,7 +122,7 @@
   (if (= 4 (:kind event))
     (let [author-key (:pubkey event)
           event (assoc event :dm true)]
-      (if (= author-key (get-event-state :pubkey))
+      (if (= author-key (get-mem :pubkey))
         (decrypt-my-dm event)
         (decrypt-his-dm event)))
     event))
@@ -185,7 +185,7 @@
             event (translate-event inner-event)
             id (:id event)
             computed-id (compute-id inner-event)
-            ui-handler (get-event-state :event-handler)
+            ui-handler (get-mem :event-handler)
             dup? (some? (gateway/get-event (get-db) id))
             ]
         (if (= id computed-id)

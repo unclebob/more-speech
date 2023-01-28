@@ -10,20 +10,14 @@
 (s/def ::id number?)
 (s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))
 
-(defn get-event-state
-  ([]
-  @(:event-context @ui-context))
-
-  ([field]
-   (get @(:event-context @ui-context) field))
-  )
-
 (defn get-mem
   ([]
-  (:event-context @ui-context))
+   (:event-context @ui-context))
 
   ([field]
-     (get @(:event-context @ui-context) field))
+   (if (coll? field)
+     (get-in @(get-mem) field)
+     (get @(get-mem) field)))
   )
 
 (defn set-mem [key value]

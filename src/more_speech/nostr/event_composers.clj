@@ -16,7 +16,7 @@
   which must include kind, tags, and content.  The body is put into an
   EVENT wrapper that is ready to send."
   [body]
-  (let [keys (get-event-state :keys)
+  (let [keys (get-mem :keys)
         private-key (util/hex-string->bytes (:private-key keys))
         pubkey (util/hex-string->bytes (:public-key keys))
         now (quot (System/currentTimeMillis) 1000)
@@ -31,7 +31,7 @@
     ["EVENT" event]))
 
 (defn compose-metadata-event []
-  (let [keys (get-event-state :keys)
+  (let [keys (get-mem :keys)
         content (events/to-json {:name (:name keys)
                           :about (:about keys)
                           :picture (:picture keys)})
@@ -96,20 +96,12 @@
   (let [pet-pubkey (contact-list/get-pubkey-from-petname user-name)]
     (if (some? pet-pubkey)
       pet-pubkey
-      (let [profiles (get-event-state :profiles)]
-        (loop [pairs (vec profiles)]
-          (if (empty? pairs)
-            nil
-            (let [pair (first pairs)]
-              (if (= user-name (:name (second pair)))
-                (first pair)
-                (recur (rest pairs))))))))))
+      (gateway/get-id-from-username (get-db) user-name))))
 
 (defn abbreviate-pubkey [pubkey-string]
   (let [pubkey (util/hex-string->num pubkey-string)
-        abbreviated-pubkey (str (subs pubkey-string 0 11) "-")
-        event-context (:event-context @ui-context)]
-    (swap! event-context assoc-in [:profiles pubkey] {:name abbreviated-pubkey})
+        abbreviated-pubkey (str (subs pubkey-string 0 11) "-")]
+    (gateway/add-profile (get-db) pubkey {:name abbreviated-pubkey})
     pubkey))
 
 (defn make-emplacement [reference tags]
@@ -157,7 +149,8 @@
       (if (nil? p-tag)
         [content 1]
         (let [recipient-key (hex-string->num (second p-tag))
-              sender-key (hex-string->num (get-in (get-event-state) [:keys :private-key]))
+              private-key (get-mem [:keys :private-key])
+              sender-key (hex-string->num private-key)
               shared-secret (SECP256K1/calculateKeyAgreement sender-key recipient-key)
               encrypted-content (SECP256K1/encrypt shared-secret content)]
           [encrypted-content 4])))
@@ -168,7 +161,7 @@
    (compose-text-event subject text nil))
 
   ([subject text reply-to-or-nil]
-   (let [pubkey (get-event-state :pubkey)
+   (let [pubkey (get-mem :pubkey)
          root (get-reply-root reply-to-or-nil)
          tags (concat (make-event-reference-tags reply-to-or-nil root)
                       (make-people-reference-tags pubkey reply-to-or-nil)
@@ -182,7 +175,7 @@
      (body->event body))))
 
 (defn send-event [event]
-  (let [send-chan (get-event-state :send-chan)]
+  (let [send-chan (get-mem :send-chan)]
     (async/>!! send-chan [:event event])))
 
 (defn compose-and-send-text-event [source-event-or-nil subject message]

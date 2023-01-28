@@ -9,7 +9,6 @@
             [more-speech.db.gateway :as gateway])
   )
 
-
 (defn hexify [bigint]
   (util/num32->hex-string bigint))
 
@@ -45,11 +44,13 @@
          :else
          (str "(" (abbreviate profile-name (- length 2)) ")"))))))
 
+(defn name-exists? [name]
+  (if (empty? name) nil name))
+
 (defn get-best-name [id]
-  (let [name (contact-list/get-petname id)
-        name (if (empty? name) (get-in (get-event-state :profiles) [id :name]) name)
-        name (if (empty? name) (hexify id) name)]
-    name))
+  (or (name-exists? (contact-list/get-petname id))
+      (name-exists? (:name (gateway/get-profile (get-db) id)))
+      (hexify id)))
 
 (defn lookup-reference [event reference]
   (let [ref-string (re-find #"\d+" reference)
