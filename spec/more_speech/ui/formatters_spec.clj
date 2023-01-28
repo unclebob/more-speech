@@ -11,12 +11,14 @@
     (should= "short" (abbreviate "short" 10))
     (should= "some lo..." (abbreviate "some long string." 10))))
 
+(declare db)
 (describe "format header"
+  (with db (in-memory/get-db))
+  (before (in-memory/clear-db @db)
+          (set-mem :pubkey 99))
+
   (it "formats an empty message"
-    (let [profiles {}
-          event-context (atom {:profiles profiles})
-          _ (reset! ui-context {:event-context event-context})
-          event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
+    (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
                  :content ""
                  :tags []}
@@ -25,10 +27,7 @@
       (should= (str "          (1111111...) " timestamp " \n") header)))
 
   (it "formats a simple message"
-    (let [profiles {}
-          event-context (atom {:profiles profiles})
-          _ (reset! ui-context {:event-context event-context})
-          event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
+    (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
                  :content "the message"
                  :tags []}
@@ -37,10 +36,8 @@
       (should= (str "          (1111111...) " timestamp " the message\n") header)))
 
   (it "formats a simple message with a user profile"
-    (let [profiles {1 {:name "user-1"}}
-          event-context (atom {:profiles profiles})
-          _ (reset! ui-context {:event-context event-context})
-          event {:pubkey 1
+    (gateway/add-profile @db 1 {:name "user-1"})
+    (let [event {:pubkey 1
                  :created-at 1
                  :content "the message"
                  :tags []}
@@ -49,10 +46,7 @@
       (should= (str "              (user-1) " timestamp " the message\n") header)))
 
   (it "formats a long message with line ends."
-    (let [profiles {}
-          event-context (atom {:profiles profiles})
-          _ (reset! ui-context {:event-context event-context})
-          event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
+    (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
                  :content (str "Four score and seven years ago\n"
                                "our fathers brought forth upon this continent\n"
@@ -68,10 +62,7 @@
       (should (.endsWith header "...\n"))))
 
   (it "formats a message with a subject"
-    (let [profiles {}
-          event-context (atom {:profiles profiles})
-          _ (reset! ui-context {:event-context event-context})
-          event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
+    (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
                  :content "the message"
                  :tags [[:subject "the subject"]]}
@@ -99,80 +90,62 @@
     ))
 
 (describe "Replacing References"
+  (with db (in-memory/get-db))
+  (before (in-memory/clear-db @db))
+
   (context "using #[n] and p tags"
+    (before (gateway/add-profile @db 0 {:name "x"}))
+
     (it "replaces nothing if nothing to replace"
-      (let [profiles {0 {:name "x"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
-            content "content"
+      (let [content "content"
             event {:content content}]
         (should= "content" (replace-references event))))
 
     (it "replaces a single p reference"
       (let [content "the #[0] reference"
-            profiles {0 {:name "x"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]]}]
         (should= "the @x reference" (replace-references event))))
 
     (it "replaces a single p reference at the start"
       (let [content "#[0] reference"
-            profiles {0 {:name "x"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]]}]
         (should= "@x reference" (replace-references event))))
 
     (it "replaces a single p reference at the end"
       (let [content "the #[0]"
-            profiles {0 {:name "x"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]]}]
         (should= "the @x" (replace-references event))))
 
     (it "replaces a single p reference alone"
       (let [content "#[0]"
-            profiles {0 {:name "x"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]]}]
         (should= "@x" (replace-references event))))
 
     (it "replaces a two p references"
+      (gateway/add-profile @db 1 {:name "y"})
       (let [content "the #[0] and #[1] reference"
-            profiles {0 {:name "x"}
-                      1 {:name "y"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p (hexify 0)]
                                            [:p (hexify 1)]]}]
         (should= "the @x and @y reference" (replace-references event))))
 
     (it "Replaces a p reference with an abbreviated id if not a profile name"
       (let [content "#[0]"
-            profiles {0 {:name "x"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p "deadbeef"]]}]
         (should= "@00000000000000000000000000000000000000000000000000000000deadbeef"
                  (replace-references event))))
 
     (it "does not replace reference if there is no p tag"
       (let [content "#[1]"
-            profiles {0 {:name "x"}}
-            event-context (atom {:profiles profiles})
-            _ (reset! ui-context {:event-context event-context})
             event {:content content :tags [[:p "deadbeef"]]}]
         (should= "#[1]" (replace-references event))))))
 
 (describe "format-reply"
+  (with db (in-memory/get-db))
+  (before (in-memory/clear-db @db)
+          (gateway/add-profile @db 1 {:name "user-1"})
+          (gateway/add-profile @db 2 {:name "user-2"}))
   (it "formats a reply to an event"
-    (let [profiles {1 {:name "user-1"}
-                    2 {:name "user-2"}}
-          _ (reset! ui-context {:event-context (atom {:profiles profiles})})
-          created-at (make-date "07/05/2022")
+    (let [created-at (make-date "07/05/2022")
           relays ["relay-1"]
           tags [["p" (hexify 1)]]
           event {:pubkey 1 :created-at created-at
@@ -182,19 +155,14 @@
         (format-reply event))))
 
   (it "formats a reply to a DM"
-    (let [profiles {1 {:name "user-1"}
-                    2 {:name "user-2"}}
-          _ (reset! ui-context {:event-context (atom {:profiles profiles})})
-          created-at (make-date "07/05/2022")
+    (let [created-at (make-date "07/05/2022")
           relays ["relay-1"]
           tags [["p" (hexify 2)]]
           event {:pubkey 1 :created-at created-at :dm true
                  :relays relays :tags tags :content "Hello #[0]."}]
       (should=
         "D @user-1\n>From: (user-1) at 07/05/22 00:00:00 on relay-1\n>---------------\n>Hello @user-2."
-        (format-reply event)))
-    )
-
+        (format-reply event))))
   )
 
 
@@ -248,7 +216,7 @@
     (should= "two&nbsp spaces" (non-breaking-spaces "two  spaces"))
     (should= "three&nbsp&nbsp spaces" (non-breaking-spaces "three   spaces"))
     (should= "1 2&nbsp 3&nbsp&nbsp 4&nbsp&nbsp&nbsp ."
-      (non-breaking-spaces "1 2  3   4    ."))
+             (non-breaking-spaces "1 2  3   4    ."))
     ))
 
 (describe "Segment article content"

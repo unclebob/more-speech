@@ -151,7 +151,7 @@
   (set-mem :event-history (conj (get-mem :event-history) item)))
 
 (defn select-event [tab-index id]
-  (swap! ui-context assoc :selected-tab tab-index)
+  (set-mem :selected-tab tab-index)
   (if-not (get-mem :backing-up)
     (do
       (gateway/update-event-as-read (get-db) id)

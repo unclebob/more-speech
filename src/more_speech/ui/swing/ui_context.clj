@@ -4,8 +4,7 @@
 (def ui-context (atom {:frame nil
                        :event-context (atom nil)
                        :node-map {}
-                       :orphaned-references {}
-                       :selected-tab nil}))
+                       :orphaned-references {}}))
 
 (s/def ::id number?)
 (s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))

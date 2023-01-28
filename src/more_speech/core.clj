@@ -20,10 +20,10 @@
   (prn 'main 'loading-configuration)
   (data-storage/load-configuration)
   (prn 'main 'setting-up-gui)
-  (let [event-context (:event-context @ui-context)
-        handler (swing/setup-main-window)]
+  (let [handler (swing/setup-main-window)]
     (prn 'main 'main-window-setup-complete)
-    (swap! event-context assoc :send-chan send-chan :event-handler handler)
+    (set-mem :send-chan send-chan)
+    (set-mem :event-handler handler)
     (prn 'main 'reading-in-last-n-days)
     (let [latest-old-message-time
           (if (not config/test-run?)

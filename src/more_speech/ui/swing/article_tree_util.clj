@@ -55,7 +55,7 @@
 
 (defn id-click [id]
   (let [frame (:frame @ui-context)
-        tab-index (:selected-tab @ui-context)
+        tab-index (get-mem :selected-tab)
         tab-selector (keyword (str "#" tab-index))
         tree (select frame [tab-selector])
         model (config tree :model)
@@ -69,9 +69,7 @@
             node (find-header-node root-node id)]
         (when (some? node)
           (util/select-tab "all")
-          (select-tree-node tree node))
-        )
-      )))
+          (select-tree-node tree node))))))
 
 (defn adjust-back-count [event-data n]
   (let [event-history (:event-history event-data)
