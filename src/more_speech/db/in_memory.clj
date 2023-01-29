@@ -21,7 +21,9 @@
   (swap! (:data db) assoc-in [:text-event-map id :read] true))
 
 (defmethod gateway/add-relays-to-event ::type [db id relays]
-  (swap! (:data db) update-in [:text-event-map id :relays] concat relays))
+  (let [event (gateway/get-event db id)
+        updated-relays (set (concat (:relays event) relays))]
+    (swap! (:data db) assoc-in [:text-event-map id :relays] updated-relays)))
 
 (defmethod gateway/add-reference-to-event ::type [db id reference]
   (swap! (:data db)

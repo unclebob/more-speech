@@ -30,12 +30,9 @@
 
 (defn add-suffix-for-duplicate [pubkey name]
   (let [id-of-name (gateway/get-id-from-username (get-db) name)]
-    (if (or (nil? id-of-name)
-            (= id-of-name pubkey))
-      (do (prn 'name name)
-          name)
-      (str name (rand-int 1000))))
-  )
+    (if (or (nil? id-of-name) (= id-of-name pubkey))
+      name
+      (str name (rand-int 1000)))))
 
 (defn process-name-event [db {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
   (try
