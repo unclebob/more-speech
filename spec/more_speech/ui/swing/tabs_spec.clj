@@ -31,20 +31,20 @@
       (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
       (change-tabs-list-name "old-name" "new-name")
       (should= [{:name "new-name"} {:name "some-name"}]
-               (:tabs-list @(:event-context @ui-context))))
+               (get-mem :tabs-list)))
 
     (it "changes does not change tabs-list name if it does not exist"
       (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
       (change-tabs-list-name "bad-name" "new-name")
       (should= [{:name "old-name"} {:name "some-name"}]
-               (:tabs-list @(:event-context @ui-context)))))
+               (get-mem :tabs-list))))
 
   (context "delete-tab-from-tabs-list"
     (it "deletes an existing tab"
       (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
       (delete-tab-from-tabs-list "old-name")
       (should= [{:name "some-name"}]
-               (:tabs-list @(:event-context @ui-context)))))
+               (get-mem :tabs-list))))
 
   (context "add-tab-to-tabs-list"
     (it "adds-a-tab"
@@ -52,7 +52,7 @@
       (add-tab-to-tabs-list "new-name")
       (should= [{:name "some-name"}
                 {:name "new-name" :selected [] :blocked []}]
-               (:tabs-list @(:event-context @ui-context))))
+               (get-mem :tabs-list)))
     )
 
   (context "select-id-in-tab"
@@ -61,5 +61,5 @@
       (add-id-to-tab "tab" :selected 1)
       (should= [{:name "tab" :selected [1]}
                 {:name "another"}]
-               (:tabs-list @(:event-context @ui-context)))))
+               (get-mem :tabs-list))))
   )

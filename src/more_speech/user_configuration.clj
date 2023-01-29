@@ -23,8 +23,7 @@
         lte (get xup :last-time-exported 0)
         xup (assoc xup :export-after-days xad
                        :last-time-exported lte)]
-    (assoc user-configuration :export-user-profile xup))
-  )
+    (assoc user-configuration :export-user-profile xup)))
 
 (defn validate-import-metadata [uc]
   (let [im (get uc :import-metadata {})
