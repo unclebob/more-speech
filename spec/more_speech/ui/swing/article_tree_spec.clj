@@ -17,7 +17,9 @@
 
 (describe "header tree"
   (with db (in-memory/get-db))
-  (before (reset! ui-context {:event-context (atom nil)}))
+  (before (in-memory/clear-db @db)
+          (clear-mem)
+          (swap! ui-context assoc :node-map {} :orphaned-references {}))
 
   (context "finding chronological insertion point"
     (it "returns zero if empty tree"
@@ -149,8 +151,8 @@
       (let [event-id 1N
             node-map {}
             orphaned-references {}
-            _ (reset! ui-context {:node-map node-map
-                                  :orphaned-references orphaned-references})]
+            _ (swap! ui-context assoc :node-map node-map
+                     :orphaned-references orphaned-references)]
         (resolve-any-orphans event-id)
         (should= {} (:node-map @ui-context))
         (should= {} (:orphaned-references @ui-context)))
@@ -164,8 +166,9 @@
             node-map {orphan-id [original-orphan-node]
                       parent-id [parent-node]}
             orphaned-references {parent-id #{orphan-id}}
-            _ (reset! ui-context {:node-map node-map
-                                  :orphaned-references orphaned-references})
+            _ (swap! ui-context assoc
+                     :node-map node-map
+                     :orphaned-references orphaned-references)
             _ (resolve-any-orphans parent-id)
             orphan-nodes (get-in @ui-context [:node-map orphan-id])
             new-orphan-node (second orphan-nodes)

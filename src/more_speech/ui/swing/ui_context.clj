@@ -1,9 +1,13 @@
 (ns more-speech.ui.swing.ui-context
   (:require [clojure.spec.alpha :as s]))
 
-(def ui-context (atom {:event-context (atom nil)
-                       :node-map {}
-                       :orphaned-references {}}))
+
+(defn make-ui-context []
+  (atom {:event-context (atom nil)
+         :node-map {}
+         :orphaned-references {}}))
+
+(def ui-context (make-ui-context))
 
 (s/def ::id number?)
 (s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))
