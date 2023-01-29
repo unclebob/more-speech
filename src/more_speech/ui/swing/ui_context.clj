@@ -23,7 +23,20 @@
   )
 
 (defn set-mem [key value]
-  (swap! (get-mem) assoc key value))
+  (if (coll? key)
+    (swap! (get-mem) assoc-in key value)
+    (swap! (get-mem) assoc key value)))
+
+(defn do-update [map key args]
+  (apply (partial update map key) args))
+
+(defn do-update-in [map key args]
+  (apply (partial update-in map key) args))
+
+(defn update-mem [key & args]
+  (if (coll? key)
+    (swap! (get-mem) do-update-in key args)
+    (swap! (get-mem) do-update key args)))
 
 (defn clear-mem []
   (reset! (get-mem) {}))
