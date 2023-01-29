@@ -393,7 +393,9 @@
 (describe "adding events"
   (with-stubs)
   (with db (in-memory/get-db))
-  (before (reset! ui-context {:event-context (atom nil)}))
+  (before (in-memory/clear-db @db)
+          (clear-mem))
+
   (it "adds one event"
     (should= ["Root" [99]]
              (events->tree @db

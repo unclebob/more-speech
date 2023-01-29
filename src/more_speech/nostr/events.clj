@@ -148,7 +148,7 @@
     (if (some? root) root id)))
 
 (defn update-event-history [item]
-  (set-mem :event-history (conj (get-mem :event-history) item)))
+  (update-mem :event-history conj item))
 
 (defn select-event [tab-index id]
   (set-mem :selected-tab tab-index)

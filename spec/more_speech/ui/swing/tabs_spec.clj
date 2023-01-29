@@ -21,57 +21,43 @@
 
   (context "get-tab-index"
     (it "gets the index of a tab using the name"
-      (let [tab-list [{:name "tab0"} {:name "tab1"}]
-            event-context {:tabs-list tab-list}]
-        (reset! ui-context {:event-context (atom event-context)})
-        (should= 0 (get-tab-index "tab0"))
-        (should= 1 (get-tab-index "tab1"))
-        (should-be-nil (get-tab-index "tab2")))))
+      (set-mem :tabs-list [{:name "tab0"} {:name "tab1"}])
+      (should= 0 (get-tab-index "tab0"))
+      (should= 1 (get-tab-index "tab1"))
+      (should-be-nil (get-tab-index "tab2"))))
 
   (context "change-tabs-list-name"
     (it "changes tabs-list name if it exists"
-      (let [tabs-list [{:name "old-name"} {:name "some-name"}]
-            event-context (atom {:tabs-list tabs-list})]
-        (reset! ui-context {:event-context event-context})
-        (change-tabs-list-name "old-name" "new-name")
-        (should= [{:name "new-name"} {:name "some-name"}]
-                 (:tabs-list @(:event-context @ui-context)))))
+      (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
+      (change-tabs-list-name "old-name" "new-name")
+      (should= [{:name "new-name"} {:name "some-name"}]
+               (:tabs-list @(:event-context @ui-context))))
 
     (it "changes does not change tabs-list name if it does not exist"
-      (let [tabs-list [{:name "old-name"} {:name "some-name"}]
-            event-context (atom {:tabs-list tabs-list})]
-        (reset! ui-context {:event-context event-context})
-        (change-tabs-list-name "bad-name" "new-name")
-        (should= [{:name "old-name"} {:name "some-name"}]
-                 (:tabs-list @(:event-context @ui-context)))))
-    )
+      (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
+      (change-tabs-list-name "bad-name" "new-name")
+      (should= [{:name "old-name"} {:name "some-name"}]
+               (:tabs-list @(:event-context @ui-context)))))
 
   (context "delete-tab-from-tabs-list"
     (it "deletes an existing tab"
-      (let [tabs-list [{:name "old-name"} {:name "some-name"}]
-            event-context (atom {:tabs-list tabs-list})]
-        (reset! ui-context {:event-context event-context})
-        (delete-tab-from-tabs-list "old-name")
-        (should= [{:name "some-name"}]
-                 (:tabs-list @(:event-context @ui-context))))))
+      (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
+      (delete-tab-from-tabs-list "old-name")
+      (should= [{:name "some-name"}]
+               (:tabs-list @(:event-context @ui-context)))))
 
   (context "add-tab-to-tabs-list"
     (it "adds-a-tab"
-      (let [tabs-list [{:name "some-name"}]
-            event-context (atom {:tabs-list tabs-list})]
-        (reset! ui-context {:event-context event-context})
-        (add-tab-to-tabs-list "new-name")
-        (should= [{:name "some-name"}
-                  {:name "new-name" :selected [] :blocked []}]
-                 (:tabs-list @(:event-context @ui-context)))))
+      (set-mem :tabs-list [{:name "some-name"}])
+      (add-tab-to-tabs-list "new-name")
+      (should= [{:name "some-name"}
+                {:name "new-name" :selected [] :blocked []}]
+               (:tabs-list @(:event-context @ui-context))))
     )
 
-  (context "select-id-in-tab")
-  (it "adds-a-tab"
-    (let [tabs-list [{:name "tab"}
-                     {:name "another"}]
-          event-context (atom {:tabs-list tabs-list})]
-      (reset! ui-context {:event-context event-context})
+  (context "select-id-in-tab"
+    (it "adds-a-tab"
+      (set-mem :tabs-list [{:name "tab"} {:name "another"}])
       (add-id-to-tab "tab" :selected 1)
       (should= [{:name "tab" :selected [1]}
                 {:name "another"}]

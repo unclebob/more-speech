@@ -25,14 +25,9 @@
     (with-stubs)
     (it "displays the appropriate event and tab"
       (with-redefs [article-tree-util/display-event (stub :display-event)]
-        (let [event-data {:event-history [[:t1 1]
-                                          [:t2 2]]
-                          :back-count 0}
-              ui-context-data {:event-context (atom event-data)}
-              _ (reset! ui-context ui-context-data)]
+          (set-mem :event-history [[:t1 1] [:t2 2]])
+          (set-mem :back-count 0)
           (go-back-by 1)
-          (should-have-invoked :display-event {:with [:t1 1]}))
-        )
-      )
+          (should-have-invoked :display-event {:with [:t1 1]})))
     )
   )
