@@ -21,7 +21,7 @@
   (let [tab-name (config tab-label :text)
         new-name (input (format "rename %s to:" tab-name))
         new-name (util/unduplicate-tab-name new-name)
-        frame (:frame @ui-context)
+        frame (get-mem :frame)
         tab-panel (select frame [:#header-tab-panel])
         tab-index (config tab-label :user-data)]
     (when (and (some? tab-index) (seq new-name))

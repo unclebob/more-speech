@@ -99,7 +99,7 @@
       (should= @now (:created-at event))
       (should= "the content" (:content event))
       (should= 0xdddddd (:sig event))
-      (should= ["url"] (:relays event))
+      (should= #{"url"} (:relays event))
       (should= [[:p "0001" "someurl"]
                 [:e "0002" "anotherurl"]] (:tags event))))
 
@@ -113,14 +113,14 @@
   (it "adds one event with two urls"
     (add-event @db {:id 10 :created-at 0} ["url1" "url2"])
     (let [event-10 (gateway/get-event @db 10)]
-      (should= {:id 10 :created-at 0 :relays ["url1" "url2"]}
+      (should= {:id 10 :created-at 0 :relays #{"url1" "url2"}}
                event-10)))
 
   (it "adds two elements with equal ids from two different relays"
     (add-event @db {:id 10 :created-at 1} ["url1"])
     (add-event @db {:id 10 :created-at 0} ["url2"])
     (let [event (gateway/get-event @db 10)]
-      (should= ["url1" "url2"] (:relays event)))))
+      (should= #{"url1" "url2"} (:relays event)))))
 
 (describe "relay recommendation event kind 2"
   (with now (int (/ (System/currentTimeMillis) 1000)))

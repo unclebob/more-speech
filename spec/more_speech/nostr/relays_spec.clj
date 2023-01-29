@@ -1,29 +1,25 @@
 (ns more-speech.nostr.relays-spec
   (:require [speclj.core :refer :all]
             [more-speech.nostr.relays :refer :all :as relays]
-            [clojure.spec.alpha :as s]
-            [more-speech.config :as config]))
+            [clojure.spec.alpha :as s]))
 
 (describe "Relays"
   (context "loads relays from the \"relays\" file and sets defaults."
     (it "loads a non-existent file"
       (reset! relays {})
       (load-relays nil)
-      (when-not config/test-run?
-        (should= {} @relays))
+      (should= {} @relays)
       (should (s/conform ::relays/relays @relays)))
 
     (it "loads an empty file"
       (load-relays "")
-      (when-not config/test-run?
-        (should= @relays {}))
+      (should= @relays {})
       (should (s/conform ::relays/relays @relays)))
 
     (it "loads a relay file with one relay"
       (load-relays "{\"relay-url\" {:read true :write true}}")
-      (when-not config/test-run?
-        (should= @relays {"relay-url"
-                          {:read true :write true :connection nil :subscribed false}}))
+      (should= @relays {"relay-url"
+                        {:read true :write true :connection nil :subscribed false}})
       (should (s/conform ::relays/relays @relays)))
 
     (it "loads a relay file with more than one relay"
@@ -31,13 +27,12 @@
                         "\"relay-url-2\" {:read false :write false}}")
                    )
 
-      (when (not config/test-run?)
-        (should= {"relay-url-1"
-                  {:read true :write true :connection nil :subscribed false}
-                  "relay-url-2"
-                  {:read false :write false :connection nil :subscribed false}}
-                 @relays)
-        (should (s/conform ::relays/relays @relays)))))
+      (should= {"relay-url-1"
+                {:read true :write true :connection nil :subscribed false}
+                "relay-url-2"
+                {:read false :write false :connection nil :subscribed false}}
+               @relays)
+      (should (s/conform ::relays/relays @relays))))
   )
 
 (describe "relays-for-writing"

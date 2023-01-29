@@ -1,8 +1,7 @@
 (ns more-speech.ui.swing.ui-context
   (:require [clojure.spec.alpha :as s]))
 
-(def ui-context (atom {:frame nil
-                       :event-context (atom nil)
+(def ui-context (atom {:event-context (atom nil)
                        :node-map {}
                        :orphaned-references {}}))
 

@@ -44,7 +44,7 @@
   (prn 'make-main-window)
   (let [title (str "More-Speech:" (:name (get-mem :keys)) " - " config/version)
         main-frame (frame :title title :size [1500 :by 1000])
-        _ (swap! ui-context assoc :frame main-frame)
+        _ (set-mem :frame main-frame)
         _ (prn 'make-main-window 'making-article-area)
         article-area (article-panel/make-article-area)
         _ (listen article-area :hyperlink open-link)

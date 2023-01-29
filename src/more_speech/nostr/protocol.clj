@@ -43,7 +43,7 @@
     (send events/event-agent handlers/handle-event message url)))
 
 (defn connect-to-relays []
-  (let [urls (if config/test-run?
+  (let [urls (if (config/is-test-run?)
                [config/test-relay]
                (keys @relays))]
     (doseq [url urls]

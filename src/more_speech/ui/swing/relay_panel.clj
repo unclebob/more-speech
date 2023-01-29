@@ -22,7 +22,7 @@
     relay-panel))
 
 (defn update-relay-panel []
-  (let [frame (:frame @ui-context)
+  (let [frame (get-mem :frame)
         relay-panel (select frame [:#relay-panel])
         panel-map (config relay-panel :user-data)]
     (loop [urls (keys @relays)]

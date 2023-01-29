@@ -231,7 +231,7 @@
         (swap! ui-context assoc-in [:orphaned-references parent-id] #{})))))
 
 (defn add-event [event]
-  (let [frame (:frame @ui-context)
+  (let [frame (get-mem :frame)
         event-id (:id event)
         ]
     (loop [tabs (get-mem :tabs-list)

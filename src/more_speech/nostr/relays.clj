@@ -30,11 +30,7 @@
   (let [loaded-relays (if (empty? relay-text)
                         {}
                         (read-string relay-text))
-        loaded-relays (set-relay-defaults loaded-relays)
-        loaded-relays (if config/test-run?
-                        {config/test-relay {:read true :write true}}
-                        loaded-relays)
-        ]
+        loaded-relays (set-relay-defaults loaded-relays)]
     (reset! relays loaded-relays)))
 
 (defn load-relays-from-file [file-name]

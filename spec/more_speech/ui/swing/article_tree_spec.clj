@@ -383,7 +383,7 @@
           header-tree (make-header-tree tab-id)
           _ (config! header-tree :id :0 :user-data 0)
           frame (frame :content header-tree)]
-      (swap! ui-context assoc :frame frame)
+      (set-mem :frame frame)
       (set-mem :tabs-list [tab])
       (add-events db event-list)
       (depict-tree header-tree))))

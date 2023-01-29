@@ -54,7 +54,7 @@
     (.scrollPathToVisible tree tree-path)))
 
 (defn id-click [id]
-  (let [frame (:frame @ui-context)
+  (let [frame (get-mem :frame)
         tab-index (get-mem :selected-tab)
         tab-selector (keyword (str "#" tab-index))
         tree (select frame [tab-selector])
@@ -77,7 +77,7 @@
     (assoc event-data :back-count back-count :backing-up true)))
 
 (defn display-event [tab-index event-id]
-  (let [frame (:frame @ui-context)
+  (let [frame (get-mem :frame)
         tab-selector (keyword (str "#" tab-index))
         tree (select frame [tab-selector])
         model (config tree :model)

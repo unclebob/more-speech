@@ -15,7 +15,9 @@
 (def send-chan (async/chan))
 
 (defn ^:export -main [& args]
-  (prn 'main 'start)
+  (prn 'main (first args) 'start)
+  (when (= "test" (first args))
+    (reset! config/test-run? true))
   (migrator/migrate-to config/migration-level)
   (prn 'main 'loading-configuration)
   (data-storage/load-configuration)
@@ -26,18 +28,18 @@
     (set-mem :event-handler handler)
     (prn 'main 'reading-in-last-n-days)
     (let [latest-old-message-time
-          (if (not config/test-run?)
+          (if (not (config/is-test-run?))
             (data-storage/read-in-last-n-days config/days-to-read handler)
             (-> (System/currentTimeMillis) (quot 1000) (- 3600)))
           _ (prn 'main 'getting-events)
           exit-condition (main/start-nostr latest-old-message-time)]
       (prn 'starting-exit-process)
-      (when (not config/test-run?)
+      (when (not (config/is-test-run?))
         (data-storage/write-configuration)
         (data-storage/write-changed-days))
       (if (= exit-condition :relaunch)
         (do
-          (invoke-now (.dispose (:frame @ui-context)))
+          (invoke-now (.dispose (get-mem :frame)))
           (recur args)
           )
         (System/exit 1)))))

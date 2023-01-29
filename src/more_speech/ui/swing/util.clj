@@ -20,7 +20,7 @@
 (defn select-tab
   "Select tab by name or index"
   [tab-selector]
-  (let [frame (:frame @ui-context)
+  (let [frame (get-mem :frame)
         tabbed-panel (select frame [:#header-tab-panel])
         tab-index (if (number? tab-selector)
                     tab-selector

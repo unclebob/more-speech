@@ -100,7 +100,7 @@
                   :center (flow-panel :items [reply-button create-button]))))
 
 (defn load-article-info [selected-id]
-  (let [main-frame (:frame @ui-context)
+  (let [main-frame (get-mem :frame)
         event (gateway/get-event (get-db) selected-id)
         [root-id _ referent] (events/get-references event)
         reply-to (select main-frame [:#reply-to-label])
