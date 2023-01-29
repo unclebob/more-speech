@@ -3,9 +3,7 @@
 
 
 (defn make-ui-context []
-  (atom {:event-context (atom nil)
-         :node-map {}
-         :orphaned-references {}}))
+  (atom {:event-context (atom nil)}))
 
 (def ui-context (make-ui-context))
 

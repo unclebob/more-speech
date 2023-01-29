@@ -156,11 +156,11 @@
           (some #(= % (:id event)) blocked))))))
 
 (defn add-orphaned-reference [referent id]
-  (swap! ui-context
-         (fn [ui-context]
-           (if (empty? (get-in ui-context [:orphaned-references referent]))
-             (assoc-in ui-context [:orphaned-references referent] #{id})
-             (update-in ui-context [:orphaned-references referent] conj id)))))
+  (letfn [(update-reference [orphaned-references referent]
+            (if (empty? (get orphaned-references referent))
+              (assoc orphaned-references referent #{id})
+              (update orphaned-references referent conj id)))]
+    (update-mem :orphaned-references update-reference referent)) )
 
 ;; at the moment an event can appear in several places in the tree.
 ;; it can be in the reply chain of an event, and it can stand alone.
@@ -186,7 +186,7 @@
         (let [node (first nodes)
               child (DefaultMutableTreeNode. this-id)]
           (.add ^DefaultMutableTreeNode node child)
-          (swap! ui-context update-in [:node-map this-id] conj child)
+          (update-mem [:node-map this-id] conj child)
           (recur (rest nodes)))))))
 
 (defn add-references [event]
@@ -194,7 +194,7 @@
         id (:id event)]
     (if (nil? referent)
       nil
-      (let [nodes (get-in @ui-context [:node-map referent])]
+      (let [nodes (get-mem [:node-map referent])]
         (if (empty? nodes)
           (add-orphaned-reference referent id)
           (add-this-node-to-reference-nodes nodes id))))))
@@ -209,13 +209,13 @@
         (recur copied-node (rest children))))))
 
 (defn build-orphan-node [orphan-id]
-  (let [node-map (:node-map @ui-context)
+  (let [node-map (get-mem :node-map)
         orphan-nodes (get node-map orphan-id)]
     (copy-node (first orphan-nodes))))
 
 (defn resolve-any-orphans [parent-id]
-  (let [parent-nodes (get-in @ui-context [:node-map parent-id])
-        orphan-set (get-in @ui-context [:orphaned-references parent-id])]
+  (let [parent-nodes (get-mem [:node-map parent-id])
+        orphan-set (get-mem [:orphaned-references parent-id])]
     (if (empty? orphan-set)
       nil
       (do
@@ -226,9 +226,9 @@
               (doseq [parent-node parent-nodes]
                 (let [orphan-node (build-orphan-node orphan-id)]
                   (.add ^DefaultMutableTreeNode parent-node orphan-node)
-                  (swap! ui-context update-in [:node-map orphan-id] conj orphan-node)))
+                  (update-mem [:node-map orphan-id] conj orphan-node)))
               (recur (rest orphan-set)))))
-        (swap! ui-context assoc-in [:orphaned-references parent-id] #{})))))
+        (set-mem [:orphaned-references parent-id] #{})))))
 
 (defn add-event [event]
   (let [frame (get-mem :frame)
@@ -247,7 +247,7 @@
                   child (DefaultMutableTreeNode. event-id)]
               (.insertNodeInto model child root insertion-point)
               (.makeVisible tree (TreePath. (.getPath child)))
-              (swap! ui-context update-in [:node-map event-id] conj child)
+              (update-mem [:node-map event-id] conj child)
               ))
           (recur (rest tabs) (inc index)))))
     (add-references event)

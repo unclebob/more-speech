@@ -18,8 +18,7 @@
 (describe "header tree"
   (with db (in-memory/get-db))
   (before (in-memory/clear-db @db)
-          (clear-mem)
-          (swap! ui-context assoc :node-map {} :orphaned-references {}))
+          (clear-mem))
 
   (context "finding chronological insertion point"
     (it "returns zero if empty tree"
@@ -109,10 +108,10 @@
   (context "adding references to tree nodes"
     (it "adds no node reference if the event has no references"
       (let [id 1N
-            _ (swap! ui-context assoc :node-map {id []})
+            _ (set-mem :node-map {id []})
             event {:id id :tags []}]
         (add-references event)
-        (should= [] (get-in @ui-context [:node-map id])))
+        (should= [] (get-mem [:node-map id])))
       )
 
     (it "adds a node reference, and a tree element if the event has a reference to an existing event"
@@ -121,10 +120,10 @@
             parent-node (DefaultMutableTreeNode. parent-id)
             node-map {parent-id [parent-node]
                       id []}
-            _ (swap! ui-context assoc :node-map node-map)
+            _ (set-mem :node-map node-map)
             event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
             _ (add-references event)
-            nodes (get-in @ui-context [:node-map id])]
+            nodes (get-mem [:node-map id])]
         (should= 1 (count nodes))
         (should= id (.getUserObject (first nodes)))
         (should= 1 (.getChildCount parent-node))
@@ -136,12 +135,12 @@
       (let [parent-id 2N
             id 1N
             node-map {id []}
-            _ (swap! ui-context assoc :node-map node-map)
+            _ (set-mem :node-map node-map)
             event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
             _ (add-references event)
-            nodes (get-in @ui-context [:node-map id])]
+            nodes (get-mem [:node-map id])]
         (should= 0 (count nodes))
-        (should= {parent-id #{1N}} (:orphaned-references @ui-context))
+        (should= {parent-id #{1N}} (get-mem :orphaned-references))
         )
       )
     )
@@ -151,11 +150,11 @@
       (let [event-id 1N
             node-map {}
             orphaned-references {}
-            _ (swap! ui-context assoc :node-map node-map
-                     :orphaned-references orphaned-references)]
+            _ (set-mem :node-map node-map)
+            _ (set-mem :orphaned-references orphaned-references)]
         (resolve-any-orphans event-id)
-        (should= {} (:node-map @ui-context))
-        (should= {} (:orphaned-references @ui-context)))
+        (should= {} (get-mem :node-map))
+        (should= {} (get-mem :orphaned-references)))
       )
 
     (it "resolves a parent event with a single orphan"
@@ -166,11 +165,10 @@
             node-map {orphan-id [original-orphan-node]
                       parent-id [parent-node]}
             orphaned-references {parent-id #{orphan-id}}
-            _ (swap! ui-context assoc
-                     :node-map node-map
-                     :orphaned-references orphaned-references)
+            _ (set-mem :node-map node-map)
+            _ (set-mem :orphaned-references orphaned-references)
             _ (resolve-any-orphans parent-id)
-            orphan-nodes (get-in @ui-context [:node-map orphan-id])
+            orphan-nodes (get-mem [:node-map orphan-id])
             new-orphan-node (second orphan-nodes)
             ]
         (should= 2 (count orphan-nodes))
@@ -179,7 +177,7 @@
                                ^DefaultMutableTreeNode (.getChildAt 0)
                                .getUserObject))
         (should= orphan-id (.getUserObject new-orphan-node))
-        (should= #{} (get-in @ui-context [:orphaned-references parent-id]))
+        (should= #{} (get-mem [:orphaned-references parent-id]))
         )
       )
     )
