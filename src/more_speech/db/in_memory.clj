@@ -1,6 +1,5 @@
 (ns more-speech.db.in-memory
-  (:require [more-speech.db.gateway :as gateway]
-            [more-speech.mem :refer :all]))
+  (:require [more-speech.db.gateway :as gateway]))
 
 (defmethod gateway/add-profile ::type [db id profile]
   (swap! (:data db) update-in [:profiles] assoc id profile))
@@ -54,8 +53,9 @@
             (recur (rest pairs))))))))
 
 ;----------methods for tests
+(def db (atom nil))
 
-(defn get-db [] {:data (get-mem) ::gateway/type ::type})
+(defn get-db [] {:data db ::gateway/type ::type})
 
 (defn clear-events [db]
   (swap! (:data db) assoc :text-event-map {}))

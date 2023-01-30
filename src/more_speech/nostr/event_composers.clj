@@ -69,8 +69,7 @@
 (defn make-people-reference-tags [pubkey reply-to-or-nil]
   (if (nil? reply-to-or-nil)
     []
-    (let [
-          parent-event-id reply-to-or-nil
+    (let [parent-event-id reply-to-or-nil
           parent-event (gateway/get-event (get-db) parent-event-id)
           parent-tags (:tags parent-event)
           people-ids (map second (filter #(= :p (first %)) parent-tags))

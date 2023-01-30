@@ -326,6 +326,7 @@
 
 (describe "find-user-id"
   (with db (in-memory/get-db))
+  (before (in-memory/clear-db @db))
 
   (it "finds the id from a profile name"
     (gateway/add-profile @db 1 {:name "bob"})
