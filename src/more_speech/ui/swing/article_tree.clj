@@ -4,7 +4,7 @@
     [more-speech.nostr.events :as events]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.article-panel :as article-panel]
-    [more-speech.ui.swing.ui-context :refer :all]
+    [more-speech.mem :refer :all]
     [clojure.set :as set]
     [more-speech.nostr.util :as util]
     [more-speech.ui.swing.util :as swing-util]

@@ -1,7 +1,7 @@
 (ns more-speech.user-configuration-spec
   (:require [speclj.core :refer :all]
             [more-speech.user-configuration :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]))
+            [more-speech.mem :refer :all]))
 
 (declare lte)
 

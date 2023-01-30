@@ -1,6 +1,6 @@
 (ns more-speech.ui.swing.tabs
   (:require [more-speech.ui.swing.util :as util]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.ui.swing.article-tree :as article-tree])
   (:use [seesaw core]))
 
@@ -48,26 +48,25 @@
       (util/select-tab tab-index))))
 
 (defn make-tabs []
-  (let [event-context (:event-context @ui-context)]
-    (loop [tabs-list (:tabs-list @event-context)
-           header-tree-tabs []
-           tab-index 0]
-      (if (empty? tabs-list)
-        header-tree-tabs
-        (let [tab (first tabs-list)
-              tab-name (:name tab)
-              header-tree (article-tree/make-header-tree tab-index)
-              _ (config! header-tree
-                         :user-data tab-index
-                         :id (keyword (str tab-index)))
-              tab-label (label :text tab-name :user-data tab-index)
-              _ (listen tab-label :mouse-pressed tab-menu)
-              tab-content (scrollable header-tree)
-              tab-data {:title tab-label
-                        :content tab-content}]
-          (recur (rest tabs-list)
-                 (conj header-tree-tabs tab-data)
-                 (inc tab-index)))))))
+  (loop [tabs-list (get-mem :tabs-list)
+         header-tree-tabs []
+         tab-index 0]
+    (if (empty? tabs-list)
+      header-tree-tabs
+      (let [tab (first tabs-list)
+            tab-name (:name tab)
+            header-tree (article-tree/make-header-tree tab-index)
+            _ (config! header-tree
+                       :user-data tab-index
+                       :id (keyword (str tab-index)))
+            tab-label (label :text tab-name :user-data tab-index)
+            _ (listen tab-label :mouse-pressed tab-menu)
+            tab-content (scrollable header-tree)
+            tab-data {:title tab-label
+                      :content tab-content}]
+        (recur (rest tabs-list)
+               (conj header-tree-tabs tab-data)
+               (inc tab-index))))))
 
 (defn ensure-tab-list-has-all [tab-list]
   (if (some #(= "all" (:name %)) tab-list)

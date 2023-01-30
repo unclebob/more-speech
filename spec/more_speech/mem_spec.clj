@@ -1,6 +1,6 @@
 (ns more-speech.mem-spec
   (:require [speclj.core :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]))
+            [more-speech.mem :refer :all]))
 
 (describe "memory operators"
   (before (clear-mem))

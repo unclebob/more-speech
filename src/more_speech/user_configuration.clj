@@ -1,5 +1,5 @@
 (ns more-speech.user-configuration
-  (:require [more-speech.ui.swing.ui-context :refer :all]
+  (:require [more-speech.mem :refer :all]
             [more-speech.config :as config]))
 
 (defn get-config

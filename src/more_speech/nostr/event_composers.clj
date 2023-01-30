@@ -1,6 +1,6 @@
 (ns more-speech.nostr.event-composers
   (:require [more-speech.nostr.events :as events]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]
             [more-speech.nostr.util :as util]

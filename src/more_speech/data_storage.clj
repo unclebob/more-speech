@@ -1,7 +1,6 @@
 (ns more-speech.data-storage
   (:require [more-speech.config :as config :refer [get-db]]
-            [more-speech.ui.swing.ui-context :refer :all]
-            [more-speech.nostr.events :as events]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.relays :as relays]
             [more-speech.ui.swing.tabs :as tabs]
@@ -54,16 +53,16 @@
                     (read-string (slurp @config/tabs-list-filename)))
         user-configuration (user-configuration/validate
                              (read-string (slurp @config/user-configuration-filename)))
-        contact-lists (read-string (slurp @config/contact-lists-filename))
-
-        event-context (events/make-event-context {:keys keys
-                                                  :pubkey pubkey
-                                                  :profiles profiles
-                                                  :tabs-list tabs-list
-                                                  :user-configuration user-configuration
-                                                  :contact-lists contact-lists
-                                                  })]
-    (swap! ui-context assoc :event-context event-context)
+        contact-lists (read-string (slurp @config/contact-lists-filename))]
+    (set-mem :keys keys)
+    (set-mem :pubkey pubkey)
+    (set-mem :profiles profiles)
+    (set-mem :tabs-list tabs-list)
+    (set-mem :user-configuration user-configuration)
+    (set-mem :contact-lists contact-lists)
+    (set-mem :text-event-map {})
+    (set-mem :event0history [])
+    (set-mem :back-count 0)
     (relays/load-relays-from-file @config/relays-filename)))
 
 (defn load-events [old-events handler]
@@ -107,8 +106,7 @@
 
 (defn write-messages-by-day
   ([]
-   (let [event-context (:event-context @ui-context)
-         message-map (:text-event-map @event-context)
+   (let [message-map (get-mem :text-event-map)
          daily-partitions (partition-messages-by-day message-map)]
      (write-messages-by-day daily-partitions)))
 

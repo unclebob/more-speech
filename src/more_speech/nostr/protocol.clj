@@ -1,7 +1,7 @@
 (ns more-speech.nostr.protocol
   (:require [more-speech.relay :as relay]
             [more-speech.websocket-relay :as ws-relay]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.relays :refer [relays]]

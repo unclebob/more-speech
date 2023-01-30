@@ -1,7 +1,7 @@
 (ns more-speech.ui.formatters
   (:require [clojure.string :as string]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.ui.formatter-util :refer :all]

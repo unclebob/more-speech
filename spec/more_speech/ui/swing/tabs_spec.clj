@@ -2,7 +2,7 @@
   (:require [speclj.core :refer :all]
             [more-speech.ui.swing.tabs :refer :all]
             [more-speech.ui.swing.util :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]))
+            [more-speech.mem :refer :all]))
 
 (describe "tabs"
   (context "ensure-tab-list-has-all"

@@ -1,16 +1,16 @@
 (ns more-speech.nostr.main
   (:require [more-speech.nostr.protocol :as protocol]
-            [more-speech.ui.swing.ui-context :as context]
+            [more-speech.mem :refer :all]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.relays :as relays]
             [more-speech.relay :as relay]
-            [more-speech.ui.swing.ui-context :refer [get-mem]]
+            [more-speech.mem :refer :all]
             [clojure.core.async :as async]))
 
 (defn process-send-channel []
-  (let [send-chan (context/get-mem :send-chan)
+  (let [send-chan (get-mem :send-chan)
         urls (keys @relays/relays)
         send-urls (filter #(:write (get @relays/relays %)) urls)
         writeable-relays (map #(get-in @relays/relays [% :connection]) send-urls)

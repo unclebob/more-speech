@@ -6,7 +6,7 @@
   (:require [more-speech.config :as config]
             [more-speech.nostr.main :as main]
             [more-speech.ui.swing.main-window :as swing]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.migrator :as migrator]
             [more-speech.data-storage :as data-storage]
             [clojure.core.async :as async])

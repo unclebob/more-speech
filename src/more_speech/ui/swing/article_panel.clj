@@ -6,7 +6,7 @@
             [more-speech.ui.formatter-util :as f-util]
             [more-speech.ui.swing.article-tree-util :as article-tree-util]
             [more-speech.ui.swing.edit-window :as edit-window]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
             [more-speech.db.gateway :as gateway]
             [more-speech.config :refer [get-db]])

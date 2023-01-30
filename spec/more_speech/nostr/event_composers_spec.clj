@@ -9,7 +9,7 @@
             [more-speech.nostr.event-handlers :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.relays :refer [relays]]
             [more-speech.config :as config])
   (:import (ecdhJava SECP256K1)))

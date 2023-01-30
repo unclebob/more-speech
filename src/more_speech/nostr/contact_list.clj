@@ -1,6 +1,6 @@
 (ns more-speech.nostr.contact-list
   (:require [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.db.gateway :as gateway]
             [more-speech.bech32 :as bech32]
             [more-speech.config :refer [get-db]]

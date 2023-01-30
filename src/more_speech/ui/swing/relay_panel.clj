@@ -1,7 +1,7 @@
 (ns more-speech.ui.swing.relay-panel
   (:use [seesaw core])
   (:require [more-speech.nostr.relays :refer [relays]]
-            [more-speech.ui.swing.ui-context :refer :all]))
+            [more-speech.mem :refer :all]))
 
 (defn make-relay-control-panel [relay-url]
   (let [relay (get @relays relay-url)

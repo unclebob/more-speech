@@ -1,7 +1,7 @@
 (ns more-speech.ui.swing.edit-window
   (:require [more-speech.nostr.event-composers :as composers]
             [more-speech.ui.formatters :as formatters]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.user-configuration :as uconfig]
             [more-speech.config :refer [get-db]]
             [more-speech.db.gateway :as gateway])

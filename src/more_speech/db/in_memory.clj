@@ -1,6 +1,6 @@
 (ns more-speech.db.in-memory
   (:require [more-speech.db.gateway :as gateway]
-            [more-speech.ui.swing.ui-context :refer [get-mem]]))
+            [more-speech.mem :refer :all]))
 
 (defmethod gateway/add-profile ::type [db id profile]
   (swap! (:data db) update-in [:profiles] assoc id profile))

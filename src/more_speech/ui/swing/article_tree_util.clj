@@ -1,6 +1,6 @@
 (ns more-speech.ui.swing.article-tree-util
   (:use [seesaw core])
-  (:require [more-speech.ui.swing.ui-context :refer :all]
+  (:require [more-speech.mem :refer :all]
             [more-speech.ui.swing.util :as util]
             [more-speech.db.gateway :as gateway]
             [more-speech.config :refer [get-db]])
@@ -71,10 +71,11 @@
           (util/select-tab "all")
           (select-tree-node tree node))))))
 
-(defn adjust-back-count [event-data n]
-  (let [event-history (:event-history event-data)
-        back-count (-> (:back-count event-data) (+ n) (max 0) (min (dec (count event-history))))]
-    (assoc event-data :back-count back-count :backing-up true)))
+(defn adjust-back-count [n]
+  (let [event-history (get-mem :event-history)
+        back-count (-> (get-mem :back-count) (+ n) (max 0) (min (dec (count event-history))))]
+    (set-mem :back-count back-count)
+    (set-mem :backing-up true)))
 
 (defn display-event [tab-index event-id]
   (let [frame (get-mem :frame)
@@ -88,10 +89,9 @@
       (select-tree-node tree node))))
 
 (defn go-back-by [n]
-  (let [event-context (:event-context @ui-context)
-        event-history (get-mem :event-history)]
+  (let [event-history (get-mem :event-history)]
     (when-not (empty? event-history)
-      (swap! event-context adjust-back-count n)
+      (adjust-back-count n)
       (let [back-count (get-mem :back-count)
             event-position (- (count event-history) back-count 1)
             [tab-index event-id] (nth event-history event-position)]

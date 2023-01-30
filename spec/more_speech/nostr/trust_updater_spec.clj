@@ -1,7 +1,7 @@
 (ns more-speech.nostr.trust-updater-spec
   (:require [speclj.core :refer :all]
             [more-speech.nostr.trust-updater :refer :all]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.db.in-memory :as in-memory]
             [more-speech.db.gateway :as gateway]))
 

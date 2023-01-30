@@ -4,7 +4,7 @@
             [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.contact-list :refer :all]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.ui-context :refer :all]))
+            [more-speech.mem :refer :all]))
 
 (defn hexify [n] (util/num32->hex-string n))
 

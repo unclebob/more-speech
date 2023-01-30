@@ -1,68 +1,11 @@
 (ns more-speech.nostr.events
-  (:require [clojure.spec.alpha :as s]
-            [clojure.data.json :as json]
+  (:require [clojure.data.json :as json]
             [more-speech.config :refer [get-db]]
-            [more-speech.ui.swing.ui-context :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.nostr.util :as util]
             [more-speech.db.gateway :as gateway])
   (:import (java.nio.charset StandardCharsets)))
-
-(s/def ::id number?)
-(s/def ::pubkey number?)
-(s/def ::created-at number?)
-(s/def ::content string?)
-(s/def ::sig number?)
-(s/def ::tag (s/tuple keyword? number?))
-(s/def ::tags (s/coll-of ::tag))
-(s/def ::references (s/coll-of number?))
-(s/def ::relay-url string?)
-(s/def ::relays (s/coll-of ::relay-url))
-(s/def ::event (s/keys :req-un [::id
-                                ::pubkey
-                                ::created-at
-                                ::content
-                                ::sig
-                                ::tags
-                                ::references]
-                       :opt-un [::relays]))
-
-(s/def ::text-event-map (s/map-of :id :event))
-(s/def ::name string?)
-(s/def ::about string?)
-(s/def ::picture string?)
-(s/def ::profile (s/keys :req-un [::name ::about ::picture]))
-(s/def ::profiles (s/map-of ::id ::profile))
-(s/def ::public-key string?)
-(s/def ::private-key string?)
-(s/def ::keys (s/keys :req-un [::name ::about ::picture ::public-key ::private-key]))
-(s/def ::selected (s/coll-of ::id))
-(s/def ::blocked (s/coll-of ::id))
-(s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
-(s/def ::tabs-list (s/coll-of ::tab))
-(s/def ::selected-event ::id)
-(s/def ::event-history (s/coll-of (s/tuple number? ::id)))
-(s/def ::back-count number?)
-(s/def ::backing-up boolean?)
-
-(s/def ::event-context (s/keys :req-un [::text-event-map
-                                        ::profiles
-                                        ::keys
-                                        ::tabs-list
-                                        ::selected-event
-                                        ::event-history
-                                        ::back-count
-                                        ::backing-up]))
-
-(defn make-event-context [event-context-map]
-  (atom (merge {:text-event-map {}
-                :profiles {}
-                :keys {}
-                :tabs-list []
-                :event-history []
-                :back-count 0
-                }
-               event-context-map)))
 
 (def event-agent (agent nil))
 

@@ -1,5 +1,5 @@
 (ns more-speech.ui.swing.util
-  (:require [more-speech.ui.swing.ui-context :refer :all]
+  (:require [more-speech.mem :refer :all]
             [clojure.core.async :as async])
   (:use [seesaw core])
   (:import (java.awt.datatransfer StringSelection)))
@@ -32,7 +32,7 @@
          new-tabs-list []]
     (cond
       (empty? tabs-list)
-      (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)
+      (set-mem :tabs-list new-tabs-list)
 
       (= old-name (:name (first tabs-list)))
       (recur (rest tabs-list)
@@ -47,7 +47,7 @@
          new-tabs-list []]
     (cond
       (empty? tabs-list)
-      (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)
+      (set-mem :tabs-list new-tabs-list)
 
       (= tab-name (:name (first tabs-list)))
       (recur (rest tabs-list) new-tabs-list)
@@ -59,7 +59,7 @@
 (defn add-tab-to-tabs-list [tab-name]
   (let [tabs-list (get-mem :tabs-list)
         new-tabs-list (conj tabs-list {:name tab-name :selected [] :blocked []})]
-    (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)))
+    (set-mem :tabs-list new-tabs-list)))
 
 
 (defn add-id-to-tab [tab-name key id]
@@ -67,7 +67,7 @@
          new-tabs-list []]
     (cond
       (empty? tabs-list)
-      (swap! (:event-context @ui-context) assoc :tabs-list new-tabs-list)
+      (set-mem :tabs-list new-tabs-list)
 
       (= tab-name (:name (first tabs-list)))
       (let [tab-descriptor (first tabs-list)

@@ -1,5 +1,5 @@
 (ns more-speech.config
-  (:require [more-speech.ui.swing.ui-context :refer [ui-context]]
+  (:require [more-speech.mem :refer :all]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]))
 
@@ -46,4 +46,4 @@
 
 (defn get-db []
   {::gateway/type ::in-memory/type
-   :data (:event-context @ui-context)})
+   :data (get-mem)})
