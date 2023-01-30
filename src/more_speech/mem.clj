@@ -21,6 +21,7 @@
                        :opt-un [::relays]))
 
 (s/def ::text-event-map (s/map-of :id :event))
+
 (s/def ::name string?)
 (s/def ::about string?)
 (s/def ::picture string?)

@@ -7,7 +7,8 @@
             [more-speech.user-configuration :as user-configuration]
             [clojure.string :as string]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.formatter-util :as fu])
+            [more-speech.ui.formatter-util :as fu]
+            [more-speech.db.in-memory :as in-memory])
   (:import (java.util Date TimeZone Locale)
            (java.text SimpleDateFormat)))
 
@@ -16,7 +17,7 @@
   (prn 'writing-profiles)
   (spit @config/profiles-filename
         (with-out-str
-          (clojure.pprint/pprint (get-mem :profiles))))
+          (clojure.pprint/pprint (get @in-memory/db :profiles))))
 
   (prn 'writing-relays)
   (spit @config/relays-filename
@@ -36,14 +37,14 @@
   (prn 'writing-contact-lists)
   (spit @config/contact-lists-filename
         (with-out-str
-          (clojure.pprint/pprint (get-mem :contact-lists))))
+          (clojure.pprint/pprint (get @in-memory/db :contact-lists))))
   (prn 'configuration-written)
   )
 
 (defn write-messages []
   (spit @config/messages-filename
         (with-out-str
-          (clojure.pprint/pprint (get-mem :text-event-map)))))
+          (clojure.pprint/pprint (get @in-memory/db :text-event-map)))))
 
 (defn load-configuration []
   (let [keys (read-string (slurp @config/keys-filename))
@@ -54,14 +55,13 @@
         user-configuration (user-configuration/validate
                              (read-string (slurp @config/user-configuration-filename)))
         contact-lists (read-string (slurp @config/contact-lists-filename))]
+    (swap! in-memory/db assoc :contact-lists contact-lists)
+    (swap! in-memory/db assoc :profiles profiles)
     (set-mem :keys keys)
     (set-mem :pubkey pubkey)
-    (set-mem :profiles profiles)
     (set-mem :tabs-list tabs-list)
     (set-mem :user-configuration user-configuration)
-    (set-mem :contact-lists contact-lists)
-    (set-mem :text-event-map {})
-    (set-mem :event0history [])
+    (set-mem :event-history [])
     (set-mem :back-count 0)
     (relays/load-relays-from-file @config/relays-filename)))
 
@@ -106,7 +106,7 @@
 
 (defn write-messages-by-day
   ([]
-   (let [message-map (get-mem :text-event-map)
+   (let [message-map (get @in-memory/db :text-event-map)
          daily-partitions (partition-messages-by-day message-map)]
      (write-messages-by-day daily-partitions)))
 
@@ -127,7 +127,7 @@
         _ (prn 'earliest-loaded-time earliest-loaded-time)
         first-day-loaded (quot earliest-loaded-time 86400)
         days-to-write (set (filter #(>= % first-day-loaded) days-changed))
-        daily-partitions (partition-messages-by-day (get-mem :text-event-map))
+        daily-partitions (partition-messages-by-day (get @in-memory/db :text-event-map))
         changed-partitions (filter #(contains? days-to-write (first %)) daily-partitions)]
     (write-messages-by-day changed-partitions)))
 
