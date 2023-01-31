@@ -34,14 +34,6 @@
 (defmethod gateway/get-contacts ::type [db user-id]
   (get-in @(:data db) [:contact-lists user-id]))
 
-(defmethod gateway/get-id-from-petname ::type [db user-id petname]
-  (loop [contacts (gateway/get-contacts db user-id)]
-    (if (seq contacts)
-      (if (= petname (:petname (first contacts)))
-        (:pubkey (first contacts))
-        (recur (rest contacts)))
-      nil)))
-
 (defmethod gateway/get-id-from-username ::type [db user-name]
   (let [profiles (:profiles @(:data db))]
     (loop [pairs (vec profiles)]

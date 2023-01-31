@@ -57,7 +57,10 @@
     (:petname his-entry)))
 
 (defn get-pubkey-from-petname [petname]
-  (gateway/get-id-from-petname (get-db) (get-mem :pubkey) petname))
-
-
+  (loop [contacts (gateway/get-contacts (get-db) (get-mem :pubkey))]
+    (if (seq contacts)
+      (if (= petname (:petname (first contacts)))
+        (:pubkey (first contacts))
+        (recur (rest contacts)))
+      nil)))
 

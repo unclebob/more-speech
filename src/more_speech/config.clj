@@ -57,6 +57,6 @@
     :in-memory
     (in-memory/get-db)
     :xtdb
-    (xtdb/get-db)
+    (xtdb/get-db "prod-db")
 
     (throw (Exception. "No Database Specified"))))
