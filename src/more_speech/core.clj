@@ -17,7 +17,10 @@
 (defn ^:export -main [& args]
   (prn 'main (first args) 'start)
   (when (= "test" (first args))
-    (reset! config/test-run? true))
+    (config/test-run!))
+  (if (config/is-test-run?)
+    (config/set-db! :in-memory)
+    (config/set-db! :xtdb))
   (migrator/migrate-to config/migration-level)
   (prn 'main 'loading-configuration)
   (data-storage/load-configuration)

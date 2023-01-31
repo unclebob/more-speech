@@ -24,6 +24,8 @@
 
 (describe "Composing outgoing events"
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
+  (before (in-memory/clear-db @db))
   (context "composing metadata (kind:0) messages"
     (it "composes using the keys data structure"
       (with-redefs [config/proof-of-work-default 0]

@@ -1,6 +1,7 @@
 (ns more-speech.config
   (:require [more-speech.mem :refer :all]
-            [more-speech.db.in-memory :as in-memory]))
+            [more-speech.db.in-memory :as in-memory]
+            [more-speech.db.xtdb :as xtdb]))
 
 (def default-font "COURIER-PLAIN-14")
 (def bold-font "COURIER-BOLD-14")
@@ -16,7 +17,10 @@
 
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)
-(def test-relay "wss://nostr-pub.wellorder.net")
+(def test-relay "wss://eden.nostr.land")
+
+(defn test-run! []
+  (reset! test-run? true))
 
 ;---configuration files
 (def private-directory (atom "private"))
@@ -43,5 +47,16 @@
 ;; https://daringfireball.net/2010/07/improved_regex_for_matching_urls
 (def url-pattern #"(?i)\b(?:(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\))+(?:\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))")
 
+
+(def db-type (atom nil))
+
+(defn set-db! [type] (reset! db-type type))
+
 (defn get-db []
-  (in-memory/get-db))
+  (condp = @db-type
+    :in-memory
+    (in-memory/get-db)
+    :xtdb
+    (xtdb/get-db)
+
+    (throw (Exception. "No Database Specified"))))

@@ -3,12 +3,14 @@
             [more-speech.nostr.trust-updater :refer :all]
             [more-speech.mem :refer :all]
             [more-speech.db.in-memory :as in-memory]
-            [more-speech.db.gateway :as gateway]))
+            [more-speech.db.gateway :as gateway]
+            [more-speech.config :as config]))
 
 (declare db)
 (describe "Setting Trust"
   (with-stubs)
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db))
 
   (it "establishes new trust with a petname."

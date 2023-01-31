@@ -7,7 +7,8 @@
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.mem :refer :all]
-            [more-speech.nostr.relays :refer [relays]]))
+            [more-speech.nostr.relays :refer [relays]]
+            [more-speech.config :as config]))
 
 (defrecord event-handler-dummy []
   event-handler
@@ -85,7 +86,7 @@
                :content "the content"
                :sig 0xdddddd})
   (with db (in-memory/get-db))
-
+  (before-all (config/set-db! :in-memory))
   (before
     (swap! (get-mem) assoc :event-handler (->event-handler-dummy))
     (in-memory/clear-events @db)
@@ -208,6 +209,7 @@
 
 (describe "fixing names"
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db))
 
   (it "should not fix a good name"
@@ -235,6 +237,7 @@
 
 (describe "process-name-event"
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db))
 
   (it "loads profiles"

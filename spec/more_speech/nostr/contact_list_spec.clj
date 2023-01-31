@@ -4,7 +4,8 @@
             [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.contact-list :refer :all]
             [more-speech.nostr.util :as util]
-            [more-speech.mem :refer :all]))
+            [more-speech.mem :refer :all]
+            [more-speech.config :as config]))
 
 (defn hexify [n] (util/num32->hex-string n))
 
@@ -12,6 +13,7 @@
 
 (describe "contact-lists"
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (clear-mem)
           (in-memory/clear-db @db))
 

@@ -8,7 +8,8 @@
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.util :as swing-util]
             [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory])
+            [more-speech.db.in-memory :as in-memory]
+            [more-speech.config :as config])
   (:import (javax.swing.tree DefaultMutableTreeNode)))
 
 (defn hexify [n] (util/num32->hex-string n))
@@ -17,6 +18,7 @@
 
 (describe "header tree"
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db)
           (clear-mem))
 
@@ -333,6 +335,7 @@
   (context "selecting nodes"
     (with-stubs)
     (with db (in-memory/get-db))
+    (before-all (config/set-db! :in-memory))
     (before (in-memory/clear-db @db))
 
     (it "remembers which articles have been read and loads article"
@@ -393,6 +396,7 @@
 (describe "adding events"
   (with-stubs)
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db)
           (clear-mem))
 
@@ -496,7 +500,7 @@
 (describe "adding ids to tabs"
   (with-stubs)
   (with db (in-memory/get-db))
-
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db))
 
   (it "adds an an unrooted article id to a tab"

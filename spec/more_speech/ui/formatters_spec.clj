@@ -4,7 +4,8 @@
             [more-speech.db.in-memory :as in-memory]
             [more-speech.ui.formatters :refer :all]
             [more-speech.ui.formatter-util :refer :all]
-            [more-speech.mem :refer :all]))
+            [more-speech.mem :refer :all]
+            [more-speech.config :as config]))
 
 (describe "Abbreviations."
   (it "abbreviates pubkeys"
@@ -14,6 +15,7 @@
 (declare db)
 (describe "format header"
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db)
           (set-mem :pubkey 99))
 
@@ -91,6 +93,7 @@
 
 (describe "Replacing References"
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db))
 
   (context "using #[n] and p tags"
@@ -141,6 +144,7 @@
 
 (describe "format-reply"
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db)
           (gateway/add-profile @db 1 {:name "user-1"})
           (gateway/add-profile @db 2 {:name "user-2"}))
@@ -248,7 +252,7 @@
 (declare db)
 (describe "Format User ID"
   (with db (in-memory/get-db))
-
+  (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db)
           (clear-mem))
   (it "shows untrusted pubkey if no profile or petname"
