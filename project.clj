@@ -11,7 +11,8 @@
                  [seesaw "1.5.0"]
                  [org.bouncycastle/bcprov-jdk18on "1.72"]
                  [com.xtdb/xtdb-core "1.23.0"]
-                 [com.xtdb/xtdb-rocksdb "1.23.0"]]
+                 [com.xtdb/xtdb-rocksdb "1.23.0"]
+                 [org.slf4j/slf4j-nop "1.7.30"]]
   :profiles {:dev {:dependencies [[speclj "3.4.1"]]}
              :uberjar {:aot :all}}
   :repositories {"local" {:url "file:lib" :username "" :password ""}}
