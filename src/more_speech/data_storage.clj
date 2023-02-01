@@ -66,7 +66,7 @@
     (relays/load-relays-from-file @config/relays-filename)))
 
 (defn load-events [old-events handler]
-  (loop [events old-events
+  (loop [events (reverse old-events)
          event-count 0]
     (if (empty? events)
       (prn 'done-loading-events)
