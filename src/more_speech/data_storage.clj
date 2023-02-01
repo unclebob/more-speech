@@ -41,11 +41,6 @@
   (prn 'configuration-written)
   )
 
-(defn write-messages []
-  (spit @config/messages-filename
-        (with-out-str
-          (clojure.pprint/pprint (get @in-memory/db :text-event-map)))))
-
 (defn load-configuration []
   (let [keys (read-string (slurp @config/keys-filename))
         pubkey (util/hex-string->num (:public-key keys))
@@ -81,14 +76,6 @@
             (prn 'EXCEPTION 'load-events)
             (prn e)))
         (recur (rest events) (inc event-count))))))
-
-(defn read-old-events [handler]
-  (let [old-events (vals (read-string (slurp @config/messages-filename)))
-        creation-times (map :created-at old-events)]
-    (load-events old-events handler)
-    (if (empty? creation-times)
-      (-> (System/currentTimeMillis) (quot 1000) (- 86400))
-      (apply max creation-times))))
 
 (defn partition-messages-by-day [message-map]
   (let [messages (sort-by :created-at (vals message-map))
