@@ -38,8 +38,7 @@
           exit-condition (main/start-nostr latest-old-message-time)]
       (prn 'starting-exit-process)
       (when (not (config/is-test-run?))
-        (data-storage/write-configuration)
-        (data-storage/write-changed-days))
+        (data-storage/write-configuration))
       (if (= exit-condition :relaunch)
         (do
           (invoke-now (.dispose (get-mem :frame)))

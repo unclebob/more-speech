@@ -138,13 +138,10 @@
   (re-matches #"\d+\-\d+\w+\d+" file-name))
 
 (defn load-event-file [file-name]
-  (loop [events (read-string (slurp file-name))]
-    (if (empty? events)
-      nil
-      (let [event (first events)
-            id (:id event)]
-        (gateway/add-event (config/get-db) id event)
-        (recur (rest events))))))
+  (let [events (read-string (slurp file-name))
+        total-events (count events)]
+    (prn 'loading total-events 'from file-name)
+    (gateway/add-events (config/get-db) events)))
 
 (defn migration-10-load-events []
   (when (file-exists? @config/messages-directory)
@@ -157,7 +154,6 @@
           (println "Done loading event files.\n")
           (let [file-name (first file-names)
                 file-path (str @config/messages-directory "/" file-name)]
-            (printf "Loading event file: %s\n" file-path)
             (load-event-file file-path)
             (rename-file file-path (str file-path ".migrated"))
             (recur (rest file-names)))))

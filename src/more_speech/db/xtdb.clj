@@ -11,6 +11,15 @@
                (assoc entity :xt/id {:type type :id id})]])]
     (xt/await-tx node tx)))
 
+(defn make-event-transaction [event]
+  [::xt/put (assoc event :xt/id {:type :event :id (:id event)})])
+
+(defn add-events [db events]
+  (let [event-transactions (map make-event-transaction events)
+        node (:node db)
+        tx (xt/submit-tx node event-transactions)]
+    (xt/await-tx node tx)))
+
 (defn get-entity [db type id]
   (dissoc
     (xt/entity (xt/db (:node db)) {:type type :id id})
@@ -38,6 +47,19 @@
 
 (defmethod gateway/get-event ::type [db id]
   (get-entity db :event id))
+
+(defmethod gateway/get-event-ids-since ::type [db start-time]
+  (let [node (:node db)
+        result (xt/q (xt/db node)
+                     '{:find [id event-time]
+                       :in [start-time]
+                       :where [[event :created-at event-time]
+                               [event :id id]
+                               [(>= event-time start-time)]]
+                       :order-by [[event-time :asc]]}
+                     start-time)]
+    (map first result))
+  )
 
 (defn delete-event [db id]
   (delete-entity db :event id))
@@ -81,7 +103,7 @@
                        :where [[profile :name user-name]
                                [profile :xt/id id]]})
         [{:keys [id]}] (first result)]
-        id))
+    id))
 
 ;--------- XTDB utilities
 

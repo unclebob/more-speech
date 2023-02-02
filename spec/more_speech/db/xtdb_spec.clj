@@ -3,7 +3,8 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.db.xtdb :as db]
             [more-speech.config :as config]
-            [more-speech.util.files :refer :all]))
+            [more-speech.util.files :refer :all]
+            [more-speech.db.xtdb :as xtdb]))
 
 (declare db)
 (describe "xtdb gateway implementations"
@@ -59,17 +60,29 @@
       (should= {:content "blah" :references ["reference"]}
                (gateway/get-event @db 1))
       (db/delete-event @db 1))
+
+    (it "loads a batch of events"
+      (xtdb/add-events @db [{:id 1 :content 1}
+                            {:id 2 :content 2}])
+      (should= {:id 1 :content 1} (gateway/get-event @db 1))
+      (should= {:id 2 :content 2} (gateway/get-event @db 2)))
+
+    (it "finds events after a certain time"
+      (xtdb/add-events @db [{:id 1 :created-at 1}
+                            {:id 2 :created-at 10}
+                            {:id 3 :created-at 11}])
+      (should= #{2 3}
+               (set (gateway/get-event-ids-since @db 10))))
+      )
+
+    (context "contacts"
+      (it "adds and fetches contacts"
+        (gateway/add-contacts @db 1 {:name "contact"})
+        (should= {:name "contact"} (gateway/get-contacts @db 1))
+        (db/delete-contacts @db 1)
+        (should-be-nil (gateway/get-contacts @db 1)))
+
+      )
     )
-
-  (context "contacts"
-    (it "adds and fetches contacts"
-      (gateway/add-contacts @db 1 {:name "contact"})
-      (should= {:name "contact"} (gateway/get-contacts @db 1))
-      (db/delete-contacts @db 1)
-      (should-be-nil (gateway/get-contacts @db 1)))
-
-
-    )
-  )
 
 

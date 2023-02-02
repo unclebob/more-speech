@@ -9,17 +9,13 @@
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatter-util :as fu]
             [more-speech.db.in-memory :as in-memory]
-            [more-speech.util.files :refer :all])
+            [more-speech.util.files :refer :all]
+            [more-speech.db.gateway :as gateway])
   (:import (java.util Date TimeZone Locale)
            (java.text SimpleDateFormat)))
 
 
 (defn write-configuration []
-  (prn 'writing-profiles)
-  (spit @config/profiles-filename
-        (with-out-str
-          (clojure.pprint/pprint (get @in-memory/db :profiles))))
-
   (prn 'writing-relays)
   (spit @config/relays-filename
         (with-out-str
@@ -34,11 +30,6 @@
   (spit @config/user-configuration-filename
         (with-out-str
           (clojure.pprint/pprint (user-configuration/get-config))))
-
-  (prn 'writing-contact-lists)
-  (spit @config/contact-lists-filename
-        (with-out-str
-          (clojure.pprint/pprint (get @in-memory/db :contact-lists))))
   (prn 'configuration-written)
   )
 
@@ -80,12 +71,10 @@
          event-count 0]
     (if (empty? events)
       (prn 'done-loading-events)
-      (let [event (first events)
-            urls (:relays event)]
+      (let [event (first events)]
         (when (zero? (rem event-count 100))
           (prn event-count 'events-loaded (fu/format-time (:created-at event))))
         (try
-          (handlers/add-event (get-db) event urls)
           (handlers/handle-text-event handler event)
           (catch Exception e
             (prn 'EXCEPTION 'load-events)
@@ -154,37 +143,18 @@
 
 (defn read-in-last-n-days [n handler]
   (prn 'read-in-last-n-days 'starting)
-  (let [message-directory (clojure.java.io/file @config/messages-directory)
-        files (.listFiles message-directory)
-        file-names (for [file files] (.getName file))
-        file-names (filter is-message-file? file-names)
-        file-names (take-last n (sort file-names))
-        first-file-name (first file-names)
-        last-file-name (last file-names)
-        _ (prn 'read-in-last-n-days 'last-file-name last-file-name)
-        first-time (time-from-file-name first-file-name)
-        last-time (if (nil? last-file-name)
-                    nil
-                    (get-last-event-time last-file-name))
-        _ (prn 'read-in-last-n-days 'last-time (fu/format-time last-time))
+  (let [db (get-db)
         now (quot (System/currentTimeMillis) 1000)
-        last-time (if (nil? last-time) (- now 86400) last-time)
-        first-time (if (nil? first-time) now first-time)]
+        start-time (- now (* n 86400))
+        event-ids (gateway/get-event-ids-since db start-time)
+        events (map #(gateway/get-event db %) event-ids)
+        times (map :created-at events)
+        last-time (if (empty? times)
+                    start-time
+                    (apply max times))
+        _ (prn 'read-in-last-n-days 'last-time (fu/format-time last-time))]
 
-    (set-mem :days-changed #{(quot last-time 86400)})
-    (set-mem :earliest-loaded-time first-time)
-    (future
-      (doseq [file-name (reverse file-names)]
-        (prn 'reading file-name)
-        (try
-          (let [file-data (slurp (str @config/messages-directory "/" file-name))
-                old-events (read-string file-data)]
-            (prn 'done-reading file-name 'loading-events)
-            (load-events old-events handler)
-            (prn 'done-loading-events file-name))
-          (catch Exception e
-            (prn 'EXCEPTION 'read-in-last-n-days 'reading file-name 'failed)
-            (prn e))))
-      (prn 'reading-files-complete))
+    (future (load-events events handler))
+    (prn 'reading-files-complete)
     last-time))
 

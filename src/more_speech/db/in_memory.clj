@@ -13,6 +13,11 @@
 (defmethod gateway/add-event ::type [db id event]
   (swap! (:data db) assoc-in [:text-event-map id] event))
 
+(defmethod gateway/add-events ::type [db events]
+  (when-let [event (first events)]
+    (gateway/add-event db (:id event) event)
+    (recur db (rest events))))
+
 (defmethod gateway/get-event ::type [db id]
   (get-in @(:data db) [:text-event-map id]))
 
