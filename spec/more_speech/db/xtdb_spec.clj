@@ -3,16 +3,7 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.db.xtdb :as db]
             [more-speech.config :as config]
-            [clojure.java.io :as io]))
-
-(defn delete-dir
-  [& fs]
-  (when-let [f (first fs)]
-    (if-let [cs (seq (.listFiles (io/file f)))]
-      (recur (concat cs fs))
-      (do
-        (io/delete-file f)
-        (recur (rest fs))))))
+            [more-speech.util.files :refer :all]))
 
 (declare db)
 (describe "xtdb gateway implementations"

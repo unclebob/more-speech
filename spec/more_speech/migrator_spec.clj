@@ -5,17 +5,8 @@
             [clojure.java.io :as io]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]))
-
-(defn delete-dir
-  [& fs]
-  (when-let [f (first fs)]
-    (when (file-exists? f)
-      (if-let [cs (seq (.listFiles (io/file f)))]
-        (recur (concat cs fs))
-        (do
-          (io/delete-file f)
-          (recur (rest fs)))))))
+            [more-speech.db.in-memory :as in-memory]
+            [more-speech.util.files :refer :all]))
 
 (defn change-to-tmp-files []
   (when (file-exists? "tmp")

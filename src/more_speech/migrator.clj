@@ -9,21 +9,8 @@
              [event-handlers :as handlers]]
             [more-speech.data-storage :as data-storage]
             [more-speech.user-configuration :as user-configuration]
-            [more-speech.db.gateway :as gateway]))
-
-(defn file-exists? [fname]
-  (.exists (io/file fname)))
-
-(defn is-directory? [fname]
-  (.isDirectory (io/file fname)))
-
-(defn delete-file [fname]
-  (when (file-exists? fname)
-    (io/delete-file fname)))
-
-(defn rename-file [fname to-fname]
-  (when (file-exists? fname)
-    (.renameTo (io/file fname) (io/file to-fname))))
+            [more-speech.db.gateway :as gateway]
+            [more-speech.util.files :refer :all]))
 
 ;---The Migrations
 
@@ -127,7 +114,8 @@
 
 (defn migrate-id-map-file [filename add-f]
   (when (file-exists? filename)
-    (let [id-map (read-string (slurp filename))]
+    (let [id-map (read-string (slurp filename))
+          n-ids (count (keys id-map))]
       (loop [ids (keys id-map)
              n-vals 0]
         (if (empty? ids)
@@ -135,11 +123,10 @@
           (let [id (first ids)
                 a-val (get id-map id)]
             (when (zero? (rem n-vals 100))
-              (prn n-vals 'id-map 'added))
+              (prn n-vals 'of n-ids 'in filename 'added))
             (add-f (config/get-db) id a-val)
             (recur (rest ids) (inc n-vals)))))
-      (rename-file filename (str filename ".migrated"))))
-  )
+      (rename-file filename (str filename ".migrated")))))
 
 (defn migration-10-load-profiles []
   (migrate-id-map-file @config/profiles-filename gateway/add-profile))

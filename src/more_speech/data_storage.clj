@@ -8,7 +8,8 @@
             [clojure.string :as string]
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatter-util :as fu]
-            [more-speech.db.in-memory :as in-memory])
+            [more-speech.db.in-memory :as in-memory]
+            [more-speech.util.files :refer :all])
   (:import (java.util Date TimeZone Locale)
            (java.text SimpleDateFormat)))
 
@@ -41,17 +42,31 @@
   (prn 'configuration-written)
   )
 
+(defn read-profiles []
+  (if (and (= :in-memory @config/db-type)
+           (file-exists? @config/profiles-filename))
+    (read-string (slurp @config/profiles-filename))
+    {}))
+
+(defn read-contact-lists []
+  (if (and (= :in-memory @config/db-type)
+           (file-exists? @config/contact-lists-filename))
+    (read-string (slurp @config/contact-lists-filename))
+    {}))
+
 (defn load-configuration []
   (let [keys (read-string (slurp @config/keys-filename))
         pubkey (util/hex-string->num (:public-key keys))
-        profiles (read-string (slurp @config/profiles-filename))
         tabs-list (tabs/ensure-tab-list-has-all
                     (read-string (slurp @config/tabs-list-filename)))
         user-configuration (user-configuration/validate
                              (read-string (slurp @config/user-configuration-filename)))
-        contact-lists (read-string (slurp @config/contact-lists-filename))]
-    (swap! in-memory/db assoc :contact-lists contact-lists)
-    (swap! in-memory/db assoc :profiles profiles)
+        profiles (read-profiles)
+        contact-lists (read-contact-lists)
+        ]
+    (when (= :in-memory @config/db-type)
+      (swap! in-memory/db assoc :contact-lists contact-lists)
+      (swap! in-memory/db assoc :profiles profiles))
     (set-mem :keys keys)
     (set-mem :pubkey pubkey)
     (set-mem :tabs-list tabs-list)

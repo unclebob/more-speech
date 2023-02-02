@@ -12,8 +12,8 @@
 (def days-to-read 3) ;how many daily message files to read in.
 (def read-contact-lists-days-ago 2)
 
-(def migration-level 9)
-(def version "2023-01-19T10:55")
+(def migration-level 10)
+(def version "2023-02-02T10:17")
 
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)
