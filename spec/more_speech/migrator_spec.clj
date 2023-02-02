@@ -3,9 +3,23 @@
             [more-speech.migrator :refer :all]
             [more-speech.config :as config]
             [clojure.java.io :as io]
-            [more-speech.user-configuration :as user-configuration]))
+            [more-speech.user-configuration :as user-configuration]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory]))
+
+(defn delete-dir
+  [& fs]
+  (when-let [f (first fs)]
+    (when (file-exists? f)
+      (if-let [cs (seq (.listFiles (io/file f)))]
+        (recur (concat cs fs))
+        (do
+          (io/delete-file f)
+          (recur (rest fs)))))))
 
 (defn change-to-tmp-files []
+  (when (file-exists? "tmp")
+    (delete-dir "tmp"))
   (reset! config/private-directory "tmp")
   (reset! config/migration-filename "tmp/migration")
   (reset! config/nicknames-filename "tmp/nicknames")        ;grandfathered
@@ -23,21 +37,8 @@
   (prn 'changed-to-tmp)
   )
 
-
-(defn delete-all-files-in [dir]
-  (let [files (.listFiles (io/file dir))]
-    (doseq [file files]
-      (let [fname (str dir "/" (.getName file))]
-        (delete-file fname))))
-  )
-
-(defn delete-all-tmp-files []
-  (delete-all-files-in "tmp/messages")
-  (delete-all-files-in "tmp"))
-
 (defn revert-from-tmp []
-  (delete-all-tmp-files)
-  (delete-file "tmp")
+  (delete-dir "tmp")
   (reset! config/private-directory "private")
   (reset! config/migration-filename "private/migration")
   (reset! config/nicknames-filename "private/nicknames")    ;grandfathered
@@ -53,10 +54,13 @@
   (reset! config/contact-lists-filename "private/contact-lists")
   )
 
+(declare db)
+
 (describe "The Migrator"
   (with-stubs)
   (before-all (change-to-tmp-files))
-  (after (delete-all-tmp-files))
+  (after (delete-dir "tmp")
+         (.mkdir (io/file "tmp")))
   (after-all (revert-from-tmp))
 
   (context "the migration framework"
@@ -225,4 +229,75 @@
       (migration-9-contact-lists)
       (should (file-exists? @config/contact-lists-filename))
       (should= {} (read-string (slurp @config/contact-lists-filename)))))
+
+  (context "migration 10 XTDB database"
+    (with db (in-memory/get-db))
+    (before-all (config/set-db! :in-memory))
+    (before (in-memory/clear-db @db))
+
+    (it "does not load profiles if no profile file is found"
+      (with-redefs [gateway/add-profile (stub :add-profile)]
+        (migration-10-load-profiles)
+        (should-not-have-invoked :add-profile)))
+
+    (it "loads profiles"
+      (spit @config/profiles-filename {1 {:name "user 1"}
+                                       2 {:name "user 2"}})
+      (migration-10-load-profiles)
+      (should= {:name "user 1"} (gateway/get-profile @db 1))
+      (should= {:name "user 2"} (gateway/get-profile @db 2))
+      (should-not (file-exists? @config/profiles-filename))
+      (should (file-exists? (str @config/profiles-filename ".migrated"))))
+
+    (it "does not load contacts if no contacts file is found"
+      (with-redefs [gateway/add-contacts (stub :add-contacts)]
+        (migration-10-load-contacts)
+        (should-not-have-invoked :add-contacts)))
+
+    (it "loads contacts"
+      (spit @config/contact-lists-filename
+            {1 [{:pubkey 99 :petname "pet-99"}
+                {:pubkey 98 :petname "pet-98"}]
+             2 [{:pubkey 97 :petname "pet-97"}
+                {:pubkey 96 :petname "pet-96"}]})
+      (migration-10-load-contacts)
+      (should= [{:pubkey 99 :petname "pet-99"}
+                {:pubkey 98 :petname "pet-98"}]
+               (gateway/get-contacts @db 1))
+      (should= [{:pubkey 97 :petname "pet-97"}
+                {:pubkey 96 :petname "pet-96"}]
+               (gateway/get-contacts @db 2))
+      (should-not (file-exists? @config/contact-lists-filename))
+      (should (file-exists? (str @config/contact-lists-filename ".migrated"))))
+
+    (it "does not load events if there are no event files"
+      (with-redefs [gateway/add-event (stub :add-event)]
+        (migration-10-load-events)
+        (should-not-have-invoked :add-event)))
+
+    (it "loads events from all matching event files"
+      (let [dir @config/messages-directory
+            f1 "/1-1jan23"
+            f2 "/2-2jan23"
+            path1 (str dir f1)
+            path2 (str dir f2)
+            renamed-dir (str @config/messages-directory ".migrated")]
+        (.mkdir (io/file "tmp/messages"))
+        (spit path1 [{:id 1 :content "c1"}
+                  {:id 2 :content "c2"}])
+        (spit path2 [{:id 3 :content "c3"}
+                  {:id 4 :content "c4"}])
+        (migration-10-load-events)
+        (should= {:id 1 :content "c1"} (gateway/get-event @db 1))
+        (should= {:id 2 :content "c2"} (gateway/get-event @db 2))
+        (should= {:id 3 :content "c3"} (gateway/get-event @db 3))
+        (should= {:id 4 :content "c4"} (gateway/get-event @db 4))
+        (should-not (file-exists? @config/messages-directory))
+        (should-not (file-exists? path1))
+        (should-not (file-exists? path2))
+        (should (file-exists? renamed-dir))
+        (should (file-exists? (str renamed-dir f1 ".migrated")))
+        (should (file-exists? (str renamed-dir f2 ".migrated")))
+        (prn 'got-here)))
+    )
   )

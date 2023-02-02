@@ -8,7 +8,8 @@
              [elliptic-signature :as ecc]
              [event-handlers :as handlers]]
             [more-speech.data-storage :as data-storage]
-            [more-speech.user-configuration :as user-configuration]))
+            [more-speech.user-configuration :as user-configuration]
+            [more-speech.db.gateway :as gateway]))
 
 (defn file-exists? [fname]
   (.exists (io/file fname)))
@@ -19,6 +20,10 @@
 (defn delete-file [fname]
   (when (file-exists? fname)
     (io/delete-file fname)))
+
+(defn rename-file [fname to-fname]
+  (when (file-exists? fname)
+    (.renameTo (io/file fname) (io/file to-fname))))
 
 ;---The Migrations
 
@@ -118,6 +123,66 @@
     @config/contact-lists-filename {})
   )
 
+;--- Migration 10 XTDB database conversion
+
+(defn migrate-id-map-file [filename add-f]
+  (when (file-exists? filename)
+    (let [id-map (read-string (slurp filename))]
+      (loop [ids (keys id-map)
+             n-vals 0]
+        (if (empty? ids)
+          (prn n-vals 'from filename 'added)
+          (let [id (first ids)
+                a-val (get id-map id)]
+            (when (zero? (rem n-vals 100))
+              (prn n-vals 'id-map 'added))
+            (add-f (config/get-db) id a-val)
+            (recur (rest ids) (inc n-vals)))))
+      (rename-file filename (str filename ".migrated"))))
+  )
+
+(defn migration-10-load-profiles []
+  (migrate-id-map-file @config/profiles-filename gateway/add-profile))
+
+(defn migration-10-load-contacts []
+  (migrate-id-map-file @config/contact-lists-filename gateway/add-contacts))
+
+(defn is-message-file? [file-name]
+  (re-matches #"\d+\-\d+\w+\d+" file-name))
+
+(defn load-event-file [file-name]
+  (loop [events (read-string (slurp file-name))]
+    (if (empty? events)
+      nil
+      (let [event (first events)
+            id (:id event)]
+        (gateway/add-event (config/get-db) id event)
+        (recur (rest events))))))
+
+(defn migration-10-load-events []
+  (when (file-exists? @config/messages-directory)
+    (let [message-directory (io/file @config/messages-directory)
+          files (.listFiles message-directory)
+          file-names (for [file files] (.getName file))
+          file-names (filter is-message-file? file-names)]
+      (loop [file-names file-names]
+        (if (empty? file-names)
+          (println "Done loading event files.\n")
+          (let [file-name (first file-names)
+                file-path (str @config/messages-directory "/" file-name)]
+            (printf "Loading event file: %s\n" file-path)
+            (load-event-file file-path)
+            (rename-file file-path (str file-path ".migrated"))
+            (recur (rest file-names)))))
+      (rename-file @config/messages-directory (str @config/messages-directory ".migrated")))))
+
+(defn migration-10-XTDB-converstion []
+  (migration-10-load-profiles)
+  (migration-10-load-contacts)
+  (migration-10-load-events))
+
+
+
 
 ;---------- The Migrations List -------
 
@@ -130,6 +195,7 @@
                        7 migration-7-break-messages-into-daily-files
                        8 migration-8-user-configuration
                        9 migration-9-contact-lists
+                       10 migration-10-XTDB-converstion
                        }))
 
 ;--------------------------------------
@@ -166,3 +232,5 @@
                 (recur (rest levels))))))
         (set-migration-level level))
       (throw (Exception. (format "Missing migrations %s." (vec missing-levels)))))))
+
+
