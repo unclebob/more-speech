@@ -105,7 +105,7 @@
                 [:e "0002" "anotherurl"]] (:tags event))))
 
   (it "adds references to tagged articles."
-    (gateway/add-event @db 2 {:id 2})
+    (gateway/add-event @db {:id 2})
     (add-cross-reference @db @event)
     (let [article (gateway/get-event @db 2)]
       (should= [0xdeadbeef] (:references article)))

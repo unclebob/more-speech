@@ -25,43 +25,49 @@
       (gateway/add-profile @db 1 {:name "name"})
       (should= 1 (gateway/get-id-from-username @db "name"))))
 
+  (it "adds a map of profiles"
+    (gateway/add-profiles-map @db {1 {:name "n1"}
+                                2 {:name "n2"}})
+    (should= {:name "n1"} (gateway/get-profile @db 1))
+    (should= {:name "n2"} (gateway/get-profile @db 2)))
+
   (context "events"
     (it "adds and fetches events"
-      (let [event {:content "content"}]
-        (gateway/add-event @db 1 event)
+      (let [event {:id 1 :content "content"}]
+        (gateway/add-event @db event)
         (should= event (gateway/get-event @db 1)))
       (db/delete-event @db 1)
       (should-be-nil (gateway/get-event @db 1)))
 
     (it "checks whether events exist"
-      (gateway/add-event @db 1 {:content "blah"})
+      (gateway/add-event @db {:id 1 :content "blah"})
       (should (gateway/event-exists? @db 1))
       (should-not (gateway/event-exists? @db 2))
       (db/delete-event @db 1)
       (should-not (gateway/event-exists? @db 1)))
 
     (it "updates events as read"
-      (gateway/add-event @db 1 {:content "blah"})
+      (gateway/add-event @db {:id 1 :content "blah"})
       (gateway/update-event-as-read @db 1)
-      (should= {:content "blah" :read true}
+      (should= {:id 1N :content "blah" :read true}
                (gateway/get-event @db 1))
       (db/delete-event @db 1))
 
     (it "adds relays to events"
-      (gateway/add-event @db 1 {:content "blah"})
+      (gateway/add-event @db {:id 1 :content "blah"})
       (gateway/add-relays-to-event @db 1 ["r1" "r2"])
-      (should= {:content "blah" :relays #{"r1" "r2"}}
+      (should= {:id 1N :content "blah" :relays #{"r1" "r2"}}
                (gateway/get-event @db 1))
       (db/delete-event @db 1))
 
     (it "adds a reference to an event"
-      (gateway/add-event @db 1 {:content "blah"})
+      (gateway/add-event @db {:id 1 :content "blah"})
       (gateway/add-reference-to-event @db 1 "reference")
-      (should= {:content "blah" :references ["reference"]}
+      (should= {:id 1 :content "blah" :references ["reference"]}
                (gateway/get-event @db 1))
       (db/delete-event @db 1))
 
-    (it "loads a batch of events"
+    (it "adds a batch of events"
       (xtdb/add-events @db [{:id 1 :content 1}
                             {:id 2 :content 2}])
       (should= {:id 1 :content 1} (gateway/get-event @db 1))
@@ -73,16 +79,32 @@
                             {:id 3 :created-at 11}])
       (should= #{2 3}
                (set (gateway/get-event-ids-since @db 10))))
-      )
-
-    (context "contacts"
-      (it "adds and fetches contacts"
-        (gateway/add-contacts @db 1 {:name "contact"})
-        (should= {:name "contact"} (gateway/get-contacts @db 1))
-        (db/delete-contacts @db 1)
-        (should-be-nil (gateway/get-contacts @db 1)))
-
-      )
     )
+
+  (context "contacts"
+    (it "adds and fetches contacts"
+      (gateway/add-contacts @db 1 {:name "contact"})
+      (should= {:name "contact"} (gateway/get-contacts @db 1))
+      (db/delete-contacts @db 1)
+      (should-be-nil (gateway/get-contacts @db 1)))
+
+    (it "adds a batch of contacts"
+      (gateway/add-contacts-map @db {1 [{:pubkey 99} {:pubkey 98}]
+                                  2 [{:pubkey 97} {:pubkey 96}]})
+      (let [contacts1 (gateway/get-contacts @db 1)
+            contacts2 (gateway/get-contacts @db 2)
+            pubkeys1 (map :pubkey contacts1)
+            pubkeys2 (map :pubkey contacts2)
+            pubkeys (concat pubkeys1 pubkeys2)]
+        (should= [{:pubkey 99} {:pubkey 98}]
+                 contacts1)
+        (should= [{:pubkey 97} {:pubkey 96}]
+                 contacts2)
+        (should (every? #(= (type 1N) (type %)) pubkeys))
+        )
+      )
+
+    )
+  )
 
 

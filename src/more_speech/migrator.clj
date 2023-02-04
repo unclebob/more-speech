@@ -116,23 +116,15 @@
   (when (file-exists? filename)
     (let [id-map (read-string (slurp filename))
           n-ids (count (keys id-map))]
-      (loop [ids (keys id-map)
-             n-vals 0]
-        (if (empty? ids)
-          (prn n-vals 'from filename 'added)
-          (let [id (first ids)
-                a-val (get id-map id)]
-            (when (zero? (rem n-vals 100))
-              (prn n-vals 'of n-ids 'in filename 'added))
-            (add-f (config/get-db) id a-val)
-            (recur (rest ids) (inc n-vals)))))
+      (prn 'adding n-ids 'records 'from filename)
+      (add-f (config/get-db) id-map)
       (rename-file filename (str filename ".migrated")))))
 
 (defn migration-10-load-profiles []
-  (migrate-id-map-file @config/profiles-filename gateway/add-profile))
+  (migrate-id-map-file @config/profiles-filename gateway/add-profiles-map))
 
 (defn migration-10-load-contacts []
-  (migrate-id-map-file @config/contact-lists-filename gateway/add-contacts))
+  (migrate-id-map-file @config/contact-lists-filename gateway/add-contacts-map))
 
 (defn is-message-file? [file-name]
   (re-matches #"\d+\-\d+\w+\d+" file-name))

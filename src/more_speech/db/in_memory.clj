@@ -4,18 +4,27 @@
 (defmethod gateway/add-profile ::type [db id profile]
   (swap! (:data db) update-in [:profiles] assoc id profile))
 
+(defmethod gateway/add-profiles-map ::type [db profiles-map]
+  (loop [ids (keys profiles-map)]
+    (if (empty? ids)
+      nil
+      (let [id (first ids)]
+        (gateway/add-profile db id (get profiles-map id))
+        (recur (rest ids))))))
+
 (defmethod gateway/get-profile ::type [db id]
   (get-in @(:data db) [:profiles id]))
 
 (defmethod gateway/event-exists? ::type [db id]
   (contains? (:text-event-map @(:data db)) id))
 
-(defmethod gateway/add-event ::type [db id event]
-  (swap! (:data db) assoc-in [:text-event-map id] event))
+(defmethod gateway/add-event ::type [db event]
+  (let [id (:id event)]
+    (swap! (:data db) assoc-in [:text-event-map id] event)))
 
 (defmethod gateway/add-events ::type [db events]
   (when-let [event (first events)]
-    (gateway/add-event db (:id event) event)
+    (gateway/add-event db event)
     (recur db (rest events))))
 
 (defmethod gateway/get-event ::type [db id]
@@ -35,6 +44,14 @@
 
 (defmethod gateway/add-contacts ::type [db user-id contacts]
   (swap! (:data db) assoc-in [:contact-lists user-id] contacts))
+
+(defmethod gateway/add-contacts-map ::type [db contacts-map]
+  (loop [ids (keys contacts-map)]
+    (if (empty? ids)
+      nil
+      (let [id (first ids)]
+        (gateway/add-contacts db id (get contacts-map id))
+        (recur (rest ids))))))
 
 (defmethod gateway/get-contacts ::type [db user-id]
   (get-in @(:data db) [:contact-lists user-id]))

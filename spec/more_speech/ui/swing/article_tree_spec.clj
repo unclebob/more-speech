@@ -25,7 +25,7 @@
   (context "finding chronological insertion point"
     (it "returns zero if empty tree"
       (let [root (DefaultMutableTreeNode.)
-            _ (gateway/add-event @db 99 {:id 99 :created-at 1})
+            _ (gateway/add-event @db {:id 99 :created-at 1})
             insertion-point (find-chronological-insertion-point root 99)]
         (should= 0 insertion-point)))
 
@@ -34,8 +34,8 @@
             child-id 1
             child (DefaultMutableTreeNode. child-id)
             _ (.add ^DefaultMutableTreeNode root child)
-            _ (gateway/add-event @db 99 {:id 99 :created-at 20})
-            _ (gateway/add-event @db child-id {:created-at 10})
+            _ (gateway/add-event @db {:id 99 :created-at 20})
+            _ (gateway/add-event @db {:id child-id :created-at 10})
             insertion-point (find-chronological-insertion-point root 99)]
         (should= 0 insertion-point)))
 
@@ -44,8 +44,8 @@
             child-id 1
             child (DefaultMutableTreeNode. child-id)
             _ (.add ^DefaultMutableTreeNode root child)
-            _ (gateway/add-event @db 99 {:id 99 :created-at 5})
-            _ (gateway/add-event @db child-id {:created-at 10})
+            _ (gateway/add-event @db {:id 99 :created-at 5})
+            _ (gateway/add-event @db {:id child-id :created-at 10})
             insertion-point (find-chronological-insertion-point root 99)]
         (should= 1 insertion-point))
       )
@@ -60,11 +60,11 @@
             _ (.add ^DefaultMutableTreeNode root child-2)
             _ (.add ^DefaultMutableTreeNode root child-3)
             event-map {99 {:id 99 :created-at 5}
-                       child-id {:created-at 10}
-                       (+ 1 child-id) {:created-at 10}
-                       (+ 2 child-id) {:created-at 10}}
+                       child-id {:id child-id :created-at 10}
+                       (+ 1 child-id) {:id (+ 1 child-id) :created-at 10}
+                       (+ 2 child-id) {:id (+ 2 child-id) :created-at 10}}
             _ (doseq [id (keys event-map)]
-                (gateway/add-event @db id (get event-map id)))
+                (gateway/add-event @db (get event-map id)))
             insertion-point (find-chronological-insertion-point root 99)]
         (should= 3 insertion-point)))
 
@@ -78,11 +78,11 @@
             _ (.add ^DefaultMutableTreeNode root child-2)
             _ (.add ^DefaultMutableTreeNode root child-3)
             event-map {99 {:id 99 :created-at 15}
-                       child-id {:created-at 30}
-                       (+ 1 child-id) {:created-at 20}
-                       (+ 2 child-id) {:created-at 10}}
+                       child-id {:id child-id :created-at 30}
+                       (+ 1 child-id) {:id (+ 1 child-id) :created-at 20}
+                       (+ 2 child-id) {:id (+ 2 child-id) :created-at 10}}
             _ (doseq [id (keys event-map)]
-                (gateway/add-event @db id (get event-map id)))
+                (gateway/add-event @db (get event-map id)))
             insertion-point (find-chronological-insertion-point root 99)]
         (should= 2 insertion-point))
       )
@@ -97,11 +97,11 @@
             _ (.add ^DefaultMutableTreeNode root child-2)
             _ (.add ^DefaultMutableTreeNode root child-3)
             event-map {99 {:id 99 :created-at 20}
-                       child-id {:created-at 10}
-                       (+ 1 child-id) {:created-at 20}
-                       (+ 2 child-id) {:created-at 30}}
+                       child-id {:id child-id :created-at 10}
+                       (+ 1 child-id) {:id (+ 1 child-id) :created-at 20}
+                       (+ 2 child-id) {:id (+ 2 child-id) :created-at 30}}
             _ (doseq [id (keys event-map)]
-                (gateway/add-event @db id (get event-map id)))
+                (gateway/add-event @db (get event-map id)))
             insertion-point (find-chronological-insertion-point root 99)]
         (should= 1 insertion-point))
       )
@@ -345,7 +345,7 @@
 
         (let [selected-event-id 1
               _ (set-mem :back-count 1)
-              _ (gateway/add-event @db selected-event-id {:content "event"})
+              _ (gateway/add-event @db {:id selected-event-id :content "event"})
               selected-node (DefaultMutableTreeNode. selected-event-id)
               tab-index 0
               _ (select-article tab-index selected-node)
@@ -375,7 +375,7 @@
 
 (defn add-events [db event-list]
   (doseq [event event-list]
-    (gateway/add-event db (:id event) event)
+    (gateway/add-event db event)
     (add-event event)))
 
 (defn events->tree [db event-list]
@@ -504,7 +504,7 @@
   (before (in-memory/clear-db @db))
 
   (it "adds an an unrooted article id to a tab"
-    (gateway/add-event @db 1 {:tags []})
+    (gateway/add-event @db {:id 1 :tags []})
     (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
                   swing-util/relaunch (stub :relaunch)]
       (add-article-to-tab 1 "tab" nil)
@@ -513,8 +513,8 @@
 
   (it "adds the root id of a thread to a tab"
     (let [root-id 100
-          event {:tags [[:e (hexify root-id) "" "root"]]}]
-      (gateway/add-event @db 1 event)
+          event {:id 1 :tags [[:e (hexify root-id) "" "root"]]}]
+      (gateway/add-event @db event)
       (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
                     swing-util/relaunch (stub :relaunch)]
         (add-article-to-tab 1 "tab" nil)

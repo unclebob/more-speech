@@ -9,7 +9,7 @@
   (before (in-memory/clear-db @db))
 
   (it "checks for existing event"
-    (gateway/add-event @db 1 {:content "event"})
+    (gateway/add-event @db {:id 1 :content "event"})
     (should (gateway/event-exists? @db 1))
     (should-not (gateway/event-exists? @db 2)))
   )

@@ -100,12 +100,12 @@
               root-id 7734
               root-id-hex (hexify root-id)
               root-author 99
-              root-event {:pubkey root-author :tags []}
+              root-event {:id root-id :pubkey root-author :tags []}
               _ (reset! (get-mem)
                         {:keys {:private-key (bytes->hex-string private-key)
                                 :public-key (bytes->hex-string public-key)}
                          :pubkey public-key})
-              _ (gateway/add-event @db root-id root-event)
+              _ (gateway/add-event @db root-event)
               text "message text"
               event (compose-text-event "" text root-id)
               {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -131,16 +131,17 @@
               root-id 1952
               root-id-hex (hexify root-id)
               root-author 99
-              root-event {:pubkey root-author :tags []}
-              root-child-event {:pubkey root-child-author
+              root-event {:id root-id :pubkey root-author :tags []}
+              root-child-event {:id root-child-id
+                                :pubkey root-child-author
                                 :tags [[:e root-id-hex]
                                        [:p (hexify root-author)]]}
               _ (reset! (get-mem)
                         {:keys {:private-key (bytes->hex-string private-key)
                                 :public-key (bytes->hex-string public-key)}
                          :pubkey public-key})
-              _ (gateway/add-event @db root-id root-event)
-              _ (gateway/add-event @db root-child-id root-child-event)
+              _ (gateway/add-event @db root-event)
+              _ (gateway/add-event @db root-child-event)
               text "message text"
               event (compose-text-event "" text root-child-id)
               {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -166,11 +167,13 @@
               root-id 7734
               root-id-hex (hexify root-id)
               root-author 99
-              root-event {:pubkey root-author :tags [[:p (hexify author)]]}
+              root-event {:id root-id
+                          :pubkey root-author
+                          :tags [[:p (hexify author)]]}
               _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
                                           :public-key (bytes->hex-string public-key)}
                                    :pubkey public-key})
-              _ (gateway/add-event @db root-id root-event)
+              _ (gateway/add-event @db root-event)
               event (compose-text-event "" "message" root-id)
               {:keys [tags]} (second event)]
 

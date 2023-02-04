@@ -8,11 +8,12 @@
         tx (xt/submit-tx
              node
              [[::xt/put
-               (assoc entity :xt/id {:type type :id id})]])]
+               (assoc entity :xt/id {:type type :id (bigint id)})]])]
     (xt/await-tx node tx)))
 
 (defn make-event-transaction [event]
-  [::xt/put (assoc event :xt/id {:type :event :id (:id event)})])
+  (let [id (bigint (:id event))]
+    [::xt/put (assoc event :id id :xt/id {:type :event :id id})]))
 
 (defn add-events [db events]
   (let [event-transactions (map make-event-transaction events)
@@ -20,14 +21,59 @@
         tx (xt/submit-tx node event-transactions)]
     (xt/await-tx node tx)))
 
+(defn make-profile-transaction [id profile]
+  (let [id (bigint id)]
+    [::xt/put (assoc profile :xt/id {:type :profile :id id})]))
+
+(defn make-profile-transactions [profiles-map]
+  (loop [ids (keys profiles-map)
+         transactions []]
+    (if (empty? ids)
+      transactions
+      (let [id (first ids)
+            profile (get profiles-map id)]
+        (recur (rest ids) (conj transactions (make-profile-transaction id profile)))))))
+
+(defmethod gateway/add-profiles-map ::type [db profiles-map]
+  (let [node (:node db)
+        profile-transactions (make-profile-transactions profiles-map)
+        tx (xt/submit-tx node profile-transactions)]
+    (xt/await-tx node tx)))
+
+(defn make-one-contacts-transaction [id contacts]
+  (let [id (bigint id)]
+    [::xt/put {:contacts contacts :xt/id {:type :contacts :id id}}]))
+
+(defn fix-contacts [contacts]
+  (for [contact contacts]
+    (update contact :pubkey bigint)))
+
+(defn make-contacts-transactions [contacts-map]
+  (loop [ids (keys contacts-map)
+         transactions []]
+    (if (empty? ids)
+      transactions
+      (let [id (first ids)
+            contacts (get contacts-map id)
+            fixed-contacts (fix-contacts contacts)]
+        (recur (rest ids) (conj transactions (make-one-contacts-transaction id fixed-contacts)))))))
+
+(defmethod gateway/add-contacts-map ::type [db contacts-map]
+  (let [node (:node db)
+        transaction (make-contacts-transactions contacts-map)
+        tx (xt/submit-tx node transaction)]
+    (xt/await-tx node tx)))
+
+
+
 (defn get-entity [db type id]
   (dissoc
-    (xt/entity (xt/db (:node db)) {:type type :id id})
+    (xt/entity (xt/db (:node db)) {:type type :id (bigint id)})
     :xt/id))
 
 (defn delete-entity [db type id]
   (let [node (:node db)
-        tx (xt/submit-tx node [[::xt/evict {:type type :id id}]])]
+        tx (xt/submit-tx node [[::xt/evict {:type type :id (bigint id)}]])]
     (xt/await-tx node tx)))
 
 (defmethod gateway/add-profile ::type [db id profile]
@@ -42,8 +88,10 @@
 (defmethod gateway/event-exists? ::type [db id]
   (some? (gateway/get-event db id)))
 
-(defmethod gateway/add-event ::type [db id event]
-  (add-entity db :event id event))
+(defmethod gateway/add-event ::type [db event]
+  (let [id (:id event)
+        event (assoc event :id (bigint id))]
+    (add-entity db :event id event)))
 
 (defmethod gateway/get-event ::type [db id]
   (get-entity db :event id))
@@ -67,7 +115,7 @@
 (defmethod gateway/update-event-as-read ::type [db id]
   (let [node (:node db)
         tx (xt/submit-tx node [[::xt/fn :assoc-entity
-                                {:type :event :id id}
+                                {:type :event :id (bigint id)}
                                 :read true]])]
     (xt/await-tx node tx))
   )
@@ -75,14 +123,14 @@
 (defmethod gateway/add-relays-to-event ::type [db id relays]
   (let [node (:node db)
         tx (xt/submit-tx node [[::xt/fn :update-relays
-                                {:type :event :id id}
+                                {:type :event :id (bigint id)}
                                 relays]])]
     (xt/await-tx node tx)))
 
 (defmethod gateway/add-reference-to-event ::type [db id reference]
   (let [node (:node db)
         tx (xt/submit-tx node [[::xt/fn :add-reference
-                                {:type :event :id id}
+                                {:type :event :id (bigint id)}
                                 reference]])]
     (xt/await-tx node tx))
   )

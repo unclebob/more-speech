@@ -59,7 +59,7 @@
   (let [id (:id event)
         time (:created-at event)]
     (when-not (gateway/event-exists? db id)
-      (gateway/add-event db id event)
+      (gateway/add-event db event)
       (add-cross-reference db event)
       (set-mem :days-changed (conj (get-mem :days-changed) (quot time 86400))))
     (gateway/add-relays-to-event db id urls)))
@@ -174,7 +174,9 @@
   (prn 'NOTICE url envelope))
 
 (defn handle-event [_agent envelope url]
-  (count-event envelope url)
+  (if (not (.startsWith (second envelope) "more-speech"))
+    (prn 'strange-message-source url envelope)
+    (count-event envelope url))
   (if (not= "EVENT" (first envelope))
     (handle-notification envelope url)
     (try
