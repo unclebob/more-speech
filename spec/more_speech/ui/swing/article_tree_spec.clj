@@ -401,18 +401,18 @@
           (clear-mem))
 
   (it "adds one event"
-    (should= ["Root" [99]]
+    (should= [0 [99]]
              (events->tree @db
                            [{:id 99}])))
 
   (it "adds two events"
-    (should= ["Root" [99] [88]]
+    (should= [0 [99] [88]]
              (events->tree @db
                            [{:id 99 :created-at 2}
                             {:id 88 :created-at 1}])))
 
   (it "adds four events and keeps them in reverse chronological order"
-    (should= ["Root" [66] [77] [88] [99]]
+    (should= [0 [66] [77] [88] [99]]
              (events->tree @db
                            [{:id 99 :created-at 1}
                             {:id 88 :created-at 2}
@@ -420,19 +420,19 @@
                             {:id 66 :created-at 4}])))
 
   (it "adds an event, and a reply when received in order."
-    (should= ["Root" [88] [99 [88]]]
+    (should= [0 [88] [99 [88]]]
              (events->tree @db
                            [{:id 99 :created-at 1}
                             {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}])))
 
   (it "adds an event, and a reply when received out of order."
-    (should= ["Root" [88] [99 [88]]]
+    (should= [0 [88] [99 [88]]]
              (events->tree @db
                            [{:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
                             {:id 99 :created-at 1}])))
 
   (it "adds a complex chain of replies in order."
-    (should= ["Root" [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]]
+    (should= [0 [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]]
              (events->tree @db
                            [{:id 99 :created-at 1}
                             {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
@@ -441,14 +441,14 @@
                             {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in order."
-    (should= ["Root" [77] [88 [77]] [99 [88 [77]]]]
+    (should= [0 [77] [88 [77]] [99 [88 [77]]]]
              (events->tree @db
                            [{:id 99 :created-at 1}
                             {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
                             {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in reverse order."
-    (should= ["Root" [77] [88 [77]] [99 [88 [77]]]]
+    (should= [0 [77] [88 [77]] [99 [88 [77]]]]
              (events->tree @db
                            (reverse
                              [{:id 99 :created-at 1}
@@ -456,7 +456,7 @@
                               {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}]))))
 
   (it "adds a complex chain of replies in reverse order."
-    (should= ["Root" [55] [66] [77 [66]] [88 [55] [77 [66]]] [99 [88 [55] [77 [66]]]]]
+    (should= [0 [55] [66] [77 [66]] [88 [55] [77 [66]]] [99 [88 [55] [77 [66]]]]]
              (events->tree @db
                            (reverse
                              [{:id 99 :created-at 1}
