@@ -11,16 +11,6 @@
                (assoc entity :xt/id {:type type :id (bigint id)})]])]
     (xt/await-tx node tx)))
 
-(defn make-event-transaction [event]
-  (let [id (bigint (:id event))]
-    [::xt/put (assoc event :id id :xt/id {:type :event :id id})]))
-
-(defn add-events [db events]
-  (let [event-transactions (map make-event-transaction events)
-        node (:node db)
-        tx (xt/submit-tx node event-transactions)]
-    (xt/await-tx node tx)))
-
 (defn make-profile-transaction [id profile]
   (let [id (bigint id)]
     [::xt/put (assoc profile :xt/id {:type :profile :id id})]))
@@ -46,7 +36,9 @@
 
 (defn fix-contacts [contacts]
   (for [contact contacts]
-    (update contact :pubkey bigint)))
+    (if (nil? (:pubkey contact))
+      contact
+      (update contact :pubkey bigint))))
 
 (defn make-contacts-transactions [contacts-map]
   (loop [ids (keys contacts-map)
@@ -63,8 +55,6 @@
         transaction (make-contacts-transactions contacts-map)
         tx (xt/submit-tx node transaction)]
     (xt/await-tx node tx)))
-
-
 
 (defn get-entity [db type id]
   (dissoc
@@ -95,6 +85,16 @@
 
 (defmethod gateway/get-event ::type [db id]
   (get-entity db :event id))
+
+(defn make-event-transaction [event]
+  (let [id (bigint (:id event))]
+    [::xt/put (assoc event :id id :xt/id {:type :event :id id})]))
+
+(defmethod gateway/add-events ::type [db events]
+  (let [event-transactions (map make-event-transaction events)
+        node (:node db)
+        tx (xt/submit-tx node event-transactions)]
+    (xt/await-tx node tx)))
 
 (defmethod gateway/get-event-ids-since ::type [db start-time]
   (let [node (:node db)

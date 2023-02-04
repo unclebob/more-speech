@@ -125,7 +125,7 @@
   (let [header-tree (tree :renderer render-event
                           :root-visible? false
                           :expands-selected-paths? true
-                          :model (DefaultTreeModel. (DefaultMutableTreeNode. "Root")))
+                          :model (DefaultTreeModel. (DefaultMutableTreeNode. 0)))
         renderer (.getCellRenderer header-tree)
         _ (.setBackgroundSelectionColor renderer (color :azure))]
     (listen header-tree :selection (partial node-selected tab-index))
@@ -232,7 +232,7 @@
 
 (defn add-event [event]
   (let [frame (get-mem :frame)
-        event-id (:id event)
+        event-id (bigint (:id event))
         ]
     (loop [tabs (get-mem :tabs-list)
            index 0]

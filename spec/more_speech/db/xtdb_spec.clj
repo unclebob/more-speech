@@ -3,8 +3,7 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.db.xtdb :as db]
             [more-speech.config :as config]
-            [more-speech.util.files :refer :all]
-            [more-speech.db.xtdb :as xtdb]))
+            [more-speech.util.files :refer :all]))
 
 (declare db)
 (describe "xtdb gateway implementations"
@@ -68,13 +67,13 @@
       (db/delete-event @db 1))
 
     (it "adds a batch of events"
-      (xtdb/add-events @db [{:id 1 :content 1}
+      (gateway/add-events @db [{:id 1 :content 1}
                             {:id 2 :content 2}])
       (should= {:id 1 :content 1} (gateway/get-event @db 1))
       (should= {:id 2 :content 2} (gateway/get-event @db 2)))
 
     (it "finds events after a certain time"
-      (xtdb/add-events @db [{:id 1 :created-at 1}
+      (gateway/add-events @db [{:id 1 :created-at 1}
                             {:id 2 :created-at 10}
                             {:id 3 :created-at 11}])
       (should= #{2 3}
