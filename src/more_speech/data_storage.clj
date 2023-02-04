@@ -73,7 +73,8 @@
       (prn 'done-loading-events)
       (let [event (first events)]
         (when (zero? (rem event-count 100))
-          (prn event-count 'events-loaded (fu/format-time (:created-at event))))
+          (prn event-count 'events-loaded (fu/format-time (:created-at event)))
+          (Thread/sleep 100))
         (try
           (handlers/handle-text-event handler event)
           (catch Exception e
