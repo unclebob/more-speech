@@ -151,8 +151,10 @@
   (let [node (:node db)
         result (xt/q (xt/db node)
                      '{:find [id]
+                       :in [user-name]
                        :where [[profile :name user-name]
-                               [profile :xt/id id]]})
+                               [profile :xt/id id]]}
+                     user-name)
         [{:keys [id]}] (first result)]
     id))
 

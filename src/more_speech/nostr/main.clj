@@ -27,11 +27,11 @@
 (defn start-nostr [subscription-time]
   (let [subscription-id "more-speech"
         metadata-request-id "more-speech-metadata"
-        contact-lists-request-id "more-speech-contact-lists"
+        ;contact-lists-request-id "more-speech-contact-lists"
         event-handler (get-mem :event-handler)
         now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (protocol/connect-to-relays)
-    (protocol/request-contact-lists-from-relays contact-lists-request-id)
+    ;(protocol/request-contact-lists-from-relays contact-lists-request-id)
     (when (user-configuration/should-import-metadata? now-in-seconds)
       (protocol/request-metadata-from-relays metadata-request-id (- now-in-seconds 86400))
       (user-configuration/set-last-time-metadata-imported now-in-seconds))

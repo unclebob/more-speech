@@ -23,7 +23,6 @@
         body (assoc body :pubkey (util/bytes->hex-string pubkey)
                          :created_at now)
         [id body] (events/make-id-with-pow config/proof-of-work-default body)
-        ;id (make-id body)
         aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
         signature (ecc/do-sign id private-key aux-rand)
         event (assoc body :id (util/bytes->hex-string id)
@@ -66,7 +65,7 @@
      []
      [[:e (events/hexify reply-to) "" "reply"]])))
 
-(defn make-people-reference-tags [pubkey reply-to-or-nil]
+(defn make-people-reference-tags [reply-to-or-nil]
   (if (nil? reply-to-or-nil)
     []
     (let [parent-event-id reply-to-or-nil
@@ -75,7 +74,10 @@
           people-ids (map second (filter #(= :p (first %)) parent-tags))
           parent-author (:pubkey parent-event)
           people-ids (conj people-ids (events/hexify parent-author))
-          people-ids (remove #(= (events/hexify pubkey) %) people-ids)]
+          my-pubkey (get-mem :pubkey)
+          people-ids (if (= (:pubkey parent-event) my-pubkey)
+                       people-ids
+                       (remove #(= (events/hexify my-pubkey) %) people-ids))]
       (map #(vector :p %) people-ids))))
 
 (defn make-subject-tag [subject]
@@ -160,10 +162,9 @@
    (compose-text-event subject text nil))
 
   ([subject text reply-to-or-nil]
-   (let [pubkey (get-mem :pubkey)
-         root (get-reply-root reply-to-or-nil)
+   (let [root (get-reply-root reply-to-or-nil)
          tags (concat (make-event-reference-tags reply-to-or-nil root)
-                      (make-people-reference-tags pubkey reply-to-or-nil)
+                      (make-people-reference-tags reply-to-or-nil)
                       (make-subject-tag subject)
                       [[:client (str "more-speech - " config/version)]])
          [content tags] (emplace-references text tags)
