@@ -67,14 +67,15 @@
     (relays/load-relays-from-file @config/relays-filename)))
 
 (defn load-events [old-events handler]
-  (loop [events (reverse old-events)
+  (Thread/sleep 60000)
+  (loop [events old-events
          event-count 0]
     (if (empty? events)
       (prn 'done-loading-events)
       (let [event (first events)]
         (when (zero? (rem event-count 100))
-          (prn event-count 'events-loaded (fu/format-time (:created-at event)))
-          (Thread/sleep 100))
+          (prn event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog @config/websocket-backlog)
+          (Thread/sleep 5000))
         (try
           (handlers/handle-text-event handler event)
           (catch Exception e
@@ -146,7 +147,7 @@
   (prn 'read-in-last-n-days 'starting)
   (let [db (get-db)
         now (quot (System/currentTimeMillis) 1000)
-        start-time (- now (* n 86400))
+        start-time (int (- now (* n 86400)))
         event-ids (gateway/get-event-ids-since db start-time)
         events (map #(gateway/get-event db %) event-ids)
         times (map :created-at events)

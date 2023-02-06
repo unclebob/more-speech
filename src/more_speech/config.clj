@@ -9,8 +9,8 @@
 
 (def article-width 120)
 
-(def days-to-read 3) ;how many daily message files to read in.
-(def read-contact-lists-days-ago 2)
+(def days-to-read 0.5) ;how far back in time to load old messages from the database.
+(def read-contact-lists-days-ago 0.5)
 
 (def migration-level 10)
 (def version "2023-02-02T10:17")
@@ -60,3 +60,7 @@
     (xtdb/get-db "prod-db")
 
     (throw (Exception. "No Database Specified"))))
+
+;------Websocket backlog
+
+(def websocket-backlog (atom 0))

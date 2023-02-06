@@ -3,13 +3,16 @@
             [clojure.java.io :as io]
             [xtdb.api :as xt]))
 
+(defn sync-db [db]
+  (xt/sync (:node db)))
+
 (defn add-entity [db type id entity]
-  (let [node (:node db)
-        tx (xt/submit-tx
-             node
-             [[::xt/put
-               (assoc entity :xt/id {:type type :id (bigint id)})]])]
-    (xt/await-tx node tx)))
+  (let [node (:node db)]
+    (xt/submit-tx
+      node
+      [[::xt/put
+        (assoc entity :xt/id {:type type :id (bigint id)})]])
+    ))
 
 (defn make-profile-transaction [id profile]
   (let [id (bigint id)]
@@ -104,7 +107,7 @@
                        :where [[event :created-at event-time]
                                [event :id id]
                                [(>= event-time start-time)]]
-                       :order-by [[event-time :asc]]}
+                       :order-by [[event-time :desc]]}
                      start-time)]
     (map first result))
   )

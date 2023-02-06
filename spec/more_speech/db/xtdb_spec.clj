@@ -3,7 +3,8 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.db.xtdb :as db]
             [more-speech.config :as config]
-            [more-speech.util.files :refer :all]))
+            [more-speech.util.files :refer :all]
+            [more-speech.db.xtdb :as xtdb]))
 
 (declare db)
 (describe "xtdb gateway implementations"
@@ -16,12 +17,14 @@
     (it "adds and fetches profiles"
       (let [profile {:name "name"}]
         (gateway/add-profile @db 1 profile)
+        (xtdb/sync-db @db)
         (should= profile (gateway/get-profile @db 1)))
       (db/delete-profile @db 1)
       (should-be-nil (gateway/get-profile @db 1)))
 
-    (it "gets and id from a user name"
+    (it "gets an id from a user name"
       (gateway/add-profile @db 1 {:name "name"})
+      (xtdb/sync-db @db)
       (should= 1 (gateway/get-id-from-username @db "name"))))
 
   (it "adds a map of profiles"
@@ -34,12 +37,14 @@
     (it "adds and fetches events"
       (let [event {:id 1 :content "content"}]
         (gateway/add-event @db event)
+        (xtdb/sync-db @db)
         (should= event (gateway/get-event @db 1)))
       (db/delete-event @db 1)
       (should-be-nil (gateway/get-event @db 1)))
 
     (it "checks whether events exist"
       (gateway/add-event @db {:id 1 :content "blah"})
+      (xtdb/sync-db @db)
       (should (gateway/event-exists? @db 1))
       (should-not (gateway/event-exists? @db 2))
       (db/delete-event @db 1)
@@ -83,6 +88,7 @@
   (context "contacts"
     (it "adds and fetches contacts"
       (gateway/add-contacts @db 1 {:name "contact"})
+      (xtdb/sync-db @db)
       (should= {:name "contact"} (gateway/get-contacts @db 1))
       (db/delete-contacts @db 1)
       (should-be-nil (gateway/get-contacts @db 1)))

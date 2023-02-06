@@ -33,9 +33,9 @@
     (protocol/connect-to-relays)
     (protocol/request-contact-lists-from-relays contact-lists-request-id)
     (when (user-configuration/should-import-metadata? now-in-seconds)
-      (protocol/request-metadata-from-relays metadata-request-id)
+      (protocol/request-metadata-from-relays metadata-request-id (- now-in-seconds 86400))
       (user-configuration/set-last-time-metadata-imported now-in-seconds))
-    (protocol/subscribe-to-relays subscription-id subscription-time)
+    (protocol/subscribe-to-relays subscription-id subscription-time now-in-seconds)
     (handlers/update-relay-panel event-handler)
     (if (user-configuration/should-export-profile? now-in-seconds)
       (do

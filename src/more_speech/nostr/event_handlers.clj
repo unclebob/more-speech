@@ -163,18 +163,23 @@
 (def event-counter (atom {:total 0}))
 
 (defn count-event [envelope url]
-  (let [source (second envelope)
+  (let [type (first envelope)
+        source (second envelope)
         key (str url "|" source)]
-    (swap! event-counter update :total inc)
-    (swap! event-counter update key #(inc (if (nil? %) 0 %)))
-    (when (zero? (mod (:total @event-counter) 1000))
-      (clojure.pprint/pprint @event-counter))))
+    (when (= type "EVENT")
+      (swap! event-counter update :total inc)
+      (swap! event-counter update key #(inc (if (nil? %) 0 %)))
+      (when (zero? (mod (:total @event-counter) 1000))
+        (prn 'websocket-backlog @config/websocket-backlog)
+        (clojure.pprint/pprint @event-counter)))))
 
 (defn handle-notification [envelope url]
   (prn 'NOTICE url envelope))
 
 (defn handle-event [_agent envelope url]
-  (if (not (.startsWith (second envelope) "more-speech"))
+  (swap! config/websocket-backlog dec)
+  (if (and (not= "OK" (first envelope))
+           (not (.startsWith (second envelope) "more-speech")))
     (prn 'strange-message-source url envelope)
     (count-event envelope url))
   (if (not= "EVENT" (first envelope))
