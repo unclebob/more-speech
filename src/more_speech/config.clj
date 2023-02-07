@@ -9,7 +9,7 @@
 
 (def article-width 120)
 
-(def days-to-read 0.5) ;how far back in time to load old messages from the database.
+(def days-to-read 1) ;how far back in time to load old messages from the database.
 (def read-contact-lists-days-ago 0.5)
 
 (def migration-level 10)

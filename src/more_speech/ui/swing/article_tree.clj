@@ -114,6 +114,7 @@
     (text! widget "Articles")
     (let [node (:value info)
           event-id (.getUserObject node)
+          event-id (if (number? event-id) event-id 0) ;dummy event-idi
           event (gateway/get-event (get-db) event-id)
           read? (:read event)
           font (if read? (uconfig/get-default-font) (uconfig/get-bold-font))
