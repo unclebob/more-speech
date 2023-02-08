@@ -9,9 +9,6 @@
 
 (def event-agent (agent nil))
 
-(defn hexify [n]
-  (util/num32->hex-string n))
-
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 

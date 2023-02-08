@@ -2,6 +2,7 @@
   (:require [speclj.core :refer :all]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
+            [more-speech.nostr.util :refer [hexify]]
             [more-speech.ui.formatters :refer :all]
             [more-speech.ui.formatter-util :refer :all]
             [more-speech.mem :refer :all]

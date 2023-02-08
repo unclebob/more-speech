@@ -3,11 +3,9 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.contact-list :refer :all]
-            [more-speech.nostr.util :as util]
+            [more-speech.nostr.util :refer [hexify]]
             [more-speech.mem :refer :all]
             [more-speech.config :as config]))
-
-(defn hexify [n] (util/num32->hex-string n))
 
 (declare db)
 

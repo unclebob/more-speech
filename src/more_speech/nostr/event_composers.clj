@@ -42,7 +42,7 @@
 (defn make-contact-list-tag [contact-entry]
   (let [petname (get contact-entry :petname "")
         petname (if (nil? petname) "" petname)]
-    [:p (events/hexify (:pubkey contact-entry)) "" petname]))
+    [:p (hexify (:pubkey contact-entry)) "" petname]))
 
 (defn make-contact-list-tags [contact-list]
   (map make-contact-list-tag contact-list))
@@ -58,12 +58,12 @@
   ([reply-to root]
    (if (or (nil? root) (= root reply-to))
      (make-event-reference-tags reply-to)
-     [[:e (events/hexify root) "" "root"] [:e (events/hexify reply-to) "" "reply"]]))
+     [[:e (hexify root) "" "root"] [:e (hexify reply-to) "" "reply"]]))
 
   ([reply-to]
    (if (nil? reply-to)
      []
-     [[:e (events/hexify reply-to) "" "reply"]])))
+     [[:e (hexify reply-to) "" "reply"]])))
 
 (defn make-people-reference-tags [reply-to-or-nil]
   (if (nil? reply-to-or-nil)
@@ -73,11 +73,11 @@
           parent-tags (:tags parent-event)
           people-ids (map second (filter #(= :p (first %)) parent-tags))
           parent-author (:pubkey parent-event)
-          people-ids (conj people-ids (events/hexify parent-author))
+          people-ids (conj people-ids (hexify parent-author))
           my-pubkey (get-mem :pubkey)
           people-ids (if (= (:pubkey parent-event) my-pubkey)
                        people-ids
-                       (remove #(= (events/hexify my-pubkey) %) people-ids))]
+                       (remove #(= (hexify my-pubkey) %) people-ids))]
       (map #(vector :p %) people-ids))))
 
 (defn make-subject-tag [subject]
@@ -188,3 +188,12 @@
 
 (defn compose-and-send-contact-list [contact-list]
   (send-event (compose-contact-list contact-list)))
+
+(defn compose-and-send-reaction-event [subject-event polarity]
+  (let [id (:id subject-event)
+        pubkey (:pubkey subject-event)
+        tags (concat (:tags subject-event) [[:e (hexify id)] [:p (hexify pubkey)]])
+        body {:kind 7
+              :tags tags
+              :content polarity}]
+    (send-event (body->event body))))

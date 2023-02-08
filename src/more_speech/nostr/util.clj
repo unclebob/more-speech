@@ -44,6 +44,9 @@
   "converts a number to a 32 byte hex-string"
   (->> n (num->bytes 32) bytes->hex-string))
 
+(defn hexify [n]
+  (num32->hex-string n))
+
 (defn bytes=
   "compares two byte arrays for equality."
   [^bytes b1 ^bytes b2]

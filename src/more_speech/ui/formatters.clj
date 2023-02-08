@@ -1,6 +1,6 @@
 (ns more-speech.ui.formatters
   (:require [clojure.string :as string]
-            [more-speech.nostr.util :as util]
+            [more-speech.nostr.util :as util :refer [hexify]]
             [more-speech.mem :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.contact-list :as contact-list]
@@ -8,9 +8,6 @@
             [more-speech.config :as config :refer [get-db]]
             [more-speech.db.gateway :as gateway])
   )
-
-(defn hexify [bigint]
-  (util/num32->hex-string bigint))
 
 (defn format-user-id
   ([user-id]

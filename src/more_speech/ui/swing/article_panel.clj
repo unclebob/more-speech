@@ -9,7 +9,8 @@
             [more-speech.mem :refer :all]
             [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
             [more-speech.db.gateway :as gateway]
-            [more-speech.config :refer [get-db]])
+            [more-speech.config :refer [get-db]]
+            [more-speech.nostr.event-composers :as composers])
   (:use [seesaw core border]))
 
 (defn bold-label [s]
@@ -28,6 +29,17 @@
     (copy-click e)
     (article-tree-util/id-click (config e :user-data))))
 
+(defn reaction-click [polarity]
+  (let [event-id (get-mem :selected-event)
+        event (gateway/get-event (get-db) event-id)]
+    (composers/compose-and-send-reaction-event event polarity)))
+
+(defn up-click [_e]
+  (reaction-click "+"))
+
+(defn dn-click [_e]
+  (reaction-click "-"))
+
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
         label-font (uconfig/get-small-font)
@@ -39,7 +51,9 @@
         subject-label (label :id :subject-label :font label-font)
         root-label (text :id :root-label :editable? false :font label-font)
         relays-popup (popup :enabled? false)
-        relays-label (label :id :relays-label :user-data relays-popup)]
+        relays-label (label :id :relays-label :user-data relays-popup)
+        up-arrow (label :text "⬆" :id :up-arrow :font (uconfig/get-bold-font))
+        dn-arrow (label :text "⬇" :id :dn-arrow :font (uconfig/get-bold-font))]
     (listen relays-label
             :mouse-entered (fn [e]
                              (-> relays-popup
@@ -50,17 +64,22 @@
     (listen root-label :mouse-pressed id-click)
     (listen id-label :mouse-pressed copy-click)
     (listen author-id-label :mouse-pressed copy-click)
+    (listen up-arrow :mouse-pressed up-click)
+    (listen dn-arrow :mouse-pressed dn-click)
     (let [grid
           (grid-panel
             :columns 3
             :preferred-size [-1 :by 70]                     ;icky.
-            :items [(flow-panel :align :left :items [(bold-label "Author:") author-name-label])
+            :items [
+                    (flow-panel :align :left :items [up-arrow (bold-label "Author:") author-name-label])
                     (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
                     (flow-panel :align :left :items [(bold-label "pubkey:") author-id-label])
+
                     (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
                     (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
                     (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
-                    (flow-panel :align :left :items [(bold-label "id:") id-label])
+
+                    (flow-panel :align :left :items [dn-arrow (bold-label "id:") id-label])
                     (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
                     (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
       grid)))

@@ -3,7 +3,7 @@
   (:require [speclj.core :refer :all]
             [more-speech.ui.swing.article-tree :refer :all]
             [more-speech.ui.swing.article-tree-util :refer :all]
-            [more-speech.nostr.util :as util]
+            [more-speech.nostr.util :as util :refer [hexify]]
             [more-speech.mem :refer :all]
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.util :as swing-util]
@@ -11,8 +11,6 @@
             [more-speech.db.in-memory :as in-memory]
             [more-speech.config :as config])
   (:import (javax.swing.tree DefaultMutableTreeNode)))
-
-(defn hexify [n] (util/num32->hex-string n))
 
 (declare db)
 
