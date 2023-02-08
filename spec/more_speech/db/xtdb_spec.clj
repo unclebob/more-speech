@@ -105,11 +105,14 @@
                  contacts1)
         (should= [{:pubkey 97} {:pubkey 96}]
                  contacts2)
-        (should (every? #(= (type 1N) (type %)) pubkeys))
-        )
-      )
+        (should (every? #(= (type 1N) (type %)) pubkeys)))))
 
-    )
+  (context "reactions"
+    (it "adds reactions to events"
+      (gateway/add-event @db {:id 1})
+      (gateway/add-reaction @db 1 2 "!")
+      (should= {:id 1 :reactions #{[2 "!"]}}
+               (gateway/get-event @db 1))))
   )
 
 

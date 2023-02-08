@@ -5,12 +5,12 @@
             [more-speech.mem :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]
-            [more-speech.nostr.util :as util]
+            [more-speech.nostr.util :refer [unhexify]]
             [more-speech.nostr.relays :as relays]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.config :as config :refer [get-db]]
             [clojure.stacktrace :as st]
-            )
+            [more-speech.nostr.util :as util])
   (:import (ecdhJava SECP256K1)))
 
 (defprotocol event-handler
@@ -68,7 +68,28 @@
   (add-event db event [url])
   (relays/add-recommended-relays-in-tags event))
 
-(defn process-like [_db _event]
+(defn get-last-x-tag [x tags]
+  (let [x-tags (filter #(= x (first %)) tags)]
+    (when (zero? (count x-tags))
+      (throw (Exception. (str "no " x "tags"))))
+    (last x-tags)))
+
+(defn get-last-p-tag [tags]
+  (get-last-x-tag :p tags))
+
+(defn get-last-e-tag [tags]
+  (get-last-x-tag :e tags))
+
+(defn process-reaction [db event]
+  (try
+    (let [{:keys [content tags]} event
+          last-e-tag (get-last-e-tag tags)
+          last-p-tag (get-last-p-tag tags)
+          target-id (unhexify (second last-e-tag))
+          reactor (unhexify (second last-p-tag))]
+      (when (gateway/event-exists? db target-id)
+        (gateway/add-reaction db target-id reactor content)))
+    (catch Exception _e))
   )
 
 (defn process-server-recommendation [event]
@@ -88,18 +109,18 @@
         2 (process-server-recommendation event)
         3 (contact-list/process-contact-list db event)
         4 (process-text-event db event url)
-        7 (process-like db event)
+        7 (process-reaction db event)
         nil))))
 
 (defn decrypt-his-dm [event]
   (let [p-tags (filter #(= :p (first %)) (:tags event))
-        my-tag (filter #(= (hex-string->num (second %))
+        my-tag (filter #(= (unhexify (second %))
                            (get-mem :pubkey))
                        p-tags)]
     (if (empty? my-tag)
       (assoc event :private true)                           ;I'm not the recipient.
       (let [his-key (:pubkey event)
-            priv-key (hex-string->num (get-mem [:keys :private-key]))
+            priv-key (unhexify (get-mem [:keys :private-key]))
             shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
             decrypted-content (SECP256K1/decrypt shared-secret (:content event))
             event (assoc event :content decrypted-content)]
@@ -108,8 +129,8 @@
 (defn decrypt-my-dm [event]
   (let [p-tags (filter #(= :p (first %)) (:tags event))
         p-tag (first p-tags)
-        his-key (hex-string->num (second p-tag))
-        priv-key (hex-string->num (get-mem [:keys :private-key]))
+        his-key (unhexify (second p-tag))
+        priv-key (unhexify (get-mem [:keys :private-key]))
         shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
         decrypted-content (SECP256K1/decrypt shared-secret (:content event))
         event (assoc event :content decrypted-content)]
@@ -149,9 +170,9 @@
   (remove nil? (map process-tag tags)))
 
 (defn translate-event [event]
-  (let [id (hex-string->num (get event "id"))
-        pubkey (hex-string->num (get event "pubkey"))
-        sig (hex-string->num (get event "sig"))]
+  (let [id (unhexify (get event "id"))
+        pubkey (unhexify (get event "pubkey"))
+        sig (unhexify (get event "sig"))]
     {:id id
      :pubkey pubkey
      :created-at (get event "created_at")

@@ -138,6 +138,14 @@
     (xt/await-tx node tx))
   )
 
+(defmethod gateway/add-reaction ::type [db id pubkey content]
+  (let [node (:node db)
+        tx (xt/submit-tx node [[::xt/fn :add-reaction
+                                {:type :event :id (bigint id)}
+                                pubkey content]])]
+    (xt/await-tx node tx))
+  )
+
 (defmethod gateway/add-contacts ::type [db user-id contacts]
   (add-entity db :contacts user-id {:contacts contacts}))
 
@@ -203,11 +211,24 @@
                        old-references (:references entity)]
                    [[::xt/put (update entity :references conj reference)]]))}]]))
 
+(defn add-add-reaction [node]
+  (xt/submit-tx
+    node
+    [[::xt/put
+      {:xt/id :add-reaction
+       :xt/fn '(fn [ctx eid pubkey content]
+                 (let [conj-set (fn [s v] (conj (set s) v))
+                       db (xtdb.api/db ctx)
+                       entity (xtdb.api/entity db eid)
+                       old-reactions (:reactions entity)]
+                   [[::xt/put (update entity :reactions conj-set [pubkey content])]]))}]]))
+
 (defn add-procedures [node]
   (add-assoc-entity node)
   (add-update-entity node)
   (add-update-relays node)
   (add-add-reference node)
+  (add-add-reaction node)
   )
 
 (defn start-xtdb! [directory]

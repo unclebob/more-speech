@@ -15,5 +15,6 @@
 (defmulti add-contacts-map (fn [db _contacts-map] (::type db)))
 (defmulti get-contacts (fn [db _user-id] (::type db)))
 (defmulti get-id-from-username (fn [db _user-name] (::type db)))
+(defmulti add-reaction (fn [db _id _pubkey _content] (::type db)))
 
 

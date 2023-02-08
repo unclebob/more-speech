@@ -40,6 +40,9 @@
   [hex-string]
   (-> hex-string hex-string->bytes bytes->num))
 
+(defn unhexify [hex-string]
+  (bigint (hex-string->num hex-string)))
+
 (defn num32->hex-string [n]
   "converts a number to a 32 byte hex-string"
   (->> n (num->bytes 32) bytes->hex-string))

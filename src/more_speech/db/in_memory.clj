@@ -66,6 +66,13 @@
             (first pair)
             (recur (rest pairs))))))))
 
+(defn conj-set [s1 val]
+  (conj (set s1) val))
+
+(defmethod gateway/add-reaction ::type [db id pubkey content]
+  (swap! (:data db)
+           update-in [:text-event-map id :reactions] conj-set [pubkey content]))
+
 ;----------methods for tests
 (def db (atom nil))
 
