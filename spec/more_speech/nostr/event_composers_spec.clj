@@ -345,3 +345,26 @@
       (gateway/add-profile @db 2 {:name "bob"})
       (should= 2 (find-user-id "petname"))
       (should= 2 (find-user-id "bob")))))
+
+(describe "compose reaction"
+  (it "composes a reaction"
+    (should= {:kind 7,
+              :tags [[:e "0000000000000000000000000000000000000000000000000000000000000001"]
+                     [:p "0000000000000000000000000000000000000000000000000000000000000002"]],
+              :content "!"}
+             (compose-reaction-event {:id 1 :pubkey 2 :tags []} "!")))
+
+  (it "only copies e and p tags into the reaction"
+    (let [subject-event {:id 1
+                 :pubkey 2
+                 :tags [[:gunk "gunk"]
+                        [:e "3"]
+                        [:p "4"]]}]
+      (should= {:kind 7,
+                :tags [[:e "3"]
+                       [:p "4"]
+                       [:e "0000000000000000000000000000000000000000000000000000000000000001"]
+                       [:p "0000000000000000000000000000000000000000000000000000000000000002"]],
+                :content "!"}
+               (compose-reaction-event subject-event "!"))))
+  )

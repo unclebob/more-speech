@@ -32,8 +32,8 @@
 (defn compose-metadata-event []
   (let [keys (get-mem :keys)
         content (events/to-json {:name (:name keys)
-                          :about (:about keys)
-                          :picture (:picture keys)})
+                                 :about (:about keys)
+                                 :picture (:picture keys)})
         body {:kind 0
               :tags []
               :content content}]
@@ -189,11 +189,17 @@
 (defn compose-and-send-contact-list [contact-list]
   (send-event (compose-contact-list contact-list)))
 
-(defn compose-and-send-reaction-event [subject-event polarity]
+(defn compose-reaction-event [subject-event polarity]
   (let [id (:id subject-event)
         pubkey (:pubkey subject-event)
-        tags (concat (:tags subject-event) [[:e (hexify id)] [:p (hexify pubkey)]])
+        ep-tags (filter #(or (= :p (first %)) (= :e (first %))) (:tags subject-event))
+        tags (concat ep-tags [[:e (hexify id)] [:p (hexify pubkey)]])
         body {:kind 7
               :tags tags
               :content polarity}]
-    (send-event (body->event body))))
+    body))
+
+(defn compose-and-send-reaction-event [subject-event polarity]
+  (send-event
+    (body->event
+      (compose-reaction-event subject-event polarity))))
