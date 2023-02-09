@@ -64,3 +64,7 @@
         (recur (rest contacts)))
       nil)))
 
+(defn get-trustees []
+  (let [contacts (gateway/get-contacts (get-db) (get-mem :pubkey))]
+    (map :pubkey contacts)))
+

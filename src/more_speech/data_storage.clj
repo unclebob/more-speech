@@ -64,7 +64,9 @@
     (set-mem :user-configuration user-configuration)
     (set-mem :event-history [])
     (set-mem :back-count 0)
-    (relays/load-relays-from-file @config/relays-filename)))
+    (if (config/is-test-run?)
+      (reset! relays/relays config/test-relays)
+      (relays/load-relays-from-file @config/relays-filename))))
 
 (defn load-events [old-events handler]
   (Thread/sleep 60000)

@@ -17,7 +17,9 @@
 
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)
-(def test-relay "wss://eden.nostr.land")
+(def test-relays {"wss://eden.nostr.land" {:read :read-all :write true}
+                  "wss://nostr-dev.wellorder.net" {:read :read-trusted, :write true}
+                  "wss://relay.damus.io" {:read :read-trusted :write true}})
 
 (defn test-run! []
   (reset! test-run? true))
@@ -35,7 +37,7 @@
 (def messages-directory (atom "private/messages"))
 (def messages-filename (atom "private/messages/message-file"))
 (def user-configuration-filename (atom "private/user-configuration"))
-(def contact-lists-filename (atom "private/contact-lists"))
+(def contact-lists-filename (atom "private/ub-contacts"))
 
 (def user-name-pattern #"\@[\w\-]+")
 (def pubkey-pattern #"[0-9a-f]{64}+")

@@ -5,7 +5,9 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.relays :refer [relays]]
-            [more-speech.config :as config])
+            [more-speech.config :as config]
+            [more-speech.nostr.contact-list :as contact-list]
+            [more-speech.nostr.util :as util])
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
@@ -25,13 +27,19 @@
 (defn request-metadata [relay id since]
   (relay/send relay ["REQ" id {"kinds" [0] "since" since}]))
 
-(defn subscribe
+(defn subscribe-all
   ([relay id]
    (let [now (int (quot (System/currentTimeMillis) 1000))]
-     (subscribe relay id (- now 86400) now)))
+     (subscribe-all relay id (- now 86400) now)))
   ([relay id since now]
    (relay/send relay ["REQ" id {"since" since "until" now}])
    (relay/send relay ["REQ" (str id "-now") {"since" now}])))
+
+(defn subscribe-trusted [relay id since now]
+  (let [trustee-ids (contact-list/get-trustees)
+        trustees (map util/hexify trustee-ids)]
+    (relay/send relay ["REQ" id {"since" since "until" now "authors" trustees}])
+    (relay/send relay ["REQ" (str id "-now") {"since" now "authors" trustees}])))
 
 (defn unsubscribe [relay id]
   (relay/send relay ["CLOSE" id]))
@@ -46,19 +54,16 @@
     (send-off events/event-agent handlers/handle-event message url)))
 
 (defn connect-to-relays []
-  (let [urls (if (config/is-test-run?)
-               [config/test-relay]
-               (keys @relays))]
-    (doseq [url urls]
-      (let [relay (ws-relay/make url handle-relay-message)
-            relay-config (get @relays url)
-            should-connect? (or (:read relay-config)
-                                (:write relay-config))
-            open-relay (if should-connect?
-                         (relay/open relay)
-                         nil)]
-        (when (some? open-relay)
-          (swap! relays assoc-in [url :connection] open-relay)))))
+  (doseq [url (keys @relays)]
+    (let [relay (ws-relay/make url handle-relay-message)
+          relay-config (get @relays url)
+          should-connect? (or (:read relay-config)
+                              (:write relay-config))
+          open-relay (if should-connect?
+                       (relay/open relay)
+                       nil)]
+      (when (some? open-relay)
+        (swap! relays assoc-in [url :connection] open-relay))))
   (prn 'relay-connection-attempts-complete))
 
 (defn request-contact-lists-from-relays [id]
@@ -84,10 +89,16 @@
     (prn 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
       (let [relay (get-in @relays [url :connection])
-            read? (get-in @relays [url :read])]
-        (when (and read? (some? relay))
+            read-type (get-in @relays [url :read])]
+        (when (and (or (not= :false read-type)
+                       (not= :no-read read-type))
+                   (some? relay))
           (unsubscribe relay id)
-          (subscribe relay id date now)
+          (condp = read-type
+            true (subscribe-all relay id date now)
+            :read-all (subscribe-all relay id date now)
+            :read-trusted (subscribe-trusted relay id date now)
+            nil)
           (swap! relays assoc-in [url :subscribed] true))))))
 
 (defn unsubscribe-from-relays [id]
