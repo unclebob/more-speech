@@ -84,9 +84,8 @@
   (try
     (let [{:keys [content tags]} event
           last-e-tag (get-last-e-tag tags)
-          last-p-tag (get-last-p-tag tags)
           target-id (unhexify (second last-e-tag))
-          reactor (unhexify (second last-p-tag))]
+          reactor (:pubkey event)]
       (when (gateway/event-exists? db target-id)
         (gateway/add-reaction db target-id reactor content)))
     (catch Exception _e))

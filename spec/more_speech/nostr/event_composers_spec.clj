@@ -355,6 +355,7 @@
              (compose-reaction-event {:id 1 :pubkey 2 :tags []} "!")))
 
   (it "only copies e and p tags into the reaction"
+    (set-mem :pubkey 0xdeadbeef)
     (let [subject-event {:id 1
                  :pubkey 2
                  :tags [[:gunk "gunk"]

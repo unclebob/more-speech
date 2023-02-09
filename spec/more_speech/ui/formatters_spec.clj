@@ -27,7 +27,7 @@
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "          (1111111...) " timestamp " \n") header)))
+      (should= (str "           (1111111...) " timestamp " \n") header)))
 
   (it "formats a simple message"
     (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
@@ -36,7 +36,7 @@
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "          (1111111...) " timestamp " the message\n") header)))
+      (should= (str "           (1111111...) " timestamp " the message\n") header)))
 
   (it "formats a simple message with a user profile"
     (gateway/add-profile @db 1 {:name "user-1"})
@@ -46,7 +46,7 @@
                  :tags []}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "              (user-1) " timestamp " the message\n") header)))
+      (should= (str "               (user-1) " timestamp " the message\n") header)))
 
   (it "formats a long message with line ends."
     (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
@@ -59,7 +59,7 @@
           timestamp (format-time (event :created-at))
           header (format-header event)]
       (should (.startsWith header
-                           (str "          (1111111...) "
+                           (str "           (1111111...) "
                                 timestamp
                                 " Four score and seven years ago~our")))
       (should (.endsWith header "...\n"))))
@@ -71,7 +71,7 @@
                  :tags [[:subject "the subject"]]}
           timestamp (format-time (event :created-at))
           header (format-header event)]
-      (should= (str "          (1111111...) " timestamp " the subject|the message\n") header)))
+      (should= (str "           (1111111...) " timestamp " the subject|the message\n") header)))
   )
 
 (describe "subject and discussion tags"

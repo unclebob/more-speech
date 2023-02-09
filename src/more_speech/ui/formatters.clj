@@ -91,11 +91,12 @@
           [reply-id _ _] (events/get-references event)
           reply-mark (if (some? reply-id) "^" " ")
           dm-mark (if (= 4 (:kind event)) "🚫 " "")
+          reaction-mark (if (some? (:reactions event)) "🤙" " ")
           header-text (-> content (string/replace \newline \~) (abbreviate 130))
           content (if (empty? subject)
                     header-text
                     (abbreviate (str subject "|" header-text) 130))]
-      (format "%s %20s %s %s%s\n" reply-mark name time dm-mark content))))
+      (format "%s%s %20s %s %s%s\n" reply-mark reaction-mark name time dm-mark content))))
 
 (defn format-reply [event]
   (let [content (replace-references event)

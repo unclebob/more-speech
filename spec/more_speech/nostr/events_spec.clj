@@ -313,8 +313,8 @@
 
   (it "adds a reaction to an event"
     (gateway/add-event @db {:id 1})
-    (process-reaction @db {:content "!" :tags [[:e (hexify 1)] [:p (hexify 2)]]})
-    (should= {:id 1 :reactions #{[2 "!"]}}
+    (process-reaction @db {:pubkey 99 :content "!" :tags [[:e (hexify 1)] [:p (hexify 2)]]})
+    (should= {:id 1 :reactions #{[99 "!"]}}
              (gateway/get-event @db 1)))
 
   (it "does not add a reaction if there is no event"
@@ -324,15 +324,14 @@
 
   (it "chooses the last e and p tags"
     (gateway/add-event @db {:id 1})
-    (process-reaction @db {:content "!" :tags [[:e "something"][:p "something"][:e (hexify 1)] [:p (hexify 2)]]})
-    (should= {:id 1 :reactions #{[2 "!"]}}
+    (process-reaction @db {:pubkey 99 :content "!" :tags [[:e "something"][:p "something"][:e (hexify 1)] [:p (hexify 2)]]})
+    (should= {:id 1 :reactions #{[99 "!"]}}
              (gateway/get-event @db 1)))
 
-  (it "does not add a reaction if tags aren't present"
+  (it "does not add a reaction if no e tag"
     (gateway/add-event @db {:id 1})
     (with-redefs [gateway/add-reaction (stub :add-reaction)]
           (process-reaction @db {:content "!" :tags []})
           (process-reaction @db {:content "!" :tags [[:p (hexify 2)]]})
-          (process-reaction @db {:content "!" :tags [[:e (hexify 1)]]})
           (should-not-have-invoked :add-reaction)))
     )
