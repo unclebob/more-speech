@@ -13,7 +13,7 @@
 (def read-contact-lists-days-ago 0.5)
 
 (def migration-level 10)
-(def version "2023-02-02T10:17")
+(def version "2023-02-10T09:12")
 
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)
