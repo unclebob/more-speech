@@ -60,17 +60,25 @@
     (swap! config/websocket-backlog inc)
     (send-off events/event-agent handlers/handle-event message url)))
 
+(defn connect-to-relay [relay]
+  (let [url (::ws-relay/url relay)
+        relay-config (get @relays url)
+        read-type (:read relay-config)
+        readable? (or (= read-type :read-all)
+                      (= read-type :read-trusted)
+                      (= read-type :read-web-of-trust))
+        writeable? (:write relay-config)
+        should-connect? (or readable? writeable?)
+        open-relay (if should-connect?
+                     (relay/open relay)
+                     nil)]
+    (when (some? open-relay)
+      (swap! relays assoc-in [url :connection] open-relay))))
+
 (defn connect-to-relays []
   (doseq [url (keys @relays)]
-    (let [relay (ws-relay/make url handle-relay-message)
-          relay-config (get @relays url)
-          should-connect? (or (:read relay-config)
-                              (:write relay-config))
-          open-relay (if should-connect?
-                       (relay/open relay)
-                       nil)]
-      (when (some? open-relay)
-        (swap! relays assoc-in [url :connection] open-relay))))
+    (let [relay (ws-relay/make url handle-relay-message)]
+      (connect-to-relay relay)))
   (prn 'relay-connection-attempts-complete))
 
 (defn request-contact-lists-from-relays [id]
