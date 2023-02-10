@@ -41,6 +41,13 @@
     (relay/send relay ["REQ" id {"since" since "until" now "authors" trustees}])
     (relay/send relay ["REQ" (str id "-trusted") {"since" now "authors" trustees}])))
 
+(defn subscribe-web-of-trust [relay id since now]
+  (let [trustee-ids (contact-list/get-web-of-trust)
+        trustees (map util/hexify trustee-ids)
+        short-trustees (map #(subs % 0 10) trustees)]
+    (relay/send relay ["REQ" id {"since" since "until" now "authors" short-trustees}])
+    (relay/send relay ["REQ" (str id "-trust-web") {"since" now "authors" short-trustees}])))
+
 (defn unsubscribe [relay id]
   (relay/send relay ["CLOSE" id]))
 
@@ -98,6 +105,7 @@
             true (subscribe-all relay id date now)
             :read-all (subscribe-all relay id date now)
             :read-trusted (subscribe-trusted relay id date now)
+            :read-web-of-trust (subscribe-web-of-trust relay id date now)
             nil)
           (swap! relays assoc-in [url :subscribed] true))))))
 

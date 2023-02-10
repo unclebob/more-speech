@@ -64,7 +64,18 @@
         (recur (rest contacts)))
       nil)))
 
-(defn get-trustees []
-  (let [contacts (gateway/get-contacts (get-db) (get-mem :pubkey))]
-    (map :pubkey contacts)))
+(defn get-trustees
+  ([]
+   (get-trustees (get-mem :pubkey)))
+  ([id]
+   (let [contacts (gateway/get-contacts (get-db) id)]
+     (map :pubkey contacts))))
+
+(defn get-web-of-trust
+  ([]
+   (get-web-of-trust (get-mem :pubkey)))
+  ([id]
+   (let [trustees (get-trustees id)
+         trusted-of-trustees (mapcat get-trustees trustees)]
+     (set (concat trustees trusted-of-trustees)))))
 

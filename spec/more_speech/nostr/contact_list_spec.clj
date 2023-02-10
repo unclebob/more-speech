@@ -111,4 +111,19 @@
       (should= nil (get-petname 3))
       (should= nil (get-petname 4)))
     )
+
+  (describe "trust accessors"
+    (it "gets trustees"
+      (gateway/add-contacts @db 1 [{:pubkey 2} {:pubkey 3}])
+      (should= #{2 3} (set (get-trustees 1))))
+
+    (it "gets web of trust"
+      (gateway/add-contacts @db 1 [{:pubkey 2} {:pubkey 3}])
+      (gateway/add-contacts @db 2 [{:pubkey 201} {:pubkey 202}])
+      (gateway/add-contacts @db 3 [{:pubkey 201} {:pubkey 302}])
+      (let [web-of-trust (get-web-of-trust 1)]
+        (should= 5 (count web-of-trust))
+        (should= #{2 3 201 202 302} web-of-trust)))
+    )
+
   )
