@@ -10,20 +10,20 @@
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
-(defn make [url recv-f]
+;callbacks :recv :close
+(defn make [url callbacks]
   {::relay/type ::websocket
    ::url url
-   ::recv-f recv-f
-   ::socket nil
-   ::open? false})
+   ::callbacks callbacks
+   ::socket nil})
 
 (defn handle-text [{:keys [buffer relay]} data last]
-  (let [{::keys [url recv-f]} relay]
+  (let [{::keys [url callbacks]} relay]
     (.append buffer (.toString data))
     (when last
       (try
         (let [envelope (json/read-str (.toString buffer))]
-          (recv-f relay envelope))
+          ((:recv callbacks) relay envelope))
         (catch Exception e
           (prn 'onText url (.getMessage e))
           (prn (.toString buffer))))
@@ -43,10 +43,11 @@
     (.request webSocket 1))
   (onPong [_this webSocket _message]
     (.request webSocket 1))
-  (onClose [_this _webSocket statusCode reason]
-    (prn 'close (::url relay) statusCode reason))
+  (onClose [_this _webSocket _statusCode _reason]
+    ((:close (::callbacks relay)) relay))
   (onError [_this _webSocket error]
-    (prn 'websocket-listener-error (::url relay) error))
+    (prn 'websocket-listener-error (::url relay) (:cause error))
+    ((:close (::callbacks relay)) relay))
   )
 
 (defn send-ping [relay]
@@ -71,12 +72,13 @@
         (if (= ws :time-out)
           (do
             (prn 'connection-time-out url)
-            (assoc relay ::open? false))
-          (let [open-relay (assoc relay ::open? true ::socket ws)]
+            relay)
+          (let [open-relay (assoc relay ::socket ws)]
             (assoc open-relay :timer (start-timer open-relay)))))
       (catch Exception e
         (prn 'connect-to-relay-failed url (:reason e))
-        (assoc relay ::open? false)))))
+        (future ((:close (::callbacks relay)) relay))
+        relay))))
 
 (defmethod relay/close ::websocket [relay]
   (let [{::keys [socket timer]} relay]
@@ -86,7 +88,7 @@
         (catch Exception e
           (prn 'on-send-close-error (:reason e)))))
     (when timer (.cancel timer))
-    (assoc relay ::open? false ::socket nil)))
+    (assoc relay ::socket nil)))
 
 (defmethod relay/send ::websocket [relay message]
   (let [{::keys [socket url]} relay]
