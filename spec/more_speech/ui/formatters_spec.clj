@@ -13,6 +13,9 @@
     (should= "short" (abbreviate "short" 10))
     (should= "some lo..." (abbreviate "some long string." 10))))
 
+(defn trim-header [header]
+  (.trim (.replace header \ᐧ \ )))
+
 (declare db)
 (describe "format header"
   (with db (in-memory/get-db))
@@ -26,8 +29,8 @@
                  :content ""
                  :tags []}
           timestamp (format-time (event :created-at))
-          header (format-header event)]
-      (should= (str "           (1111111...) " timestamp " \n") header)))
+          header (trim-header (format-header event))]
+      (should= (str "(1111111...) " timestamp) header)))
 
   (it "formats a simple message"
     (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
@@ -35,8 +38,8 @@
                  :content "the message"
                  :tags []}
           timestamp (format-time (event :created-at))
-          header (format-header event)]
-      (should= (str "           (1111111...) " timestamp " the message\n") header)))
+          header (trim-header (format-header event))]
+      (should= (str "(1111111...) " timestamp " the message") header)))
 
   (it "formats a simple message with a user profile"
     (gateway/add-profile @db 1 {:name "user-1"})
@@ -45,8 +48,8 @@
                  :content "the message"
                  :tags []}
           timestamp (format-time (event :created-at))
-          header (format-header event)]
-      (should= (str "               (user-1) " timestamp " the message\n") header)))
+          header (trim-header (format-header event))]
+      (should= (str "(user-1) " timestamp " the message") header)))
 
   (it "formats a long message with line ends."
     (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
@@ -57,12 +60,12 @@
                                "the proposition that all men are created equal.")
                  :tags []}
           timestamp (format-time (event :created-at))
-          header (format-header event)]
+          header (trim-header (format-header event))]
       (should (.startsWith header
-                           (str "           (1111111...) "
+                           (str "(1111111...) "
                                 timestamp
                                 " Four score and seven years ago~our")))
-      (should (.endsWith header "...\n"))))
+      (should (.endsWith header "..."))))
 
   (it "formats a message with a subject"
     (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
@@ -70,8 +73,8 @@
                  :content "the message"
                  :tags [[:subject "the subject"]]}
           timestamp (format-time (event :created-at))
-          header (format-header event)]
-      (should= (str "           (1111111...) " timestamp " the subject|the message\n") header)))
+          header (trim-header (format-header event))]
+      (should= (str "(1111111...) " timestamp " the subject|the message") header)))
   )
 
 (describe "subject and discussion tags"

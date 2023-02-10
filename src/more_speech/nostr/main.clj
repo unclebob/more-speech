@@ -7,7 +7,8 @@
             [more-speech.nostr.relays :as relays]
             [more-speech.relay :as relay]
             [more-speech.mem :refer :all]
-            [clojure.core.async :as async]))
+            [clojure.core.async :as async]
+            [more-speech.config :as config]))
 
 (defn process-send-channel []
   (let [send-chan (get-mem :send-chan)
@@ -31,11 +32,12 @@
         event-handler (get-mem :event-handler)
         now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (protocol/connect-to-relays)
-    (protocol/request-contact-lists-from-relays contact-lists-request-id)
     (when (user-configuration/should-import-metadata? now-in-seconds)
       (protocol/request-metadata-from-relays metadata-request-id (- now-in-seconds 86400))
       (user-configuration/set-last-time-metadata-imported now-in-seconds))
     (protocol/subscribe-to-relays subscription-id subscription-time now-in-seconds)
+    (when-not (config/is-test-run?)
+      (protocol/request-contact-lists-from-relays contact-lists-request-id))
     (handlers/update-relay-panel event-handler)
     (if (user-configuration/should-export-profile? now-in-seconds)
       (do

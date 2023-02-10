@@ -33,13 +33,13 @@
      (subscribe-all relay id (- now 86400) now)))
   ([relay id since now]
    (relay/send relay ["REQ" id {"since" since "until" now}])
-   (relay/send relay ["REQ" (str id "-now") {"since" now}])))
+   (relay/send relay ["REQ" (str id "-all") {"since" now}])))
 
 (defn subscribe-trusted [relay id since now]
   (let [trustee-ids (contact-list/get-trustees)
         trustees (map util/hexify trustee-ids)]
     (relay/send relay ["REQ" id {"since" since "until" now "authors" trustees}])
-    (relay/send relay ["REQ" (str id "-now") {"since" now "authors" trustees}])))
+    (relay/send relay ["REQ" (str id "-trusted") {"since" now "authors" trustees}])))
 
 (defn unsubscribe [relay id]
   (relay/send relay ["CLOSE" id]))
@@ -70,8 +70,8 @@
   (prn 'requesting-contact-lists)
   (doseq [url (keys @relays)]
     (let [relay (get-in @relays [url :connection])
-          read? (get-in @relays [url :read])]
-      (when (and read? (some? relay))
+          read-type (get-in @relays [url :read])]
+      (when (= :read-all read-type)
         (unsubscribe relay id)
         (request-contact-lists relay id)))))
 

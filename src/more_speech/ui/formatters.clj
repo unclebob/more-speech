@@ -91,7 +91,7 @@
           [reply-id _ _] (events/get-references event)
           reply-mark (if (some? reply-id) "^" " ")
           dm-mark (if (= 4 (:kind event)) "🚫 " "")
-          reaction-mark (if (some? (:reactions event)) "🤙" " ")
+          reaction-mark (if (some? (:reactions event)) "🤙" " ᐧᐧᐧᐧ")
           header-text (-> content (string/replace \newline \~) (abbreviate 130))
           content (if (empty? subject)
                     header-text
