@@ -81,3 +81,6 @@
         key-bytes (byte-array 32)
         _ (.nextBytes gen key-bytes)]
     key-bytes))
+
+(defn get-now []
+  (System/currentTimeMillis))

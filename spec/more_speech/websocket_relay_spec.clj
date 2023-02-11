@@ -9,10 +9,9 @@
   (it "can be made"
     (should= {::relay/type ::ws-relay/websocket
               ::ws-relay/url "url"
-              ::ws-relay/recv-f :some-f
-              ::ws-relay/socket nil
-              ::ws-relay/open? false}
-             (ws-relay/make "url" :some-f)))
+              ::ws-relay/callbacks :some-callbacks
+              ::ws-relay/socket nil}
+             (ws-relay/make "url" :some-callbacks)))
 
   (it "can open and close"
     (pending "be nice to relay.damus.io")

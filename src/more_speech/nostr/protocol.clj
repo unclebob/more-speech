@@ -96,17 +96,28 @@
     (when (some? open-relay)
       (swap! relays assoc-in [url :connection] open-relay))))
 
+(defn increment-relay-retry
+  "used in a swap!, increments retries counter unless the last retry was over an hour ago
+  and then resets to 1"
+  [relays url]
+  (let [relay (get relays url)
+        retries (get relay :retries 0)
+        last-retry-time (get relay :retry-time 0)
+        now (util/get-now)
+        time-since-last-retry (- now last-retry-time)
+        retries (if (> time-since-last-retry 3600000) 1 (inc retries))
+        relays (assoc-in relays [url :retries] retries)
+        relays (assoc-in relays [url :retry-time] now)]
+    relays))
+
 (defn handle-close [relay]
   (let [url (::ws-relay/url relay)
         now (quot (System/currentTimeMillis) 1000)
         minutes-10 600
-        date (- now minutes-10)
-        inc-retry (fn [relays url]
-                    (let [retries (get-in relays [url :retries] 0)]
-                      (assoc-in relays [url :retries] (inc retries))))]
+        date (- now minutes-10)]
     (prn 'relay-closed url)
     (swap! relays assoc-in [url :connection] nil)
-    (swap! relays inc-retry url)
+    (swap! relays increment-relay-retry url)
     (future
       (let [retries (get-in @relays [url :retries])
             seconds-to-wait (min 300 (* retries 10))]
