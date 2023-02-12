@@ -99,10 +99,12 @@
       pet-pubkey
       (gateway/get-id-from-username (get-db) user-name))))
 
-(defn abbreviate-pubkey [pubkey-string]
+(defn add-abbreviated-pubkey [pubkey-string]
   (let [pubkey (util/hex-string->num pubkey-string)
-        abbreviated-pubkey (str (subs pubkey-string 0 11) "-")]
-    (gateway/add-profile (get-db) pubkey {:name abbreviated-pubkey})
+        abbreviated-pubkey (str (subs pubkey-string 0 11) "-")
+        now (util/get-now)]
+    (gateway/add-profile (get-db) pubkey {:name abbreviated-pubkey
+                                          :created-at now})
     pubkey))
 
 (defn make-emplacement [reference tags]
@@ -112,7 +114,7 @@
         user-id (find-user-id user-reference)
         user-id (if (and (nil? user-id)
                          (re-matches config/pubkey-pattern user-reference))
-                  (abbreviate-pubkey user-reference)
+                  (add-abbreviated-pubkey user-reference)
                   user-id)]
     (if (nil? user-id)
       [reference tags]

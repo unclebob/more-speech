@@ -276,6 +276,7 @@
   )
 
 (describe "Emplacing references"
+  (with-stubs)
   (with db (in-memory/get-db))
 
   (context "replace @user with #[n] where n is the index of the 'p' tag."
@@ -313,14 +314,15 @@
                  (emplace-references content tags))))
 
     (it "adds an abbreviated profile name for an unamed pubkey"
-      (let [tags [[:e "blah"]]
-            user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
-            pubkey (num32->hex-string user-id)
-            content (str "hello @" pubkey ".")]
-        (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
-                 (emplace-references content tags))
-        (should= {:name "0123456789a-"}
-                 (gateway/get-profile @db user-id))))
+      (with-redefs [util/get-now (stub :get-now {:return 1000})]
+        (let [tags [[:e "blah"]]
+              user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
+              pubkey (num32->hex-string user-id)
+              content (str "hello @" pubkey ".")]
+          (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
+                   (emplace-references content tags))
+          (should= {:name "0123456789a-" :created-at 1000}
+                   (gateway/get-profile @db user-id)))))
 
     (it "does not recognize pubkeys that aren't 32 bytes"
       (let [tags [[:e "blah"]]
@@ -357,10 +359,10 @@
   (it "only copies e and p tags into the reaction"
     (set-mem :pubkey 0xdeadbeef)
     (let [subject-event {:id 1
-                 :pubkey 2
-                 :tags [[:gunk "gunk"]
-                        [:e "3"]
-                        [:p "4"]]}]
+                         :pubkey 2
+                         :tags [[:gunk "gunk"]
+                                [:e "3"]
+                                [:p "4"]]}]
       (should= {:kind 7,
                 :tags [[:e "3"]
                        [:p "4"]

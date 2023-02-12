@@ -244,8 +244,9 @@
     (process-name-event
       @db
       {:pubkey 1
+       :created-at 1000
        :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})
-    (should= {:name "bob" :about "about" :picture "picture"}
+    (should= {:name "bob" :about "about" :picture "picture" :created-at 1000}
              (gateway/get-profile @db 1)))
 
   (it "adds suffixes to duplicate names."

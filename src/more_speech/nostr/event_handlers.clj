@@ -28,13 +28,17 @@
         (str "dudx-" (rand-int 100000))
         fixed-name))))
 
-(defn add-suffix-for-duplicate [pubkey name]
+(defn add-suffix-for-duplicate
+  ([pubkey name]
+   (add-suffix-for-duplicate pubkey name 1))
+
+  ([pubkey name max]
   (let [id-of-name (gateway/get-id-from-username (get-db) name)]
     (if (or (nil? id-of-name) (= id-of-name pubkey))
       name
-      (str name (rand-int 1000)))))
+      (recur pubkey (str name (inc (rand-int max))) (* 10 max))))))
 
-(defn process-name-event [db {:keys [_id pubkey _created-at _kind _tags content _sig] :as event}]
+(defn process-name-event [db {:keys [_id pubkey created-at _kind _tags content _sig] :as event}]
   (try
     (let [profile (json/read-str content)
           name (get profile "name" "tilt")
@@ -43,7 +47,8 @@
           name (add-suffix-for-duplicate pubkey (fix-name name))
           profile {:name name
                    :about about
-                   :picture picture}]
+                   :picture picture
+                   :created-at created-at}]
       (gateway/add-profile db pubkey profile))
     (catch Exception e
       (prn 'json-exception-process-name-event-ignored (.getMessage e))
