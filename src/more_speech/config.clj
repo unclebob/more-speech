@@ -10,6 +10,7 @@
 (def article-width 120)
 
 (def days-to-read 1) ;how far back in time to load old messages from the database.
+(def read-contacts false) ;Read contacts from relays at startup.
 (def read-contact-lists-days-ago 0.5)
 
 (def migration-level 10)

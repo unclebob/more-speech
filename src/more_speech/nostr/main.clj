@@ -36,7 +36,7 @@
       (protocol/request-metadata-from-relays metadata-request-id (- now-in-seconds 86400))
       (user-configuration/set-last-time-metadata-imported now-in-seconds))
     (protocol/subscribe-to-relays subscription-id subscription-time now-in-seconds)
-    (when-not (config/is-test-run?)
+    (when (and config/read-contacts (not (config/is-test-run?)))
       (protocol/request-contact-lists-from-relays contact-lists-request-id))
     (handlers/update-relay-panel event-handler)
     (if (user-configuration/should-export-profile? now-in-seconds)

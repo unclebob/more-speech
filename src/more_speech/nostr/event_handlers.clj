@@ -133,8 +133,8 @@
 (defn decrypt-my-dm [event]
   (let [p-tags (filter #(= :p (first %)) (:tags event))
         p-tag (first p-tags)
-        his-key (unhexify (second p-tag))
-        priv-key (unhexify (get-mem [:keys :private-key]))
+        his-key (biginteger (unhexify (second p-tag)))
+        priv-key (biginteger (unhexify (get-mem [:keys :private-key])))
         shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
         decrypted-content (SECP256K1/decrypt shared-secret (:content event))
         event (assoc event :content decrypted-content)]

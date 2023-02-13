@@ -74,16 +74,21 @@
          event-count 0]
     (if (empty? events)
       (prn 'done-loading-events)
-      (let [event (first events)]
-        (when (zero? (rem event-count 100))
-          (prn event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog @config/websocket-backlog)
-          (Thread/sleep 5000))
-        (try
-          (handlers/handle-text-event handler event)
-          (catch Exception e
-            (prn 'EXCEPTION 'load-events)
-            (prn e)))
-        (recur (rest events) (inc event-count))))))
+      (if (> @config/websocket-backlog 10)
+        (do (prn 'waiting-for-backlog @config/websocket-backlog)
+            (Thread/sleep 5000)
+            (recur events event-count))
+        (let [event (first events)]
+          (when (zero? (rem event-count 100))
+            (prn event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog @config/websocket-backlog)
+            (Thread/sleep 5000))
+          (try
+            (handlers/handle-text-event handler event)
+            (Thread/sleep 50) ;take a breath
+            (catch Exception e
+              (prn 'EXCEPTION 'load-events)
+              (prn e)))
+          (recur (rest events) (inc event-count)))))))
 
 (defn partition-messages-by-day [message-map]
   (let [messages (sort-by :created-at (vals message-map))
