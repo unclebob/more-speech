@@ -1,9 +1,9 @@
-(ns more-speech.ui.swing.article-tree-util-spec
+(ns more-speech.ui.swing.article-panel-util-spec
   (:require [speclj.core :refer :all]
             [more-speech.mem :refer :all]
-            [more-speech.ui.swing.article-tree-util :refer :all :as article-tree-util]))
+            [more-speech.ui.swing.article-panel-util :refer :all]))
 
-(describe "Article Tree Util"
+(describe "article-panel-util"
   (before (clear-mem))
 
   (context "adjust-back-count"
@@ -26,7 +26,7 @@
   (context "go-back-by"
     (with-stubs)
     (it "displays the appropriate event and tab"
-      (with-redefs [article-tree-util/display-event (stub :display-event)]
+      (with-redefs [display-event (stub :display-event)]
         (set-mem :event-history [[:t1 1] [:t2 2]])
         (set-mem :back-count 0)
         (go-back-by 1)

@@ -20,7 +20,9 @@
   (handle-text-event [_handler event]
     (invoke-later (article-tree/add-event event)))
   (update-relay-panel [_handler]
-    (invoke-later (relay-panel/update-relay-panel))))
+    (invoke-later (relay-panel/update-relay-panel)))
+  (immediate-add-text-event [_handler event]
+    (article-tree/add-event event)))
 
 (defn open-link [e]
   (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))

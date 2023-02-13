@@ -4,7 +4,7 @@
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatters :as formatters]
             [more-speech.ui.formatter-util :as f-util]
-            [more-speech.ui.swing.article-tree-util :as article-tree-util]
+            [more-speech.ui.swing.article-panel-util :as article-panel-util]
             [more-speech.ui.swing.edit-window :as edit-window]
             [more-speech.mem :refer :all]
             [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
@@ -27,7 +27,7 @@
 (defn id-click [e]
   (if (.isPopupTrigger e)
     (copy-click e)
-    (article-tree-util/id-click (config e :user-data))))
+    (article-panel-util/id-click (config e :user-data))))
 
 (defn reaction-click [polarity]
   (let [frame (get-mem :frame)
@@ -113,10 +113,10 @@
     :text editor-pane-stylesheet))
 
 (defn go-back [_e]
-  (article-tree-util/go-back-by 1))
+  (article-panel-util/go-back-by 1))
 
 (defn go-forward [_e]
-  (article-tree-util/go-back-by -1))
+  (article-panel-util/go-back-by -1))
 
 (defn make-control-panel []
   (let [reply-button (button :text "Reply")
