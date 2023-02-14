@@ -81,6 +81,12 @@
         (abbreviate (second tag) 90)
         (recur (rest tags))))))
 
+(defn make-reaction-mark [event]
+  (let [reactions (count (:reactions event))]
+    (cond (> reactions 99) ">>"
+          (zero? reactions) "  "
+          :else (format "%2d" reactions))))
+
 (defn format-header [{:keys [pubkey created-at tags] :as event}]
   (if (nil? event)
     "nil"
@@ -91,7 +97,7 @@
           [reply-id _ _] (events/get-references event)
           reply-mark (if (some? reply-id) "^" " ")
           dm-mark (if (= 4 (:kind event)) "🚫 " "")
-          reaction-mark (if (some? (:reactions event)) "🤙" " ᐧᐧᐧᐧ")
+          reaction-mark (make-reaction-mark event)
           header-text (-> content (string/replace \newline \~) (abbreviate 130))
           content (if (empty? subject)
                     header-text
