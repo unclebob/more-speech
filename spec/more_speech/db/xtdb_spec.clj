@@ -29,7 +29,7 @@
 
   (it "adds a map of profiles"
     (gateway/add-profiles-map @db {1 {:name "n1"}
-                                2 {:name "n2"}})
+                                   2 {:name "n2"}})
     (should= {:name "n1"} (gateway/get-profile @db 1))
     (should= {:name "n2"} (gateway/get-profile @db 2)))
 
@@ -73,16 +73,23 @@
 
     (it "adds a batch of events"
       (gateway/add-events @db [{:id 1 :content 1}
-                            {:id 2 :content 2}])
+                               {:id 2 :content 2}])
       (should= {:id 1 :content 1} (gateway/get-event @db 1))
       (should= {:id 2 :content 2} (gateway/get-event @db 2)))
 
     (it "finds events after a certain time"
       (gateway/add-events @db [{:id 1 :created-at 1}
-                            {:id 2 :created-at 10}
-                            {:id 3 :created-at 11}])
+                               {:id 2 :created-at 10}
+                               {:id 3 :created-at 11}])
       (should= #{2 3}
                (set (gateway/get-event-ids-since @db 10))))
+
+    (it "finds read events after a certain time"
+      (gateway/add-events @db [{:id 1 :created-at 1}
+                               {:id 2 :created-at 10 :read true}
+                               {:id 3 :created-at 11}])
+      (should= [2]
+               (gateway/get-ids-of-read-events-since @db 10)))
     )
 
   (context "contacts"
@@ -95,7 +102,7 @@
 
     (it "adds a batch of contacts"
       (gateway/add-contacts-map @db {1 [{:pubkey 99} {:pubkey 98}]
-                                  2 [{:pubkey 97} {:pubkey 96}]})
+                                     2 [{:pubkey 97} {:pubkey 96}]})
       (let [contacts1 (gateway/get-contacts @db 1)
             contacts2 (gateway/get-contacts @db 2)
             pubkeys1 (map :pubkey contacts1)

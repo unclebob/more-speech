@@ -32,7 +32,7 @@
     (prn 'main 'reading-in-last-n-days)
     (let [latest-old-message-time
           (if (not (config/is-test-run?))
-            (data-storage/read-in-last-n-days config/days-to-read handler)
+            (data-storage/load-event-history handler)
             (-> (System/currentTimeMillis) (quot 1000) (- 3600)))
           _ (prn 'main 'getting-events)
           exit-condition (main/start-nostr latest-old-message-time)]

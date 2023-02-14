@@ -112,6 +112,21 @@
     (map first result))
   )
 
+(defmethod gateway/get-ids-of-read-events-since ::type [db start-time]
+  (let [node (:node db)
+        result (xt/q (xt/db node)
+                     '{:find [id event-time]
+                       :in [start-time]
+                       :where [[event :created-at event-time]
+                               [event :id id]
+                               [event :read true]
+                               [(>= event-time start-time)]]
+                       :order-by [[event-time :desc]]}
+                     start-time)]
+    (map first result))
+  )
+
+
 (defn delete-event [db id]
   (delete-entity db :event id))
 

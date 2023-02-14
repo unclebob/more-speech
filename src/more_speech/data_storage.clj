@@ -69,26 +69,23 @@
       (relays/load-relays-from-file @config/relays-filename))))
 
 (defn load-events [old-events handler]
-  (Thread/sleep 60000)
   (loop [events old-events
          event-count 0]
     (if (empty? events)
       (prn 'done-loading-events)
-      (if (> @config/websocket-backlog 10)
-        (do (prn 'waiting-for-backlog @config/websocket-backlog)
-            (Thread/sleep 5000)
-            (recur events event-count))
-        (let [event (first events)]
-          (when (zero? (rem event-count 100))
-            (prn event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog @config/websocket-backlog)
-            (Thread/sleep 5000))
-          (try
-            (handlers/handle-text-event handler event)
-            (Thread/sleep 50) ;take a breath
-            (catch Exception e
-              (prn 'EXCEPTION 'load-events)
-              (prn e)))
-          (recur (rest events) (inc event-count)))))))
+      (let [event (first events)]
+        (when (zero? (rem event-count 100))
+          (prn event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog @config/websocket-backlog)
+          (Thread/sleep 5000))
+        (try
+          (handlers/handle-text-event handler event)
+          (if (> @config/websocket-backlog 10)
+            (Thread/sleep 100)
+            (Thread/sleep 50))                              ;take a breath
+          (catch Exception e
+            (prn 'EXCEPTION 'load-events)
+            (prn e)))
+        (recur (rest events) (inc event-count))))))
 
 (defn partition-messages-by-day [message-map]
   (let [messages (sort-by :created-at (vals message-map))
@@ -150,19 +147,28 @@
 (defn is-message-file? [file-name]
   (re-matches #"\d+\-\d+\w+\d+" file-name))
 
-(defn read-in-last-n-days [n handler]
-  (prn 'read-in-last-n-days 'starting)
+(defn get-read-events []
   (let [db (get-db)
         now (quot (System/currentTimeMillis) 1000)
-        start-time (int (- now (* n 86400)))
-        event-ids (gateway/get-event-ids-since db start-time)
+        start-time (int (- now (* config/days-to-read-messages-that-have-been-read 86400)))
+        event-ids (gateway/get-ids-of-read-events-since db start-time)]
+    (prn 'reading (count event-ids) 'read-messages)
+    event-ids))
+
+(defn load-event-history [handler]
+  (prn 'load-event-history 'starting)
+  (let [db (get-db)
+        read-event-ids (get-read-events)
+        now (quot (System/currentTimeMillis) 1000)
+        start-time (int (- now (* config/days-to-read 86400)))
+        all-event-ids (gateway/get-event-ids-since db start-time)
+        event-ids (concat read-event-ids all-event-ids)
         events (map #(gateway/get-event db %) event-ids)
         times (map :created-at events)
         last-time (if (empty? times)
                     start-time
                     (apply max times))
-        _ (prn 'read-in-last-n-days 'last-time (fu/format-time last-time))]
-
+        _ (prn 'load-event-history 'last-time (fu/format-time last-time))]
     (future (load-events events handler))
     (prn 'reading-files-complete)
     last-time))

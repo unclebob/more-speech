@@ -232,26 +232,27 @@
         (set-mem [:orphaned-references parent-id] #{})))))
 
 (defn add-event [event]
-  (let [frame (get-mem :frame)
-        event-id (bigint (:id event))
-        ]
-    (loop [tabs (get-mem :tabs-list)
-           index 0]
-      (if (empty? tabs)
-        nil
-        (let [tree-id (keyword (str "#" index))
-              tree (select frame [tree-id])]
-          (when (should-add-event? (first tabs) event)
-            (let [model (config tree :model)
-                  root (.getRoot model)
-                  insertion-point (find-chronological-insertion-point root event-id)
-                  child (DefaultMutableTreeNode. event-id)]
-              (.insertNodeInto model child root insertion-point)
-              (.makeVisible tree (TreePath. (.getPath child)))
-              (update-mem [:node-map event-id] conj child)
-              ))
-          (recur (rest tabs) (inc index)))))
-    (add-references event)
-    (resolve-any-orphans event-id)))
+  (when (nil? (get-mem [:node-map (:id event)]))
+    (let [frame (get-mem :frame)
+          event-id (bigint (:id event))
+          ]
+      (loop [tabs (get-mem :tabs-list)
+             index 0]
+        (if (empty? tabs)
+          nil
+          (let [tree-id (keyword (str "#" index))
+                tree (select frame [tree-id])]
+            (when (should-add-event? (first tabs) event)
+              (let [model (config tree :model)
+                    root (.getRoot model)
+                    insertion-point (find-chronological-insertion-point root event-id)
+                    child (DefaultMutableTreeNode. event-id)]
+                (.insertNodeInto model child root insertion-point)
+                (.makeVisible tree (TreePath. (.getPath child)))
+                (update-mem [:node-map event-id] conj child)
+                ))
+            (recur (rest tabs) (inc index)))))
+      (add-references event)
+      (resolve-any-orphans event-id))))
 
 
