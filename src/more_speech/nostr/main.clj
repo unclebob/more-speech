@@ -26,9 +26,9 @@
           (recur (async/<!! send-chan)))))))
 
 (defn start-nostr [subscription-time]
-  (let [subscription-id "more-speech"
-        metadata-request-id "more-speech-metadata"
-        contact-lists-request-id "more-speech-contact-lists"
+  (let [subscription-id config/subscription-id-base
+        metadata-request-id (str subscription-id "-metadata")
+        contact-lists-request-id (str subscription-id "-contact-lists")
         event-handler (get-mem :event-handler)
         now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (protocol/connect-to-relays)

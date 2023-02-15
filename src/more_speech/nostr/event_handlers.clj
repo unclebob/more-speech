@@ -205,7 +205,7 @@
 (defn handle-event [_agent envelope url]
   (swap! config/websocket-backlog dec)
   (if (and (not= "OK" (first envelope))
-           (not (.startsWith (second envelope) "more-speech")))
+           (not (.startsWith (second envelope) config/subscription-id-base)))
     (prn 'strange-message-source url envelope)
     (count-event envelope url))
   (if (not= "EVENT" (first envelope))

@@ -44,6 +44,7 @@
   (onPong [_this webSocket _message]
     (.request webSocket 1))
   (onClose [_this _webSocket _statusCode _reason]
+    (prn 'websocket-closed (::url relay))
     ((:close (::callbacks relay)) relay))
   (onError [_this _webSocket error]
     (prn 'websocket-listener-error (::url relay) (:cause error))

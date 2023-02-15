@@ -10,12 +10,14 @@
 (def article-width 120)
 
 (def days-to-read 1) ;how far back in time to load old messages from the database.
-(def days-to-read-messages-that-have-been-read 30)
+(def days-to-read-messages-that-have-been-read 14)
 (def read-contacts false) ;Read contacts from relays at startup.
 (def read-contact-lists-days-ago 0.5)
 
 (def migration-level 10)
 (def version "2023-02-10T09:12")
+
+(def subscription-id-base "ms")
 
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)

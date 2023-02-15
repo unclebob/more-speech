@@ -37,9 +37,10 @@
 
 (defn subscribe-trusted [relay id since now]
   (let [trustee-ids (contact-list/get-trustees)
-        trustees (map util/hexify trustee-ids)]
-    (relay/send relay ["REQ" id {"since" since "until" now "authors" trustees}])
-    (relay/send relay ["REQ" (str id "-trusted") {"since" now "authors" trustees}])))
+        trustees (map util/hexify trustee-ids)
+        short-trustees (map #(subs % 0 10) trustees)]
+    (relay/send relay ["REQ" id {"since" since "until" now "authors" short-trustees}])
+    (relay/send relay ["REQ" (str id "-trusted") {"since" now "authors" short-trustees}])))
 
 (defn subscribe-web-of-trust [relay id since now]
   (let [trustee-ids (contact-list/get-web-of-trust)
@@ -66,7 +67,7 @@
     (when (and (or (not= :false read-type)
                    (not= :no-read read-type))
                (some? relay))
-      (unsubscribe relay id)
+      ;(unsubscribe relay id)
       (condp = read-type
         true (subscribe-all relay id date now)
         :read-all (subscribe-all relay id date now)
@@ -141,7 +142,7 @@
     (let [relay (get-in @relays [url :connection])
           read-type (get-in @relays [url :read])]
       (when (= :read-all read-type)
-        (unsubscribe relay id)
+        ;(unsubscribe relay id)
         (request-contact-lists relay id)))))
 
 (defn request-metadata-from-relays [id since]
@@ -150,7 +151,7 @@
     (let [relay (get-in @relays [url :connection])
           read? (get-in @relays [url :read])]
       (when (and read? (some? relay))
-        (unsubscribe relay id)
+        ;(unsubscribe relay id)
         (request-metadata relay id since)))))
 
 (defn unsubscribe-from-relays [id]
