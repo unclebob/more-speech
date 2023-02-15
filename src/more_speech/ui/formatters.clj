@@ -91,8 +91,10 @@
   (let [tags (:tags event)
         ptags (filter #(= :p (first %)) tags)
         to (util/unhexify (second (first ptags)))
-        to-name (format-user-id to)]
-    (str "🚫->" to-name " ")))
+        to-name (if (= to (get-mem :pubkey))
+                  ""
+                  (str "-> " (format-user-id to)))]
+    (str "🚫" to-name " ")))
 
 (defn format-header [{:keys [pubkey created-at tags] :as event}]
   (if (nil? event)

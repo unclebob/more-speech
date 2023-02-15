@@ -127,7 +127,7 @@
         (Thread/sleep (* 1000 seconds-to-wait)))
       (prn 'reconnecting-to url)
       (connect-to-relay relay)
-      (subscribe-to-relay url "more-speech-reconnect" date now))))
+      (subscribe-to-relay url (str config/subscription-id-base "-reconnect") date now))))
 
 (defn connect-to-relays []
   (doseq [url (keys @relays)]
