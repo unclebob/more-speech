@@ -87,6 +87,13 @@
           (zero? reactions) "  "
           :else (format "%2d" reactions))))
 
+(defn make-dm-mark [event]
+  (let [tags (:tags event)
+        ptags (filter #(= :p (first %)) tags)
+        to (util/unhexify (second (first ptags)))
+        to-name (format-user-id to)]
+    (str "🚫->" to-name " ")))
+
 (defn format-header [{:keys [pubkey created-at tags] :as event}]
   (if (nil? event)
     "nil"
@@ -96,7 +103,7 @@
           subject (get-subject tags)
           [reply-id _ _] (events/get-references event)
           reply-mark (if (some? reply-id) "^" " ")
-          dm-mark (if (= 4 (:kind event)) "🚫 " "")
+          dm-mark (if (= 4 (:kind event)) (make-dm-mark event) "")
           reaction-mark (make-reaction-mark event)
           header-text (-> content (string/replace \newline \~) (abbreviate 130))
           content (if (empty? subject)

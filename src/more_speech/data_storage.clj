@@ -166,7 +166,7 @@
         events (map #(gateway/get-event db %) event-ids)
         times (map :created-at events)
         last-time (if (empty? times)
-                    start-time
+                    (- now 60)
                     (apply max times))
         _ (prn 'load-event-history 'last-time (fu/format-time last-time))]
     (future (load-events events handler))

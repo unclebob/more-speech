@@ -34,10 +34,10 @@
    (add-suffix-for-duplicate pubkey name 1))
 
   ([pubkey name max]
-  (let [id-of-name (gateway/get-id-from-username (get-db) name)]
-    (if (or (nil? id-of-name) (= id-of-name pubkey))
-      name
-      (recur pubkey (str name (inc (rand-int max))) (* 10 max))))))
+   (let [id-of-name (gateway/get-id-from-username (get-db) name)]
+     (if (or (nil? id-of-name) (= id-of-name pubkey))
+       name
+       (recur pubkey (str name (inc (rand-int max))) (* 10 max))))))
 
 (defn process-name-event [db {:keys [_id pubkey created-at _kind _tags content _sig] :as event}]
   (try
@@ -124,8 +124,8 @@
                        p-tags)]
     (if (empty? my-tag)
       (assoc event :private true)                           ;I'm not the recipient.
-      (let [his-key (:pubkey event)
-            priv-key (unhexify (get-mem [:keys :private-key]))
+      (let [his-key (biginteger (:pubkey event))
+            priv-key (biginteger (unhexify (get-mem [:keys :private-key])))
             shared-secret (SECP256K1/calculateKeyAgreement priv-key his-key)
             decrypted-content (SECP256K1/decrypt shared-secret (:content event))
             event (assoc event :content decrypted-content)]
@@ -227,6 +227,6 @@
                 (handle-text-event ui-handler event))))
           (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)))
       (catch Exception e
-        (do (prn `handle-event url (.getMessage e))
+        (do (prn 'handle-event url (.getMessage e))
             (prn "--on event: " envelope)
             (st/print-stack-trace e))))))

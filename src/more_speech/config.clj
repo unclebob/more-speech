@@ -22,6 +22,7 @@
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)
 (def test-relays {"wss://eden.nostr.land" {:read :read-all :write true}
+                  "wss://relay.thes.ai" {:read :read-all :write true}
                   "wss://nostr-dev.wellorder.net" {:read :read-trusted, :write true}
                   "wss://relay.damus.io" {:read :read-trusted :write true}})
 
