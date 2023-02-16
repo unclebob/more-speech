@@ -1,6 +1,10 @@
 (ns more-speech.ui.swing.util
   (:require [more-speech.mem :refer :all]
-            [clojure.core.async :as async])
+            [clojure.core.async :as async]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.config :as config]
+            [more-speech.nostr.event-handlers :as event-handlers]
+            [more-speech.ui.swing.article-tree-util :as at-util])
   (:use [seesaw core])
   (:import (java.awt.datatransfer StringSelection)))
 
@@ -95,5 +99,28 @@
   (let [selection (StringSelection. text)]
     (.setContents (get-clipboard) selection selection)))
 
+(defn load-event [id]
+  (when-not (contains? (get-mem :node-map) id)
+    (let [event (gateway/get-event (config/get-db) id)
+          handler (get-mem :event-handler)]
+      (when (some? event)
+        (event-handlers/immediate-add-text-event handler event)))))
 
-
+(defn select-event [id]
+  (load-event id)
+  (let [frame (get-mem :frame)
+        tab-index (get-mem :selected-tab)
+        tab-selector (keyword (str "#" tab-index))
+        tree (select frame [tab-selector])
+        model (config tree :model)
+        root-node (.getRoot model)
+        node (at-util/find-header-node root-node id)]
+    (if (some? node)
+      (at-util/select-tree-node tree node)
+      (let [tree (select frame [(keyword (str "#" (get-tab-index "all")))])
+            model (config tree :model)
+            root-node (.getRoot model)
+            node (at-util/find-header-node root-node id)]
+        (when (some? node)
+          (select-tab "all")
+          (at-util/select-tree-node tree node))))))

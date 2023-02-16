@@ -7,10 +7,12 @@
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.relay-panel :as relay-panel]
             [more-speech.ui.swing.tabs :as tabs]
+            [more-speech.ui.swing.util :as swing-util]
             [more-speech.mem :refer :all]
             [more-speech.config :as config :refer [get-db]]
             [more-speech.ui.formatter-util :as formatter-util]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.util :as util]
+            [clojure.string :as string])
   (:use [seesaw core])
   (:import (javax.swing Timer)
            (javax.swing.event HyperlinkEvent$EventType)))
@@ -27,11 +29,23 @@
 (defn open-link [e]
   (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
     (when-let [url (str (.getURL e))]
-      (try
-        (browse/browse-url url)
-        (catch Exception ex
-          (prn 'open-link url (.getMessage ex))
-          (prn ex))))))
+      (let [[type subject] (string/split (.getDescription e) #"://")]
+        (cond
+          (or (= type "http") (= type "https"))
+          (try
+            (browse/browse-url url)
+            (catch Exception ex
+              (prn 'open-link url (.getMessage ex))
+              (prn ex)))
+
+          (= type "ms-idreference")
+          (let [id (util/unhexify (subs subject 1))]
+            (swing-util/select-event id))
+
+          :else
+          (do (prn 'open-link url 'type type 'subject subject)
+              (prn (.getDescription e)))
+          )))))
 
 (defn timer-action [_]
   ;nothing for now.

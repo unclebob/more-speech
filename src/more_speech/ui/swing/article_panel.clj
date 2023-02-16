@@ -27,7 +27,7 @@
 (defn id-click [e]
   (if (.isPopupTrigger e)
     (copy-click e)
-    (article-panel-util/id-click (config e :user-data))))
+    (swing-util/select-event (config e :user-data))))
 
 (defn reaction-click [polarity]
   (let [frame (get-mem :frame)
