@@ -31,9 +31,13 @@
 
 (defn compose-metadata-event []
   (let [keys (get-mem :keys)
-        content (events/to-json {:name (:name keys)
-                                 :about (:about keys)
-                                 :picture (:picture keys)})
+        profile {:name (:name keys)
+                 :about (:about keys)
+                 :picture (:picture keys)}
+        profile (if (some? (:nip05 keys))
+                  (assoc profile :nip05 (:nip05 keys))
+                  profile)
+        content (events/to-json profile)
         body {:kind 0
               :tags []
               :content content}]

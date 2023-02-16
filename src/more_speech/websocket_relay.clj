@@ -69,10 +69,11 @@
             cl (.newWebSocketBuilder client)
             cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) relay))
             wsf (future (.get cws))
-            ws (deref wsf 5000 :time-out)]
+            ws (deref wsf 30000 :time-out)]
         (if (= ws :time-out)
           (do
             (prn 'connection-time-out url)
+            (future ((:close (::callbacks relay)) relay))
             relay)
           (let [open-relay (assoc relay ::socket ws)]
             (assoc open-relay :timer (start-timer open-relay)))))
