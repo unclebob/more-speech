@@ -9,7 +9,7 @@
 
 (defn make-contact-from-tag [[_p pubkey relay petname]]
   (try
-    (let [pubkey (if (re-matches config/pubkey-pattern pubkey)
+    (let [pubkey (if (re-matches config/hex-key-pattern pubkey)
                    (util/hex-string->num pubkey)
                    (bech32/address->number (.trim pubkey)))]
       {:pubkey pubkey :relay relay :petname petname})

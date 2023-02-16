@@ -168,7 +168,8 @@
 
   ([content segments]
    (let [patterns [[:url config/url-pattern]
-                   [:namereference config/user-name-pattern]]
+                   [:idreference config/id-reference-pattern]
+                   [:namereference config/user-reference-pattern]]
          pattern (apply combine-patterns patterns)
          group-names (map first patterns)]
      (loop [content content
@@ -214,7 +215,13 @@
           (str formatted-content (linkify seg))
 
           :namereference
-          (str formatted-content (ms-linkify "ms-namereference" seg))))
+          (str formatted-content (ms-linkify "ms-namereference" seg))
+
+          :idreference
+          (str formatted-content (ms-linkify "ms-idreference" seg))
+
+          formatted-content
+          ))
       ""
       segments)))
 

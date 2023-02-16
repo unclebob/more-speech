@@ -113,7 +113,7 @@
         user-reference (subs reference 1)
         user-id (find-user-id user-reference)
         user-id (if (and (nil? user-id)
-                         (re-matches config/pubkey-pattern user-reference))
+                         (re-matches config/hex-key-pattern user-reference))
                   (add-abbreviated-pubkey user-reference)
                   user-id)]
     (if (nil? user-id)
@@ -136,7 +136,7 @@
 
 (defn emplace-references [content tags]
   (let [padded-content (str " " content " ")
-        pattern config/user-name-pattern
+        pattern config/user-reference-pattern
         references (re-seq pattern padded-content)
         segments (string/split padded-content pattern)
         [emplacements tags] (make-emplacements references tags)

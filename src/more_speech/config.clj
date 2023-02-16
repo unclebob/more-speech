@@ -44,8 +44,9 @@
 (def user-configuration-filename (atom "private/user-configuration"))
 (def contact-lists-filename (atom "private/ub-contacts"))
 
-(def user-name-pattern #"\@[\w\-]+")
-(def pubkey-pattern #"[0-9a-f]{64}+")
+(def user-reference-pattern #"\@[\w\-]+")
+(def id-reference-pattern #"\@[0-9a-f]{64}")
+(def hex-key-pattern #"[0-9a-f]{64}")
 (def user-name-chars #"[\w\-]+")
 (def reference-pattern #"\#\[\d+\]")
 

@@ -241,6 +241,10 @@
     (should= [[:namereference "@name"] [:text " text"]]
              (segment-article "@name text")))
 
+  (it "returns an :idreference segment"
+      (should= [[:idreference   "@0000000000000000000000000000000000000000000000000000000000000000"] [:text " text"]]
+               (segment-article "@0000000000000000000000000000000000000000000000000000000000000000 text")))
+
   (it "returns a list of :text and :url and :namereference segments"
     (should= [[:text "Hey "] [:namereference "@bob"] [:text " Check this "] [:url "http://nostr.com"] [:text " It's cool"]]
              (segment-article "Hey @bob Check this http://nostr.com It's cool")))
@@ -256,6 +260,10 @@
   (it "should ms-link a namereference"
     (should= "<a href=\"ms-namereference://@name\">@name</a>"
              (reformat-article "@name")))
+
+  (it "should ms-link an idreference"
+     (should= "<a href=\"ms-idreference://@0000000000000000000000000000000000000000000000000000000000000000\">@0000000000000000000000000000000000000000000000000000000000000000</a>"
+              (reformat-article "@0000000000000000000000000000000000000000000000000000000000000000")))
 
   (it "should escape HTML entities and linkify url"
     (should= "&lt;b&gt;Clojure&lt;&#x2F;b&gt;: <a href=\"https://clojure.org/\">clojure.org/</a>"
