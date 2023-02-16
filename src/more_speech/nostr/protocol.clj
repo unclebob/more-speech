@@ -67,7 +67,6 @@
     (when (and (or (not= :false read-type)
                    (not= :no-read read-type))
                (some? relay))
-      ;(unsubscribe relay id)
       (condp = read-type
         true (subscribe-all relay id date now)
         :read-all (subscribe-all relay id date now)
@@ -142,7 +141,6 @@
     (let [relay (get-in @relays [url :connection])
           read-type (get-in @relays [url :read])]
       (when (= :read-all read-type)
-        ;(unsubscribe relay id)
         (request-contact-lists relay id)))))
 
 (defn request-metadata-from-relays [id since]
