@@ -6,8 +6,7 @@
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.ui.formatter-util :refer :all]
             [more-speech.config :as config :refer [get-db]]
-            [more-speech.db.gateway :as gateway])
-  )
+            [more-speech.db.gateway :as gateway]))
 
 (defn format-user-id
   ([user-id]
@@ -153,30 +152,56 @@
         uri (if (= 2 (count split-url)) (second split-url) url)]
     (str "<a href=\"" url "\">" uri "</a>")))
 
+(defn ms-linkify [type subject]
+  (str "<a href=\"" (str type "://" subject) "\">" subject "</a>"))
+
+(defn combine-patterns
+  "patterns are a list of [:name pattern]"
+  [& patterns]
+  (let [grouped-patterns (map #(str "(?<" (name (first %)) ">" (second %) ")") patterns)
+        combined-patterns (interpose "|" grouped-patterns)]
+    (re-pattern (apply str combined-patterns))))
+
 (defn segment-article
   ([content]
-   (let [segment (re-find config/url-pattern content)]
-     (cond
-       (not (nil? segment))
-       (let [url-start-index (string/index-of content segment)
-             url-end-index (+ url-start-index (.length segment))
-             text-sub (subs content 0 url-start-index)
-             url-sub (subs content url-start-index url-end-index)
-             rest (subs content url-end-index)]
-         (concat
-           (if (empty? text-sub)
-             [[:url url-sub]]
-             [[:text text-sub] [:url url-sub]])
-           (segment-article rest)))
-       (not (empty? content)) (list [:text content])
-       :else '()))))
+   (segment-article content []))
+
+  ([content segments]
+   (let [patterns [[:url config/url-pattern]
+                   [:namereference config/user-name-pattern]]
+         pattern (apply combine-patterns patterns)
+         group-names (map first patterns)]
+     (loop [content content
+            segments segments]
+       (let [matcher (re-matcher pattern content)
+             segment (first (re-find matcher))]
+         (cond
+           (empty? content)
+           segments
+
+           (some? segment)
+           (let [grouped-by-name (map #(vector (keyword %) (.group matcher (name %))) group-names)
+                 the-group (filter #(some? (second %)) grouped-by-name)
+                 segment-type (ffirst the-group)
+                 url-start-index (string/index-of content segment)
+                 url-end-index (+ url-start-index (.length segment))
+                 text-sub (subs content 0 url-start-index)
+                 url-sub (subs content url-start-index url-end-index)
+                 rest (subs content url-end-index)]
+             (recur rest
+                    (concat segments
+                            (if (empty? text-sub)
+                              [[segment-type url-sub]]
+                              [[:text text-sub] [segment-type url-sub]]))))
+           :else
+           (concat segments (list [:text content]))))))))
 
 (defn reformat-article [article]
   (let [segments (segment-article article)]
     (reduce
       (fn [formatted-content [seg-type seg]]
-        (cond
-          (= seg-type :text)
+        (condp = seg-type
+          :text
           (str formatted-content
                ((comp
                   non-breaking-spaces
@@ -185,8 +210,11 @@
                   format-replies
                   ) seg)
                )
-          (= seg-type :url)
-          (str formatted-content (linkify seg))))
+          :url
+          (str formatted-content (linkify seg))
+
+          :namereference
+          (str formatted-content (ms-linkify "ms-namereference" seg))))
       ""
       segments)))
 

@@ -230,27 +230,44 @@
 (describe "Segment article content"
   (it "returns empty list if content is empty"
     (should= '() (segment-article "")))
+
   (it "returns a single :text element if no url in content"
     (should= '([:text "no url"]) (segment-article "no url")))
+
   (it "returns a single :url element if whole content is a url"
     (should= '([:url "http://nostr.com"]) (segment-article "http://nostr.com")))
-  (it "returns a list of :text and :url elements when content contains multiple text and url segments"
-    (should= '([:text "Check this "] [:url "http://nostr.com"] [:text " It's cool"])
-             (segment-article "Check this http://nostr.com It's cool")))
+
+  (it "returns a :namereference segment"
+    (should= [[:namereference "@name"] [:text " text"]]
+             (segment-article "@name text")))
+
+  (it "returns a list of :text and :url and :namereference segments"
+    (should= [[:text "Hey "] [:namereference "@bob"] [:text " Check this "] [:url "http://nostr.com"] [:text " It's cool"]]
+             (segment-article "Hey @bob Check this http://nostr.com It's cool")))
   )
 
 (describe "Format article"
   (it "should escape HTML entities"
     (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article "<b>text</b>")))
+
   (it "should linkify url"
     (should= "<a href=\"https://nostr.com\">nostr.com</a>" (reformat-article "https://nostr.com")))
+
+  (it "should ms-link a namereference"
+    (should= "<a href=\"ms-namereference://@name\">@name</a>"
+             (reformat-article "@name")))
+
   (it "should escape HTML entities and linkify url"
     (should= "&lt;b&gt;Clojure&lt;&#x2F;b&gt;: <a href=\"https://clojure.org/\">clojure.org/</a>"
              (reformat-article "<b>Clojure</b>: https://clojure.org/")))
+
   (it "should format replies and escape HTML entities properly"
     (should= "&gt;this is<br>&gt;a reply" (reformat-article ">this is >a reply")))
+
   (it "should replace multiple spaces with &nbsp"
     (should= "one two&nbsp three&nbsp&nbsp ." (reformat-article "one two  three   .")))
+
+
   )
 
 (declare db)
@@ -304,4 +321,18 @@
       (gateway/add-contacts @db trusted-user [{:pubkey trusted-by-trusted-user}])
       (set-mem :pubkey my-pubkey)
       (should= "2-deg<-trusted-pet" (format-user-id trusted-by-trusted-user))))
+  )
+
+(describe "combine patterns"
+  (it "combines a single pattern and name"
+    (let [pattern (combine-patterns [:name1 #"pattern1"])]
+      (should= java.util.regex.Pattern (type pattern))
+      (should= "(?<name1>pattern1)" (str pattern))))
+
+  (it "combines multiple patterns and names"
+      (let [pattern (combine-patterns [:name1 #"pattern1"]
+                                      [:name2 #"pattern2"])]
+        (should= java.util.regex.Pattern (type pattern))
+        (should= "(?<name1>pattern1)|(?<name2>pattern2)" (str pattern))))
+
   )
