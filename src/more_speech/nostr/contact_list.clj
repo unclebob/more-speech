@@ -13,8 +13,8 @@
                    (util/hex-string->num pubkey)
                    (bech32/address->number (.trim pubkey)))]
       {:pubkey pubkey :relay relay :petname petname})
-    (catch Exception e
-      (prn 'make-contact-from-tag 'exception [pubkey relay petname] (.getMessage e))
+    (catch Exception _e
+      ;(prn 'make-contact-from-tag 'exception [pubkey relay petname] (.getMessage e))
       nil)))
 
 (defn unpack-contact-list-event [event]

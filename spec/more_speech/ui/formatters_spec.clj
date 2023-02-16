@@ -206,7 +206,7 @@
 
 (describe "Linkify URL"
   (it "should wrap a hyperlink around the url string"
-    (should= "<a href=\"https://nostr.com\">https://nostr.com</a>" (linkify "https://nostr.com")))
+    (should= "<a href=\"https://nostr.com\">nostr.com</a>" (linkify "https://nostr.com")))
   )
 
 (describe "Format replies"
@@ -229,23 +229,23 @@
 
 (describe "Segment article content"
   (it "returns empty list if content is empty"
-    (should= '() (segment-text-url "")))
+    (should= '() (segment-article "")))
   (it "returns a single :text element if no url in content"
-    (should= '([:text "no url"]) (segment-text-url "no url")))
+    (should= '([:text "no url"]) (segment-article "no url")))
   (it "returns a single :url element if whole content is a url"
-    (should= '([:url "http://nostr.com"]) (segment-text-url "http://nostr.com")))
+    (should= '([:url "http://nostr.com"]) (segment-article "http://nostr.com")))
   (it "returns a list of :text and :url elements when content contains multiple text and url segments"
     (should= '([:text "Check this "] [:url "http://nostr.com"] [:text " It's cool"])
-             (segment-text-url "Check this http://nostr.com It's cool")))
+             (segment-article "Check this http://nostr.com It's cool")))
   )
 
 (describe "Format article"
   (it "should escape HTML entities"
     (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article "<b>text</b>")))
   (it "should linkify url"
-    (should= "<a href=\"https://nostr.com\">https://nostr.com</a>" (reformat-article "https://nostr.com")))
+    (should= "<a href=\"https://nostr.com\">nostr.com</a>" (reformat-article "https://nostr.com")))
   (it "should escape HTML entities and linkify url"
-    (should= "&lt;b&gt;Clojure&lt;&#x2F;b&gt;: <a href=\"https://clojure.org/\">https://clojure.org/</a>"
+    (should= "&lt;b&gt;Clojure&lt;&#x2F;b&gt;: <a href=\"https://clojure.org/\">clojure.org/</a>"
              (reformat-article "<b>Clojure</b>: https://clojure.org/")))
   (it "should format replies and escape HTML entities properly"
     (should= "&gt;this is<br>&gt;a reply" (reformat-article ">this is >a reply")))

@@ -149,27 +149,30 @@
   (string/replace content " >" "\n>"))
 
 (defn linkify [url]
-  (str "<a href=\"" url "\">" url "</a>"))
+  (let [split-url (string/split url #"://")
+        uri (if (= 2 (count split-url)) (second split-url) url)]
+    (str "<a href=\"" url "\">" uri "</a>")))
 
-(defn segment-text-url [content]
-  (let [url (re-find config/url-pattern content)]
-    (cond
-      (not (nil? url))
-      (let [url-start-index (string/index-of content url)
-            url-end-index (+ url-start-index (.length url))
-            text-sub (subs content 0 url-start-index)
-            url-sub (subs content url-start-index url-end-index)
-            rest (subs content url-end-index)]
-        (concat
-          (if (empty? text-sub)
-            [[:url url-sub]]
-            [[:text text-sub] [:url url-sub]])
-          (segment-text-url rest)))
-      (not (empty? content)) (list [:text content])
-      :else '())))
+(defn segment-article
+  ([content]
+   (let [segment (re-find config/url-pattern content)]
+     (cond
+       (not (nil? segment))
+       (let [url-start-index (string/index-of content segment)
+             url-end-index (+ url-start-index (.length segment))
+             text-sub (subs content 0 url-start-index)
+             url-sub (subs content url-start-index url-end-index)
+             rest (subs content url-end-index)]
+         (concat
+           (if (empty? text-sub)
+             [[:url url-sub]]
+             [[:text text-sub] [:url url-sub]])
+           (segment-article rest)))
+       (not (empty? content)) (list [:text content])
+       :else '()))))
 
 (defn reformat-article [article]
-  (let [segments (segment-text-url article)]
+  (let [segments (segment-article article)]
     (reduce
       (fn [formatted-content [seg-type seg]]
         (cond
