@@ -67,6 +67,7 @@
     (try
       (let [client (HttpClient/newHttpClient)
             cl (.newWebSocketBuilder client)
+            cl (.header cl "origin" "more-speech")
             cws (.buildAsync cl (URI/create url) (->listener (StringBuffer.) relay))
             wsf (future (.get cws))
             ws (deref wsf 30000 :time-out)]
