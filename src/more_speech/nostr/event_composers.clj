@@ -106,7 +106,7 @@
 (defn add-abbreviated-pubkey [pubkey-string]
   (let [pubkey (util/hex-string->num pubkey-string)
         abbreviated-pubkey (str (subs pubkey-string 0 11) "-")
-        now (util/get-now)]
+        now (util/get-now-ms)]
     (gateway/add-profile (get-db) pubkey {:name abbreviated-pubkey
                                           :created-at now})
     pubkey))

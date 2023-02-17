@@ -314,7 +314,7 @@
                  (emplace-references content tags))))
 
     (it "adds an abbreviated profile name for an unamed pubkey"
-      (with-redefs [util/get-now (stub :get-now {:return 1000})]
+      (with-redefs [util/get-now-ms (stub :get-now {:return 1000})]
         (let [tags [[:e "blah"]]
               user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
               pubkey (num32->hex-string user-id)

@@ -103,7 +103,7 @@
   (let [relay (get relays url)
         retries (get relay :retries 0)
         last-retry-time (get relay :retry-time 0)
-        now (util/get-now)
+        now (util/get-now-ms)
         time-since-last-retry (- now last-retry-time)
         retries (if (> time-since-last-retry 3600000) 1 (inc retries))
         relays (assoc-in relays [url :retries] retries)

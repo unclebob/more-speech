@@ -30,6 +30,16 @@
 (defmethod gateway/get-event ::type [db id]
   (get-in @(:data db) [:text-event-map id]))
 
+(defmethod gateway/get-ids-by-author-since ::type [db author start-time]
+  (let [event-map (:text-event-map @(:data db))
+        ids (keys event-map)
+        events (map #(gateway/get-event db %) ids)
+        authors-events (filter #(= author (:pubkey %)) events)
+        authors-since-events (filter #(> (:created-at %) start-time) authors-events)]
+    (map :id authors-since-events))
+  )
+
+
 (defmethod gateway/update-event-as-read ::type [db id]
   (swap! (:data db) assoc-in [:text-event-map id :read] true))
 

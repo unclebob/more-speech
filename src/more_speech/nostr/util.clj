@@ -82,5 +82,8 @@
         _ (.nextBytes gen key-bytes)]
     key-bytes))
 
-(defn get-now []
+(defn get-now-ms []
   (System/currentTimeMillis))
+
+(defn get-now []
+  (quot (get-now-ms) 1000))

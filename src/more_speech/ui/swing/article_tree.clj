@@ -17,20 +17,33 @@
   (:use [seesaw core font tree color])
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
+
+(defn add-tab-to-tree [tab-data]
+  )
+
 (defn if-new-tab [tab-name]
   (if (= tab-name "<new-tab>")
     (let [new-tab-name (input "New tab name:")
           new-tab-name (swing-util/unduplicate-tab-name new-tab-name)]
       (if (seq new-tab-name)
         (do (swing-util/add-tab-to-tabs-list new-tab-name)
+            ;(let [tab-data (tabs/make-tab-data {:name new-tab-name} (count (get-mem :tabs-list)))]
+            ;  (add-tab-to-tree tab-data))
             new-tab-name)
         nil))
     tab-name))
 
+(declare add-event-to-tab)
 (defn add-author-to-tab [public-key tab-name _e]
   (when-let [tab-name (if-new-tab tab-name)]
     (swing-util/add-id-to-tab tab-name :selected public-key)
-    (swing-util/relaunch)))
+    (let [now (util/get-now)
+          since (- now 86400)
+          tab (swing-util/get-tab-by-name tab-name)
+          ids (gateway/get-ids-by-author-since (get-db) public-key since)]
+      (doseq [id ids]
+        (add-event-to-tab tab (gateway/get-event (get-db) id))))
+    ))
 
 (defn block-author-from-tab [public-key tab-name _e]
   (when-let [tab-name (if-new-tab tab-name)]
@@ -114,7 +127,7 @@
     (text! widget "Articles")
     (let [node (:value info)
           event-id (.getUserObject node)
-          event-id (if (number? event-id) event-id 0) ;dummy event-idi
+          event-id (if (number? event-id) event-id 0)       ;dummy event-idi
           event (gateway/get-event (get-db) event-id)
           read? (:read event)
           font (if read? (uconfig/get-default-font) (uconfig/get-bold-font))
@@ -161,7 +174,7 @@
             (if (empty? (get orphaned-references referent))
               (assoc orphaned-references referent #{id})
               (update orphaned-references referent conj id)))]
-    (update-mem :orphaned-references update-reference referent)) )
+    (update-mem :orphaned-references update-reference referent)))
 
 ;; at the moment an event can appear in several places in the tree.
 ;; it can be in the reply chain of an event, and it can stand alone.
@@ -231,28 +244,34 @@
               (recur (rest orphan-set)))))
         (set-mem [:orphaned-references parent-id] #{})))))
 
+(defn add-event-to-tab-tree [tree event-id]
+  (let [model (config tree :model)
+        root (.getRoot model)
+        insertion-point (find-chronological-insertion-point root event-id)
+        child (DefaultMutableTreeNode. event-id)]
+    (.insertNodeInto model child root insertion-point)
+    (.makeVisible tree (TreePath. (.getPath child)))
+    (update-mem [:node-map event-id] conj child)))
+
+(defn add-event-to-tab [tab event]
+  (when (should-add-event? tab event)
+    (let [tab-index (swing-util/get-tab-index (:name tab))
+          tree-id (keyword (str "#" tab-index))
+          frame (get-mem :frame)
+          tree (select frame [tree-id])
+          event-id (bigint (:id event))]
+      (add-event-to-tab-tree tree event-id))))
+
 (defn add-event [event]
   (when (nil? (get-mem [:node-map (:id event)]))
-    (let [frame (get-mem :frame)
-          event-id (bigint (:id event))
-          ]
-      (loop [tabs (get-mem :tabs-list)
-             index 0]
-        (if (empty? tabs)
-          nil
-          (let [tree-id (keyword (str "#" index))
-                tree (select frame [tree-id])]
-            (when (should-add-event? (first tabs) event)
-              (let [model (config tree :model)
-                    root (.getRoot model)
-                    insertion-point (find-chronological-insertion-point root event-id)
-                    child (DefaultMutableTreeNode. event-id)]
-                (.insertNodeInto model child root insertion-point)
-                (.makeVisible tree (TreePath. (.getPath child)))
-                (update-mem [:node-map event-id] conj child)
-                ))
-            (recur (rest tabs) (inc index)))))
-      (add-references event)
+    (loop [tabs (get-mem :tabs-list)]
+      (if (empty? tabs)
+        nil
+        (do
+          (add-event-to-tab (first tabs) event)
+          (recur (rest tabs)))))
+    (add-references event)
+    (let [event-id (bigint (:id event))]
       (resolve-any-orphans event-id))))
 
 

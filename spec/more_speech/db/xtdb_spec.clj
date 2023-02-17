@@ -90,6 +90,13 @@
                                {:id 3 :created-at 11}])
       (should= [2]
                (gateway/get-ids-of-read-events-since @db 10)))
+
+    (it "gets events by author since date"
+        (gateway/add-events @db [{:id 1 :pubkey 100 :created-at 0}
+                                 {:id 2 :pubkey 100 :created-at 10}
+                                 {:id 3 :pubkey 100 :created-at 11}
+                                 {:id 4 :pubkey 200 :created-at 12}])
+        (should= #{2 3} (set (gateway/get-ids-by-author-since @db 100 9))))
     )
 
   (context "contacts"

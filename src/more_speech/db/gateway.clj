@@ -9,6 +9,7 @@
 (defmulti get-event (fn [db _id] (::type db)))
 (defmulti get-event-ids-since (fn [db _start-time] (::type db)))
 (defmulti get-ids-of-read-events-since (fn [db _start-time] (::type db)))
+(defmulti get-ids-by-author-since (fn [db _author _start-time] (::type db)))
 (defmulti update-event-as-read (fn [db _id] (::type db)))
 (defmulti add-relays-to-event (fn [db _id _relays] (::type db)))
 (defmulti add-reference-to-event (fn [db _id _reference] (::type db)))

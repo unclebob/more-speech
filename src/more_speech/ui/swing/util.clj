@@ -12,6 +12,8 @@
   (while (not (empty? (.getSubElements popup)))
     (.remove popup 0)))
 
+(defn get-tab-by-name [name]
+  (first (filter #(= name (:name %)) (get-mem :tabs-list))))
 
 (defn get-tab-index [name]
   (loop [tab-list (get-mem :tabs-list)

@@ -47,23 +47,26 @@
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
       (util/select-tab tab-index))))
 
+(defn make-tab-data [tab-desc tab-index]
+  (let [tab-name (:name tab-desc)
+        header-tree (article-tree/make-header-tree tab-index)
+        _ (config! header-tree
+                   :user-data tab-index
+                   :id (keyword (str tab-index)))
+        tab-label (label :text tab-name :user-data tab-index)
+        _ (listen tab-label :mouse-pressed tab-menu)
+        tab-content (scrollable header-tree)]
+    {:title tab-label
+     :content tab-content}
+    ))
+
 (defn make-tabs []
   (loop [tabs-list (get-mem :tabs-list)
          header-tree-tabs []
          tab-index 0]
     (if (empty? tabs-list)
       header-tree-tabs
-      (let [tab (first tabs-list)
-            tab-name (:name tab)
-            header-tree (article-tree/make-header-tree tab-index)
-            _ (config! header-tree
-                       :user-data tab-index
-                       :id (keyword (str tab-index)))
-            tab-label (label :text tab-name :user-data tab-index)
-            _ (listen tab-label :mouse-pressed tab-menu)
-            tab-content (scrollable header-tree)
-            tab-data {:title tab-label
-                      :content tab-content}]
+      (let [tab-data (make-tab-data (first tabs-list) tab-index)]
         (recur (rest tabs-list)
                (conj header-tree-tabs tab-data)
                (inc tab-index))))))
