@@ -123,22 +123,40 @@
                                [(>= event-time start-time)]]
                        :order-by [[event-time :desc]]}
                      start-time)]
-    (map first result))
-  )
+    (map first result)))
 
 (defmethod gateway/get-ids-by-author-since ::type [db author start-time]
   (let [node (:node db)
-          result (xt/q (xt/db node)
-                       '{:find [id event-time]
-                         :in [start-time author]
-                         :where [[event :created-at event-time]
-                                 [event :id id]
-                                 [event :pubkey author]
-                                 [(>= event-time start-time)]]
-                         :order-by [[event-time :desc]]}
-                       start-time author)]
-      (map first result))
+        result (xt/q (xt/db node)
+                     '{:find [id event-time]
+                       :in [start-time author]
+                       :where [[event :created-at event-time]
+                               [event :id id]
+                               [event :pubkey author]
+                               [(>= event-time start-time)]]
+                       :order-by [[event-time :desc]]}
+                     start-time author)]
+    (map first result)))
+
+(defn cites? [id tag]
+  (= id (second tag)))
+
+(defmethod gateway/get-ids-that-cite-since ::type [db target-id start-time]
+  (let [node (:node db)
+        result (xt/q (xt/db node)
+                     '{:find [id event-time]
+                       :in [start-time target-id]
+                       :where [[event :created-at event-time]
+                               [event :id id]
+                               [event :tags tag]
+                               [(>= event-time start-time)]
+                               [(more-speech.db.xtdb/cites? target-id tag)]
+                               ]
+                       :order-by [[event-time :desc]]}
+                     start-time target-id)]
+    (map first result))
   )
+
 
 
 (defn delete-event [db id]

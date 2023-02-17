@@ -38,7 +38,16 @@
         authors-since-events (filter #(> (:created-at %) start-time) authors-events)]
     (map :id authors-since-events))
   )
+(defn cited? [id tags]
+  (some #(= id (second %)) tags))
 
+(defmethod gateway/get-ids-that-cite-since ::type [db id start-time]
+  (let [event-map (:text-event-map @(:data db))
+        ids (keys event-map)
+        events (map #(gateway/get-event db %) ids)
+        cited-events (filter #(cited? id (:tags %)) events)
+        authors-since-events (filter #(> (:created-at %) start-time) cited-events)]
+    (map :id authors-since-events)))
 
 (defmethod gateway/update-event-as-read ::type [db id]
   (swap! (:data db) assoc-in [:text-event-map id :read] true))
@@ -81,7 +90,7 @@
 
 (defmethod gateway/add-reaction ::type [db id pubkey content]
   (swap! (:data db)
-           update-in [:text-event-map id :reactions] conj-set [pubkey content]))
+         update-in [:text-event-map id :reactions] conj-set [pubkey content]))
 
 ;----------methods for tests
 (def db (atom nil))

@@ -74,85 +74,85 @@
                (get-mem :tabs-list))))
 
   (context "filtering events in tabs."
-      (it "allows all if the filters are empty"
-        (let [event {:id 1}
-              filter {:selected []
-                      :blocked []}]
-          (should (should-add-event? filter event))))
+    (it "allows all if the filters are empty"
+      (let [event {:id 1}
+            filter {:selected []
+                    :blocked []}]
+        (should (should-add-event? filter event))))
 
-      (it "allows selected event ids"
-        (let [events [{:id 1} {:id 2} {:id 3}]
-              filter {:selected [1 3]
-                      :blocked []}
-              filter-results (map #(boolean (should-add-event? filter %)) events)]
-          (should= [true false true] filter-results)))
+    (it "allows selected event ids"
+      (let [events [{:id 1} {:id 2} {:id 3}]
+            filter {:selected [1 3]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false true] filter-results)))
 
-      (it "allows selected pubkeys"
-        (let [events [{:id 1 :pubkey 10} {:id 2 :pubkey 20} {:id 3 :pubkey 30}]
-              filter {:selected [10 30]
-                      :blocked []}
-              filter-results (map #(boolean (should-add-event? filter %)) events)]
-          (should= [true false true] filter-results)))
+    (it "allows selected pubkeys"
+      (let [events [{:id 1 :pubkey 10} {:id 2 :pubkey 20} {:id 3 :pubkey 30}]
+            filter {:selected [10 30]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false true] filter-results)))
 
-      (it "allows selected pubkeys when mentioned in p tags"
-        (let [events [{:id 1 :pubkey 10}
-                      {:id 2 :pubkey 20 :tags [[:p (util/hexify 50)]]}
-                      {:id 3 :pubkey 30}]
-              filter {:selected [50]
-                      :blocked []}
-              filter-results (map #(boolean (should-add-event? filter %)) events)]
-          (should= [false true false] filter-results)))
+    (it "allows selected pubkeys when mentioned in p tags"
+      (let [events [{:id 1 :pubkey 10}
+                    {:id 2 :pubkey 20 :tags [[:p (util/hexify 50)]]}
+                    {:id 3 :pubkey 30}]
+            filter {:selected [50]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [false true false] filter-results)))
 
-      (it "allows events that have a selected id at the root of a thread."
-        (let [events [{:id 1 :tags [[:e "10" ""]]}
-                      {:id 2 :tags [[:e "11" ""]]}
-                      {:id 3 :tags [[:e "30" ""]]}
-                      {:id 4 :tags [[:e "90" ""] [:e "30" ""]]}
-                      {:id 5 :tags [[:e "90" ""] [:e "50" ""] [:e "30" ""]]}
-                      {:id 6 :tags [[:e "90" ""] [:e "30" ""] [:e "50" ""]]}]
-              filter {:selected [16r10 16r30]
-                      :blocked []}
-              filter-results (map #(boolean (should-add-event? filter %)) events)]
-          (should= [true false true false false false] filter-results)))
+    (it "allows events that have a selected id at the root of a thread."
+      (let [events [{:id 1 :tags [[:e "10" ""]]}
+                    {:id 2 :tags [[:e "11" ""]]}
+                    {:id 3 :tags [[:e "30" ""]]}
+                    {:id 4 :tags [[:e "90" ""] [:e "30" ""]]}
+                    {:id 5 :tags [[:e "90" ""] [:e "50" ""] [:e "30" ""]]}
+                    {:id 6 :tags [[:e "90" ""] [:e "30" ""] [:e "50" ""]]}]
+            filter {:selected [16r10 16r30]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false true false false false] filter-results)))
 
-      (it "does not allow an id or pubkey that is blocked, even if it is selected."
-        (let [events [{:id 1 :pubkey 20}
-                      {:id 2 :pubkey 20}
-                      {:id 3 :pubkey 20}
-                      {:id 4 :pubkey 10}]
-              filter {:selected [1 2 3 4]
-                      :blocked [2 10]}
-              filter-results (map #(boolean (should-add-event? filter %)) events)]
-          (should= [true false true false] filter-results))
-        )
+    (it "does not allow an id or pubkey that is blocked, even if it is selected."
+      (let [events [{:id 1 :pubkey 20}
+                    {:id 2 :pubkey 20}
+                    {:id 3 :pubkey 20}
+                    {:id 4 :pubkey 10}]
+            filter {:selected [1 2 3 4]
+                    :blocked [2 10]}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false true false] filter-results))
       )
+    )
 
   (context "selecting nodes"
-      (with-stubs)
-      (with db (in-memory/get-db))
-      (before-all (config/set-db! :in-memory))
-      (before (in-memory/clear-db @db))
+    (with-stubs)
+    (with db (in-memory/get-db))
+    (before-all (config/set-db! :in-memory))
+    (before (in-memory/clear-db @db))
 
-      (it "remembers which articles have been read and loads article"
-        (with-redefs
-          [article-panel/load-article-info
-           (stub :load-article-info {:return nil})]
+    (it "remembers which articles have been read and loads article"
+      (with-redefs
+        [article-panel/load-article-info
+         (stub :load-article-info {:return nil})]
 
-          (let [selected-event-id 1
-                _ (set-mem :back-count 1)
-                _ (gateway/add-event @db {:id selected-event-id :content "event"})
-                selected-node (DefaultMutableTreeNode. selected-event-id)
-                tab-index 0
-                _ (select-article tab-index selected-node)
-                selected-event (get-mem :selected-event)
-                event-history (get-mem :event-history)
-                back-count (get-mem :back-count)
-                event (gateway/get-event @db selected-event-id)]
-            (should (:read event))
-            (should-have-invoked :load-article-info {:with [selected-event-id]})
-            (should= selected-event selected-event-id)
-            (should= [[tab-index selected-event-id]] event-history)
-            (should= 0 back-count)))))
+        (let [selected-event-id 1
+              _ (set-mem :back-count 1)
+              _ (gateway/add-event @db {:id selected-event-id :content "event"})
+              selected-node (DefaultMutableTreeNode. selected-event-id)
+              tab-index 0
+              _ (select-article tab-index selected-node)
+              selected-event (get-mem :selected-event)
+              event-history (get-mem :event-history)
+              back-count (get-mem :back-count)
+              event (gateway/get-event @db selected-event-id)]
+          (should (:read event))
+          (should-have-invoked :load-article-info {:with [selected-event-id]})
+          (should= selected-event selected-event-id)
+          (should= [[tab-index selected-event-id]] event-history)
+          (should= 0 back-count)))))
   )
 
 (describe "adding ids to tabs"
@@ -164,20 +164,25 @@
   (it "adds an an unrooted article id to a tab"
     (gateway/add-event @db {:id 1 :tags []})
     (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
-                  swing-util/relaunch (stub :relaunch)]
+                  swing-util/relaunch (stub :relaunch)
+                  swing-util/select-tab (stub :select-tab)
+                  add-event-to-tab (stub :add-event-to-tab)]
       (add-article-to-tab 1 "tab" nil)
-      (should-have-invoked :relaunch)
-      (should-have-invoked :add-id-to-tab {:with ["tab" :selected 1]})))
+      (should-have-invoked :add-id-to-tab {:with ["tab" :selected 1]})
+      (should-have-invoked :select-tab {:with ["tab"]})
+      (should-have-invoked :add-event-to-tab)))
 
   (it "adds the root id of a thread to a tab"
     (let [root-id 100
           event {:id 1 :tags [[:e (util/hexify root-id) "" "root"]]}]
       (gateway/add-event @db event)
       (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
-                    swing-util/relaunch (stub :relaunch)]
+                    add-event-to-tab (stub :add-event-to-tab)
+                    swing-util/select-tab (stub :select-tab)]
         (add-article-to-tab 1 "tab" nil)
-        (should-have-invoked :relaunch)
-        (should-have-invoked :add-id-to-tab {:with ["tab" :selected root-id]}))))
+        (should-have-invoked :add-id-to-tab {:with ["tab" :selected root-id]})
+        (should-have-invoked :select-tab {:with ["tab"]})
+        (should-have-invoked :add-event-to-tab))))
   )
 
 (defn depict-node [node]

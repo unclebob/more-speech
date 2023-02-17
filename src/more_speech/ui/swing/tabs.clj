@@ -141,22 +141,43 @@
           ids (gateway/get-ids-by-author-since (get-db) public-key since)]
       (swing-util/select-tab tab-name)
       (doseq [id ids]
-        (add-event-to-tab tab (gateway/get-event (get-db) id)))
-      )
-    ))
+        (add-event-to-tab tab (gateway/get-event (get-db) id))))))
+
+(defn block-author-from-tab [public-key tab-name _e]
+  (when-let [tab-name (if-new-tab tab-name)]
+    (swing-util/add-id-to-tab tab-name :blocked public-key)))
+
+(defn add-article-to-tab [event-id tab-name _e]
+  (when-let [tab-name (if-new-tab tab-name)]
+    (let [root-of-thread (events/get-root-of-thread event-id)]
+      (swing-util/add-id-to-tab tab-name :selected root-of-thread)
+      (let [now (util/get-now)
+            since (- now 86400)
+            tab (swing-util/get-tab-by-name tab-name)
+            ids (gateway/get-ids-that-cite-since (get-db) root-of-thread since)
+            ids (set (concat [root-of-thread event-id] ids))]
+        (swing-util/select-tab tab-name)
+        (doseq [id ids]
+          (add-event-to-tab tab (gateway/get-event (get-db) id)))))))
+
+(defn block-article-from-tab [event-id tab-name _e]
+  (when-let [tab-name (if-new-tab tab-name)]
+    (swing-util/add-id-to-tab tab-name :blocked event-id)))
 
 (defn delete-tab [tab-label _e]
-  (let [tab-name (config tab-label :text)]
+  (let [tab-name (config tab-label :text)
+        tab-index (swing-util/get-tab-index tab-name)]
     (when (confirm (format "Confirm delete %s" tab-name))
       (swing-util/delete-tab-from-tabs-list tab-name)
-      (swing-util/relaunch))))
+      (let [frame (get-mem :frame)
+            tab-panel (select frame [:#header-tab-panel])]
+        (.remove tab-panel tab-index)))))
 
 (defn new-tab [_e]
   (let [new-tab-name (input "New tab name:")
         new-tab-name (swing-util/unduplicate-tab-name new-tab-name)]
     (when (seq new-tab-name)
-      (swing-util/add-tab-to-tabs-list new-tab-name)
-      (swing-util/relaunch))))
+      (swing-util/add-tab-to-tabs-list new-tab-name))))
 
 (defn change-tab-name [tab-label _e]
   (let [tab-name (config tab-label :text)
@@ -185,23 +206,6 @@
   (if (some #(= "all" (:name %)) tab-list)
     tab-list
     (conj tab-list {:name "all" :selected [] :blocked []})))
-
-
-(defn block-author-from-tab [public-key tab-name _e]
-  (when-let [tab-name (if-new-tab tab-name)]
-    (swing-util/add-id-to-tab tab-name :blocked public-key)
-    (swing-util/relaunch)))
-
-(defn add-article-to-tab [event-id tab-name _e]
-  (when-let [tab-name (if-new-tab tab-name)]
-    (let [root-of-thread (events/get-root-of-thread event-id)]
-      (swing-util/add-id-to-tab tab-name :selected root-of-thread))
-    (swing-util/relaunch)))
-
-(defn block-article-from-tab [event-id tab-name _e]
-  (when-let [tab-name (if-new-tab tab-name)]
-    (swing-util/add-id-to-tab tab-name :blocked event-id)
-    (swing-util/relaunch)))
 
 (defn get-info [event _e]
   (alert
