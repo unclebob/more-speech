@@ -140,6 +140,7 @@
           tab (swing-util/get-tab-by-name tab-name)
           ids (gateway/get-ids-by-author-since (get-db) public-key since)]
       (swing-util/select-tab tab-name)
+      (prn 'adding (count ids) 'events)
       (doseq [id ids]
         (add-event-to-tab tab (gateway/get-event (get-db) id))))))
 
@@ -157,6 +158,7 @@
             ids (gateway/get-ids-that-cite-since (get-db) root-of-thread since)
             ids (set (concat [root-of-thread event-id] ids))]
         (swing-util/select-tab tab-name)
+        (prn 'adding (count ids) 'events)
         (doseq [id ids]
           (add-event-to-tab tab (gateway/get-event (get-db) id)))))))
 
