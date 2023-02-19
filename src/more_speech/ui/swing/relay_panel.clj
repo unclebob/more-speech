@@ -21,20 +21,3 @@
         relay-panel (vertical-panel :items relay-control-panels :id :relay-panel :user-data panel-map)]
     relay-panel))
 
-(defn update-relay-panel []
-  (let [frame (get-mem :frame)
-        relay-panel (select frame [:#relay-panel])
-        panel-map (config relay-panel :user-data)]
-    (loop [urls (keys @relays)]
-      (if (empty? urls)
-        nil
-        (let [url (first urls)
-              relay (get @relays url)
-              this-relay-panel (get panel-map url)
-              connected (select this-relay-panel [:#connected])
-              subscribed (select this-relay-panel [:#subscribed])]
-          (config! connected :selected? (some? (:connection relay)))
-          (config! subscribed :selected? (:subscribed relay))
-          (recur (rest urls)))))
-    )
-  )

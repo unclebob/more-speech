@@ -5,7 +5,6 @@
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.ui.swing.article-tree :as article-tree]
             [more-speech.ui.swing.article-panel :as article-panel]
-            [more-speech.ui.swing.relay-panel :as relay-panel]
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.ui.swing.util :as swing-util]
             [more-speech.mem :refer :all]
@@ -21,8 +20,6 @@
   handlers/event-handler
   (handle-text-event [_handler event]
     (invoke-later (article-tree/add-event event)))
-  (update-relay-panel [_handler]
-    (invoke-later (relay-panel/update-relay-panel)))
   (immediate-add-text-event [_handler event]
     (article-tree/add-event event)))
 
@@ -66,9 +63,6 @@
         article-area (article-panel/make-article-area)
         _ (listen article-area :hyperlink open-link)
         header-tab-panel (tabbed-panel :tabs (tabs/make-tabs) :id :header-tab-panel)
-        _ (prn 'make-main-window 'making-relay-panel)
-        relay-panel (relay-panel/make-relay-panel)
-        _ (prn 'make-main-window 'relay-panel-complete)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)
                                     :south (article-panel/make-control-panel))
@@ -78,10 +72,8 @@
                          article-panel
                          :divider-location 1/2)
         _ (prn 'make-main-window 'messages-panel-complete)
-        main-tabs (tabbed-panel :tabs [{:title "Messages" :content messages-panel}
-                                       {:title "Relays" :content (scrollable relay-panel)}])
         timer (Timer. 100 nil)]
-    (config! main-frame :content main-tabs)
+    (config! main-frame :content messages-panel)
     (listen timer :action timer-action)
     (listen main-frame :window-closing
             (fn [_]

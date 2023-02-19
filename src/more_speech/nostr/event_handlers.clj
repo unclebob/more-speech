@@ -15,7 +15,6 @@
 
 (defprotocol event-handler
   (handle-text-event [handler event])
-  (update-relay-panel [handler])
   (immediate-add-text-event [handler event]))
 
 (defn fix-name [name]

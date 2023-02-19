@@ -149,7 +149,6 @@
     (let [relay (get-in @relays [url :connection])
           read? (get-in @relays [url :read])]
       (when (and read? (some? relay))
-        ;(unsubscribe relay id)
         (request-metadata relay id since)))))
 
 (defn unsubscribe-from-relays [id]

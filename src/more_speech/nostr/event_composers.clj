@@ -4,6 +4,7 @@
             [more-speech.nostr.util :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]
             [more-speech.nostr.util :as util]
+            [more-speech.nostr.relays :refer [relays]]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.config :as config :refer [get-db]]
             [clojure.string :as string]
@@ -189,8 +190,22 @@
         event (compose-text-event subject message reply-to-or-nil)]
     (send-event event)))
 
+(defn compose-recommended-server-event [url]
+  (let [body {:kind 2
+               :tags []
+               :content url}]
+    (body->event body)))
+
+(defn remove-arguments [url]
+  (re-find #"ws+\://[\w.]+" url))
+
 (defn compose-and-send-metadata-event []
-  (send-event (compose-metadata-event)))
+  (send-event (compose-metadata-event))
+  (let [server-urls (filter #(:write (get @relays %)) (keys @relays))
+        server-urls (map remove-arguments server-urls)]
+    (prn 'server-urls server-urls)
+    (doseq [url server-urls]
+      (send-event (compose-recommended-server-event url)))))
 
 (defn compose-and-send-contact-list [contact-list]
   (send-event (compose-contact-list contact-list)))

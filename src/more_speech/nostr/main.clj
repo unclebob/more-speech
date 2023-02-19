@@ -2,7 +2,6 @@
   (:require [more-speech.nostr.protocol :as protocol]
             [more-speech.mem :refer :all]
             [more-speech.user-configuration :as user-configuration]
-            [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.relays :as relays]
             [more-speech.relay :as relay]
@@ -29,7 +28,6 @@
   (let [subscription-id config/subscription-id-base
         metadata-request-id (str subscription-id "-metadata")
         contact-lists-request-id (str subscription-id "-contact-lists")
-        event-handler (get-mem :event-handler)
         now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (protocol/connect-to-relays)
     (when (user-configuration/should-import-metadata? now-in-seconds)
@@ -38,7 +36,6 @@
     (protocol/subscribe-to-relays subscription-id subscription-time now-in-seconds)
     (when (and config/read-contacts (not (config/is-test-run?)))
       (protocol/request-contact-lists-from-relays contact-lists-request-id))
-    (handlers/update-relay-panel event-handler)
     (if (user-configuration/should-export-profile? now-in-seconds)
       (do
         (user-configuration/set-last-time-profile-exported now-in-seconds)
