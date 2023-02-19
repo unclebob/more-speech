@@ -64,8 +64,10 @@
 
 (defn add-tab-to-tabs-list [tab-name]
   (let [tabs-list (get-mem :tabs-list)
-        new-tabs-list (conj tabs-list {:name tab-name :selected [] :blocked []})]
-    (set-mem :tabs-list new-tabs-list)))
+        tab-desc {:name tab-name :selected [] :blocked []}
+        new-tabs-list (conj tabs-list tab-desc)]
+    (set-mem :tabs-list new-tabs-list)
+    tab-desc))
 
 
 (defn add-id-to-tab [tab-name key id]
@@ -110,16 +112,17 @@
 
 (defn select-event [id]
   (load-event id)
-  (let [frame (get-mem :frame)
-        tab-index (get-mem :selected-tab)
-        tab-selector (keyword (str "#" tab-index))
-        tree (select frame [tab-selector])
+  (let [tab-index (get-mem :selected-tab)
+        tabs-list (get-mem :tabs-list)
+        tab-data (get tabs-list tab-index)
+        tab-name (:name tab-data)
+        tree (get-mem [:tab-tree-map tab-name])
         model (config tree :model)
         root-node (.getRoot model)
         node (at-util/find-header-node root-node id)]
     (if (some? node)
       (at-util/select-tree-node tree node)
-      (let [tree (select frame [(keyword (str "#" (get-tab-index "all")))])
+      (let [tree (get-mem [:tab-tree-map "all"])
             model (config tree :model)
             root-node (.getRoot model)
             node (at-util/find-header-node root-node id)]

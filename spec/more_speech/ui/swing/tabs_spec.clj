@@ -206,7 +206,7 @@
 
 (defn events->tree [db event-list]
   (with-redefs [render-event (stub :render-event)]
-    (let [tab-id :tab
+    (let [tab-id "tab"
           tab {:name tab-id
                :selected []
                :blocked []}

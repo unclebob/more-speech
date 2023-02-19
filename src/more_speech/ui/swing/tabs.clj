@@ -46,8 +46,9 @@
             (instance? DefaultMutableTreeNode selected-node))
       (select-article tab-index selected-node))))
 
-(defn make-header-tree [tab-index]
-  (let [header-tree (tree :renderer render-event
+(defn make-header-tree [tab-name]
+  (let [tab-index (swing-util/get-tab-index tab-name)
+        header-tree (tree :renderer render-event
                           :root-visible? false
                           :expands-selected-paths? true
                           :model (DefaultTreeModel. (DefaultMutableTreeNode. 0)))
@@ -55,21 +56,21 @@
         _ (.setBackgroundSelectionColor renderer (color :azure))]
     (listen header-tree :selection (partial node-selected tab-index))
     (listen header-tree :mouse-pressed mouse-pressed)
+    (set-mem [:tab-tree-map tab-name] header-tree)
     header-tree))
 
 (defn make-tab-data [tab-desc tab-index]
   (let [tab-name (:name tab-desc)
-        header-tree (make-header-tree tab-index)
+        header-tree (make-header-tree tab-name)
         _ (config! header-tree
-                   :user-data tab-index
-                   :id (keyword (str tab-index)))
-        tab-label (label :text tab-name :user-data tab-index)
+                   :user-data tab-index)
+        tab-label (label :text tab-name)
         _ (listen tab-label :mouse-pressed tab-menu)
         tab-content (scrollable header-tree)]
     {:title tab-label
      :content tab-content}))
 
-(defn add-tab-to-tree [tab-data]
+(defn add-tab-to-tab-panel [tab-data]
   (let [frame (get-mem :frame)
         tab-panel (select frame [:#header-tab-panel])
         component (:content tab-data)
@@ -86,7 +87,7 @@
             (let [new-tab {:name new-tab-name :selected [] :blocked []}
                   tab-index (swing-util/get-tab-index new-tab-name)
                   tab-data (make-tab-data new-tab tab-index)]
-              (add-tab-to-tree tab-data))
+              (add-tab-to-tab-panel tab-data))
             new-tab-name)
         nil))
     tab-name))
@@ -125,10 +126,8 @@
 
 (defn add-event-to-tab [tab event]
   (when (should-add-event? tab event)
-    (let [tab-index (swing-util/get-tab-index (:name tab))
-          tree-id (keyword (str "#" tab-index))
-          frame (get-mem :frame)
-          tree (select frame [tree-id])
+    (let [tab-name (:name tab)
+          tree (get-mem [:tab-tree-map tab-name])
           event-id (bigint (:id event))]
       (add-event-to-tab-tree tree event-id))))
 
@@ -179,7 +178,11 @@
   (let [new-tab-name (input "New tab name:")
         new-tab-name (swing-util/unduplicate-tab-name new-tab-name)]
     (when (seq new-tab-name)
-      (swing-util/add-tab-to-tabs-list new-tab-name))))
+      (let [tab-desc (swing-util/add-tab-to-tabs-list new-tab-name)
+            tab-index (swing-util/get-tab-index new-tab-name)
+            tab-data (make-tab-data tab-desc tab-index)]
+        (add-tab-to-tab-panel tab-data)
+        ))))
 
 (defn change-tab-name [tab-label _e]
   (let [tab-name (config tab-label :text)
@@ -187,11 +190,14 @@
         new-name (swing-util/unduplicate-tab-name new-name)
         frame (get-mem :frame)
         tab-panel (select frame [:#header-tab-panel])
-        tab-index (config tab-label :user-data)]
+        tab-index (swing-util/get-tab-index tab-name)]
     (when (and (some? tab-index) (seq new-name))
-      (let [label (.getTabComponentAt tab-panel tab-index)]
+      (let [label (.getTabComponentAt tab-panel tab-index)
+            tree (get-mem [:tab-tree-map tab-name])]
         (config! label :text new-name)
-        (swing-util/change-tabs-list-name tab-name new-name)))))
+        (swing-util/change-tabs-list-name tab-name new-name)
+        (set-mem [:tab-tree-map new-name] tree)
+        (set-mem [:tab-tree-map tab-name] nil)))))
 
 (defn make-tabs []
   (loop [tabs-list (get-mem :tabs-list)
@@ -261,7 +267,7 @@
 (defn tab-menu [e]
   (let [tab-label (.getComponent e)
         tab-name (config tab-label :text)
-        tab-index (config tab-label :user-data)
+        tab-index (swing-util/get-tab-index tab-name)
         isAll? (= "all" tab-name)
         p (popup :items [(action :name "Change name..."
                                  :handler (partial change-tab-name tab-label)
