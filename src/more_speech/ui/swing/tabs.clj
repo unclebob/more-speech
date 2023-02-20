@@ -18,7 +18,7 @@
         [seesaw core font tree color])
   (:import (javax.swing.tree DefaultTreeModel DefaultMutableTreeNode TreePath)))
 
-(declare mouse-pressed tab-menu)
+(declare mouse-pressed tab-menu search-event)
 
 (defn render-event [widget info]
   (if (seqable? (:value info))
@@ -59,16 +59,40 @@
     (set-mem [:tab-tree-map tab-name] header-tree)
     header-tree))
 
-(defn make-tab-data [tab-desc tab-index]
+(defn make-search-bar [tab-name]
+  (let [found-id (keyword (str tab-name "-found"))
+        search-id (keyword (str tab-name "-search"))
+        search-field (text :text "" :editable? true :columns 30 :id search-id)
+        search-items [(label "Find:")
+                      search-field
+                      (text :text "" :editable? false :columns 15 :id found-id)
+                      (label "⬆")
+                      (label "⬇")]
+        bar (flow-panel :align :left :items search-items)]
+    (listen search-field :key-pressed (partial search-event tab-name))
+    bar
+  ))
+
+(defn make-tab [tab-desc]
   (let [tab-name (:name tab-desc)
-        header-tree (make-header-tree tab-name)
-        _ (config! header-tree
-                   :user-data tab-index)
         tab-label (label :text tab-name)
         _ (listen tab-label :mouse-pressed tab-menu)
-        tab-content (scrollable header-tree)]
+        header-tree (make-header-tree tab-name)
+        scrollable-header-tree (scrollable header-tree)
+        search-bar (make-search-bar tab-name)
+        tab-window (top-bottom-split search-bar scrollable-header-tree)
+        ]
     {:title tab-label
-     :content tab-content}))
+     :content tab-window}))
+
+(defn make-tabs []
+  (loop [tabs-list (get-mem :tabs-list)
+         header-tree-tabs []]
+    (if (empty? tabs-list)
+      header-tree-tabs
+      (let [tab-data (make-tab (first tabs-list))]
+        (recur (rest tabs-list)
+               (conj header-tree-tabs tab-data))))))
 
 (defn add-tab-to-tab-panel [tab-data]
   (let [frame (get-mem :frame)
@@ -85,8 +109,7 @@
       (if (seq new-tab-name)
         (do (swing-util/add-tab-to-tabs-list new-tab-name)
             (let [new-tab {:name new-tab-name :selected [] :blocked []}
-                  tab-index (swing-util/get-tab-index new-tab-name)
-                  tab-data (make-tab-data new-tab tab-index)]
+                  tab-data (make-tab new-tab)]
               (add-tab-to-tab-panel tab-data))
             new-tab-name)
         nil))
@@ -179,10 +202,8 @@
         new-tab-name (swing-util/unduplicate-tab-name new-tab-name)]
     (when (seq new-tab-name)
       (let [tab-desc (swing-util/add-tab-to-tabs-list new-tab-name)
-            tab-index (swing-util/get-tab-index new-tab-name)
-            tab-data (make-tab-data tab-desc tab-index)]
-        (add-tab-to-tab-panel tab-data)
-        ))))
+            tab-data (make-tab tab-desc)]
+        (add-tab-to-tab-panel tab-data)))))
 
 (defn change-tab-name [tab-label _e]
   (let [tab-name (config tab-label :text)
@@ -197,18 +218,9 @@
         (config! label :text new-name)
         (swing-util/change-tabs-list-name tab-name new-name)
         (set-mem [:tab-tree-map new-name] tree)
-        (set-mem [:tab-tree-map tab-name] nil)))))
-
-(defn make-tabs []
-  (loop [tabs-list (get-mem :tabs-list)
-         header-tree-tabs []
-         tab-index 0]
-    (if (empty? tabs-list)
-      header-tree-tabs
-      (let [tab-data (make-tab-data (first tabs-list) tab-index)]
-        (recur (rest tabs-list)
-               (conj header-tree-tabs tab-data)
-               (inc tab-index))))))
+        (set-mem [:tab-tree-map tab-name] nil)
+        (set-mem [:tab-search new-name] (get-mem [:tab-search tab-name]))
+        (set-mem [:tab-search tab-name] nil)))))
 
 (defn ensure-tab-list-has-all [tab-list]
   (if (some #(= "all" (:name %)) tab-list)
@@ -281,4 +293,17 @@
     (if (.isPopupTrigger e)
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
       (swing-util/select-tab tab-index))))
+
+(defn load-tab-search [tab-name]
+  (let [[target _n] (get-mem [:tab-search tab-name])]
+    (prn 'searching-for target)))
+
+(defn search-event [tab-name e]
+  (let [c (.getKeyChar e)]
+    (when (= \newline c)
+      (let [search-id (keyword (str "#" tab-name "-search"))
+            search-text (select (get-mem :frame) [search-id])
+            target-text (config search-text :text)]
+        (set-mem [:tab-search tab-name] [target-text 0])
+        (future (load-tab-search tab-name))))))
 
