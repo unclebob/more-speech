@@ -1,7 +1,8 @@
 (ns more-speech.db.xtdb
   (:require [more-speech.db.gateway :as gateway]
             [clojure.java.io :as io]
-            [xtdb.api :as xt]))
+            [xtdb.api :as xt]
+            [more-speech.nostr.util :as util]))
 
 (defn sync-db [db]
   (xt/sync (:node db)))
@@ -127,6 +128,7 @@
 
 (defmethod gateway/get-ids-by-author-since ::type [db author start-time]
   (let [node (:node db)
+        author (bigint author)
         result (xt/q (xt/db node)
                      '{:find [id event-time]
                        :in [start-time author]
@@ -138,26 +140,13 @@
                      start-time author)]
     (map first result)))
 
-(defn cites? [id tag]
-  (= id (second tag)))
+(defn cites? [id tags]
+  (let [id (util/hexify id)]
+    (some #(= id (second %)) tags)))
 
 (defmethod gateway/get-ids-that-cite-since ::type [db target-id start-time]
-  (let [node (:node db)
-        result (xt/q (xt/db node)
-                     '{:find [id event-time]
-                       :in [start-time target-id]
-                       :where [[event :created-at event-time]
-                               [event :id id]
-                               [event :tags tag]
-                               [(>= event-time start-time)]
-                               [(more-speech.db.xtdb/cites? target-id tag)]
-                               ]
-                       :order-by [[event-time :desc]]}
-                     start-time target-id)]
-    (map first result))
-  )
-
-
+  (let [ids (gateway/get-event-ids-since db start-time)]
+    (filter #(cites? target-id (:tags (gateway/get-event db %))) ids)))
 
 (defn delete-event [db id]
   (delete-entity db :event id))

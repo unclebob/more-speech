@@ -110,6 +110,15 @@
       (when (some? event)
         (event-handlers/immediate-add-text-event handler event)))))
 
+(defn get-node [tab-name id]
+  (let [tree (get-mem [:tab-tree-map tab-name])]
+    (if (some? tree)
+      (let [model (config tree :model)
+            root-node (.getRoot model)]
+        (at-util/find-header-node root-node id))
+      nil)
+    ))
+
 (defn select-event [id]
   (load-event id)
   (let [tab-index (get-mem :selected-tab)
@@ -117,9 +126,7 @@
         tab-data (get tabs-list tab-index)
         tab-name (:name tab-data)
         tree (get-mem [:tab-tree-map tab-name])
-        model (config tree :model)
-        root-node (.getRoot model)
-        node (at-util/find-header-node root-node id)]
+        node (get-node tab-name id)]
     (if (some? node)
       (at-util/select-tree-node tree node)
       (let [tree (get-mem [:tab-tree-map "all"])

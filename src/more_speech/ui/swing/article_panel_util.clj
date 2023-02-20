@@ -6,15 +6,17 @@
             [more-speech.ui.swing.article-tree-util :as at-util]))
 
 (defn display-event [tab-index event-id]
-  (let [frame (get-mem :frame)
-        tab-selector (keyword (str "#" tab-index))
-        tree (select frame [tab-selector])
-        model (config tree :model)
-        root-node (.getRoot model)
-        node (at-util/find-header-node root-node event-id)]
-    (when (some? node)
-      (util/select-tab tab-index)
-      (at-util/select-tree-node tree node))))
+  (let [tabs-list (get-mem :tabs-list)
+        tab-desc (get tabs-list tab-index)
+        tab-name (:name tab-desc)
+        tree (get-mem [:tab-tree-map tab-name])]
+    (when (some? tree)
+      (let [model (config tree :model)
+            root-node (.getRoot model)
+            node (at-util/find-header-node root-node event-id)]
+        (when (some? node)
+          (util/select-tab tab-index)
+          (at-util/select-tree-node tree node))))))
 
 (defn adjust-back-count [n]
   (let [event-history (get-mem :event-history)
