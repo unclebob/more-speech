@@ -69,7 +69,8 @@
 (defn update-mem [key & args]
   (if (coll? key)
     (swap! (get-mem) do-update-in key args)
-    (swap! (get-mem) do-update key args)))
+    (swap! (get-mem) do-update key args))
+  (get-mem key))
 
 (defn clear-mem []
   (reset! (get-mem) {}))

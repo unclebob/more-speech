@@ -47,7 +47,6 @@
   (search-for-node root #(= id %)))
 
 (defn select-tree-node [tree node]
-  (prn 'select-tree-node tree)
   (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]
     (.clearSelection tree)
     (.setSelectionPath tree tree-path)

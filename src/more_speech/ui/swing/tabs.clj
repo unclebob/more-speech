@@ -13,12 +13,13 @@
             [clojure.set :as set]
             [more-speech.nostr.trust-updater :as trust-updater]
             [more-speech.ui.swing.edit-window :as edit-window]
-            [more-speech.ui.formatter-util :as f-util])
+            [more-speech.ui.formatter-util :as f-util]
+            [more-speech.nostr.tab-searcher :as tab-searcher])
   (:use [seesaw core]
         [seesaw core font tree color])
   (:import (javax.swing.tree DefaultTreeModel DefaultMutableTreeNode TreePath)))
 
-(declare mouse-pressed tab-menu search-event)
+(declare mouse-pressed tab-menu)
 
 (defn render-event [widget info]
   (if (seqable? (:value info))
@@ -60,18 +61,22 @@
     header-tree))
 
 (defn make-search-bar [tab-name]
-  (let [found-id (keyword (str tab-name "-found"))
+  (let [status-id (keyword (str tab-name "-status"))
         search-id (keyword (str tab-name "-search"))
-        search-field (text :text "" :editable? true :columns 30 :id search-id)
+        search-field (text :text "" :editable? true :columns 50 :id search-id)
+        status-field (text :text "" :editable? false :columns 10 :id status-id)
+        prev-search (label "⬆")
+        next-search (label "⬇")
         search-items [(label "Find:")
-                      search-field
-                      (text :text "" :editable? false :columns 15 :id found-id)
-                      (label "⬆")
-                      (label "⬇")]
+                      search-field status-field
+                      next-search prev-search]
         bar (flow-panel :align :left :items search-items)]
-    (listen search-field :key-pressed (partial search-event tab-name))
-    bar
-  ))
+    (listen search-field :key-pressed (partial tab-searcher/search-event tab-name))
+    (listen prev-search :mouse-pressed
+            (partial tab-searcher/select-prev tab-name))
+    (listen next-search :mouse-pressed
+            (partial tab-searcher/select-next tab-name))
+    bar))
 
 (defn make-tab [tab-desc]
   (let [tab-name (:name tab-desc)
@@ -294,16 +299,4 @@
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
       (swing-util/select-tab tab-index))))
 
-(defn load-tab-search [tab-name]
-  (let [[target _n] (get-mem [:tab-search tab-name])]
-    (prn 'searching-for target)))
-
-(defn search-event [tab-name e]
-  (let [c (.getKeyChar e)]
-    (when (= \newline c)
-      (let [search-id (keyword (str "#" tab-name "-search"))
-            search-text (select (get-mem :frame) [search-id])
-            target-text (config search-text :text)]
-        (set-mem [:tab-search tab-name] [target-text 0])
-        (future (load-tab-search tab-name))))))
 
