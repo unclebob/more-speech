@@ -29,13 +29,15 @@
 (defn match-string-target [target event]
   (let [content (formatters/replace-references event)
         author-name (:name (gateway/get-profile (get-db) (:pubkey event)))
+        author-id (contact-list/get-pubkey-from-petname target)
         petname (contact-list/get-petname (:pubkey event))
         subject (get-subject event)
         re-target (re-pattern target)]
     (or (re-find re-target content)
         (and subject (re-find re-target subject))
         (and author-name (re-find re-target author-name))
-        (and petname (re-find re-target petname)))))
+        (and petname (re-find re-target petname))
+        (and author-id (match-id author-id event)))))
 
 (defn match-npub [target event]
   (match-id (bech32/address->number target) event))

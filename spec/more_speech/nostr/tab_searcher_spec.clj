@@ -29,14 +29,14 @@
     (it "should match if re-target is in content"
       (should
         (match-target "#\"t\\w+t\"" {:id 1N :pubkey 2N
-                                :tags []
-                                :content "the target is here"})))
+                                     :tags []
+                                     :content "the target is here"})))
 
     (it "should match if re-target is in subject"
       (should
         (match-target "#\"t\\w+t\"" {:id 1N :pubkey 2N
-                                :tags [[:e 1N] [:subject "the target is here"]]
-                                :content "nope"})))
+                                     :tags [[:e 1N] [:subject "the target is here"]]
+                                     :content "nope"})))
 
     (it "should match if user name is target and user is embedded with #[n]"
       (gateway/add-profile @db 1N {:name "user-name"})
@@ -74,6 +74,14 @@
 
     (it "should match if npub matches any p tag"
       (should (match-target "npub1qzvsn7htrv"               ;153
+                            {:id 153N :pubkey 2N :content ""
+                             :tags [[:e (util/hexify 1N)]
+                                    [:p (util/hexify 88N)]]})))
+
+    (it "should match if petname matches any p tag"
+      (set-mem :pubkey 99N)
+      (gateway/add-contacts @db 99N [{:pubkey 1N :petname "pet"}])
+      (should (match-target "pet"
                             {:id 153N :pubkey 2N :content ""
                              :tags [[:e (util/hexify 1N)]
                                     [:p (util/hexify 88N)]]})))
