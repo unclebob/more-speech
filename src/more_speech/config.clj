@@ -15,7 +15,7 @@
 (def read-contact-lists-days-ago 0.5)
 
 (def migration-level 10)
-(def version "2023-02-10T09:12")
+(def version "2023-02-21T15:39")
 
 (def subscription-id-base "ms")
 
