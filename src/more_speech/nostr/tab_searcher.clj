@@ -15,7 +15,7 @@
     (second (first subject-tags))))
 
 (defn id-matches-tag [id tags]
-  (some #(= id (util/unhexify (second %))) tags))
+  (some #(= (util/hexify id) (second %)) tags))
 
 (defn match-id [id event]
   (or (= id (:pubkey event))
@@ -125,26 +125,28 @@
         tree (get-mem [:tab-tree-map tab-name])
         model (config tree :model)
         root (.getRoot model)]
-    (loop [children (enumeration-seq (.children root))
-           n 0]
-      (if (= target (get-search-target tab-name))
-        (let [child (first children)]
-          (cond
-            (nil? child)
-            (update-search-status tab-name)
-
-            (event-matches target (.getUserObject child))
-            (do
-              (update-mem [:tab-search tab-name]
-                          add-id-to-results (.getUserObject child))
+    (try
+      (loop [children (enumeration-seq (.children root))
+             n 0]
+        (if (= target (get-search-target tab-name))
+          (let [child (first children)]
+            (cond
+              (nil? child)
               (update-search-status tab-name)
-              (when (zero? n)
-                (select-next tab-name nil))
-              (recur (rest children) (inc n)))
 
-            :else
-            (recur (rest children) n)))))))
+              (event-matches target (.getUserObject child))
+              (do
+                (update-mem [:tab-search tab-name]
+                            add-id-to-results (.getUserObject child))
+                (update-search-status tab-name)
+                (when (zero? n)
+                  (select-next tab-name nil))
+                (recur (rest children) (inc n)))
 
+              :else
+              (recur (rest children) n)))))
+      (catch Exception e
+        (prn 'load-tab-search e)))))
 
 (defn search-event [tab-name e]
   (let [c (.getKeyChar e)]
@@ -152,4 +154,6 @@
       (set-search-status tab-name "")
       (let [target-text (get-search-target tab-name)]
         (set-mem [:tab-search tab-name] [target-text 0 []])
-        (future (load-tab-search tab-name))))))
+        (when-not (empty? target-text)
+          (set-search-status tab-name "Searching...")
+          (future (load-tab-search tab-name)))))))
