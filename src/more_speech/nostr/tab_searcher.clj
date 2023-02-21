@@ -30,6 +30,7 @@
   (let [content (formatters/replace-references event)
         author-name (:name (gateway/get-profile (get-db) (:pubkey event)))
         author-id (contact-list/get-pubkey-from-petname target)
+        author-id (or author-id (gateway/get-id-from-username (get-db) target))
         petname (contact-list/get-petname (:pubkey event))
         subject (get-subject event)
         re-target (re-pattern target)]

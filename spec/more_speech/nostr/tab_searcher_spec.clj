@@ -85,5 +85,13 @@
                             {:id 153N :pubkey 2N :content ""
                              :tags [[:e (util/hexify 1N)]
                                     [:p (util/hexify 88N)]]})))
+
+    (it "should match if username matches any p tag"
+          (set-mem :pubkey 99N)
+          (gateway/add-profile @db 1N {:name "username"})
+          (should (match-target "username"
+                                {:id 153N :pubkey 2N :content ""
+                                 :tags [[:e (util/hexify 1N)]
+                                        [:p (util/hexify 88N)]]})))
     )
   )
