@@ -24,9 +24,12 @@
 (def test-relays {"wss://eden.nostr.land" {:read :read-all :write true}
                   "wss://relay.thes.ai" {:read :read-all :write true}
                   "wss://nostr-dev.wellorder.net" {:read :read-trusted, :write true}
+                  "wss://nostr-pub.wellorder.net" {:read :read-trusted, :write true}
                   "wss://relay.damus.io" {:read :read-trusted :write true}
-                  "wss://relay.nostr.info" {:read :read-trusted :write true}
-                  "wss://relay.snort.social" {:read :read-trusted :write true}})
+                  "wss://relay.nostr.info" {:read :read-all :write true}
+                  "wss://relay.snort.social" {:read :read-trusted :write true}
+                  "wss://nostr.mikedilger.com" {:read :read-all :write true}
+                  })
 
 (defn test-run! []
   (reset! test-run? true))

@@ -6,7 +6,8 @@
             [more-speech.user-configuration :as user-configuration]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
-            [more-speech.util.files :refer :all]))
+            [more-speech.util.files :refer :all]
+            [more-speech.nostr.util :as util]))
 
 (defn change-to-tmp-files []
   (when (file-exists? "tmp")
@@ -217,9 +218,12 @@
 
   (context "migration 9 contact list"
     (it "creates an empty contact-list file"
+      (spit @config/keys-filename {:public-key (util/hexify 1N)})
       (migration-9-contact-lists)
       (should (file-exists? @config/contact-lists-filename))
-      (should= {} (read-string (slurp @config/contact-lists-filename)))))
+      (should (contains?
+                (read-string (slurp @config/contact-lists-filename))
+                1N))))
 
   (context "migration 10 XTDB database"
     (with db (in-memory/get-db))

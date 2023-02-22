@@ -10,7 +10,8 @@
             [more-speech.data-storage :as data-storage]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.db.gateway :as gateway]
-            [more-speech.util.files :refer :all]))
+            [more-speech.util.files :refer :all]
+            [more-speech.initial-contact-list :as initial-contact-list]))
 
 ;---The Migrations
 
@@ -33,9 +34,11 @@
   (when-not (file-exists? @config/nicknames-filename)
     (spit @config/nicknames-filename {16r2ef93f01cd2493e04235a6b87b10d3c4a74e2a7eb7c3caf168268f6af73314b5 "unclebobmartin"}))
   (when-not (file-exists? @config/relays-filename)
-    (spit @config/relays-filename {"wss://nostr-pub.wellorder.net"
-                                   {:read true :write true}
-                                   }))
+    (spit @config/relays-filename
+          {
+           "wss://relay.damus.io" {:read :read-web-of-trust :write true}
+           "wss://relay.snort.social" {:read :read-web-of-trust :write true}
+           }))
   (when-not (file-exists? @config/read-event-ids-filename)
     (spit @config/read-event-ids-filename #{}))
   (when-not (file-exists? @config/tabs-filename)
@@ -106,8 +109,14 @@
 ;--- Migration 9 contact lists file ---
 
 (defn migration-9-contact-lists []
-  (spit
-    @config/contact-lists-filename {})
+  (let [pubkey (util/unhexify
+                 (:public-key (read-string (slurp @config/keys-filename))))
+        icl initial-contact-list/icl
+        your-cl (:you icl)
+        icl (dissoc icl :you)
+        icl (assoc icl pubkey your-cl)]
+    (spit
+      @config/contact-lists-filename icl))
   )
 
 ;--- Migration 10 XTDB database conversion

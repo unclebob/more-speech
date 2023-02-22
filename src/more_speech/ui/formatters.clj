@@ -55,12 +55,16 @@
     (if (>= index (count tags))
       reference
       (try
-        (let [id-string (-> tags (nth index) second)
-              id (util/hex-string->num id-string)
-              name (get-best-name id)]
-          (str "@" name))
+        (let [tag-type (-> tags (nth index) first)]
+          (if (or (= :p tag-type)
+                  (= :e tag-type))
+            (let [id-string (-> tags (nth index) second)
+                  id (util/hex-string->num id-string)
+                  name (get-best-name id)]
+              (str "@" name))
+            reference))
         (catch Exception e
-          (prn `lookup-reference 'bad-id index tags)
+          (prn lookup-reference 'bad-id index tags)
           (prn (.getMessage e))
           "@-unknown-")))))
 

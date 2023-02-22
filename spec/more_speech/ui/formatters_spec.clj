@@ -155,7 +155,7 @@
   (it "formats a reply to an event"
     (let [created-at (make-date "07/05/2022")
           relays ["relay-1"]
-          tags [["p" (hexify 1)]]
+          tags [[:p (hexify 1)]]
           event {:pubkey 1 :created-at created-at
                  :relays relays :tags tags :content "Hello #[0]."}]
       (should=
@@ -165,14 +165,13 @@
   (it "formats a reply to a DM"
     (let [created-at (make-date "07/05/2022")
           relays ["relay-1"]
-          tags [["p" (hexify 2)]]
+          tags [[:p (hexify 2)]]
           event {:pubkey 1 :created-at created-at :dm true
                  :relays relays :tags tags :content "Hello #[0]."}]
       (should=
         "D @user-1\n>From: (user-1) at 07/05/22 00:00:00 on relay-1\n>---------------\n>Hello @user-2."
         (format-reply event))))
   )
-
 
 (describe "Escape HTML entities"
   (it "returns the same string in the absence of any HTML entities"

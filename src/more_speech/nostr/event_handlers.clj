@@ -203,6 +203,9 @@
 
 (defn handle-event [_agent envelope url]
   (swap! config/websocket-backlog dec)
+  (when (and (> @config/websocket-backlog 0)
+             (zero? (mod @config/websocket-backlog 100)))
+    (prn 'websocket-backlog @config/websocket-backlog))
   (if (and (not= "OK" (first envelope))
            (not (.startsWith (second envelope) config/subscription-id-base)))
     (prn 'strange-message-source url envelope)
