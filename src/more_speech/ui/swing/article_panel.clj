@@ -22,7 +22,9 @@
     (let [x (.x (.getPoint e))
           y (.y (.getPoint e))
           node (.getComponent e)
-          p (popup :items [(action :name "Copy" :handler (partial copy-to-clipboard (.getText node)))])]
+          hex-id (util/hexify (config node :user-data))
+          p (popup :items [(action :name "Copy"
+                                   :handler (partial copy-to-clipboard hex-id))])]
       (.show p (to-widget e) x y))))
 
 (defn id-click [e]
@@ -166,7 +168,9 @@
         reactions (count (:reactions event))
         reactions-label (select main-frame [:#reactions-count])
         reactions-popup (config reactions-label :user-data)
-        relay-names (map #(re-find config/relay-pattern %) (:relays event))]
+        relay-names (map #(re-find config/relay-pattern %) (:relays event))
+        author-id (select main-frame [:#author-id-label])
+        event-id (select main-frame [:#id-label])]
     (text! reactions-label (str reactions))
     (if reacted?
       (do
@@ -183,25 +187,25 @@
                           (formatters/replace-references event)))
     (text! (select main-frame [:#author-name-label])
            (formatters/format-user-id (:pubkey event) 50))
-    (text! (select main-frame [:#author-id-label])
-           (util/num32->hex-string (:pubkey event)))
     (text! (select main-frame [:#created-time-label])
            (f-util/format-time (:created-at event)))
-    (config! (select main-frame [:#id-label])
+    (config! author-id :user-data (:pubkey event)
+             :text (f-util/abbreviate (util/num32->hex-string (:pubkey event)) 20))
+    (config! event-id
              :user-data (:id event)
-             :text (util/num32->hex-string (:id event)))
+             :text (f-util/abbreviate (util/num32->hex-string (:id event)) 20))
     (if (some? referent)
       (let [replied-event (gateway/get-event (get-db) referent)]
         (text! reply-to (formatters/format-user-id (:pubkey replied-event) 50))
         (config! citing
                  :user-data referent
-                 :text (util/num32->hex-string referent)))
+                 :text (f-util/abbreviate (util/num32->hex-string referent) 20)))
       (do (text! reply-to "")
           (text! citing "")))
     (if (some? root-id)
       (config! root-label
                :user-data root-id
-               :text (util/num32->hex-string root-id))
+               :text (f-util/abbreviate (util/num32->hex-string root-id) 20))
       (text! root-label ""))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (format "%d %s"

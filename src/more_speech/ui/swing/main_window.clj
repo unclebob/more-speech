@@ -57,7 +57,7 @@
   (prn 'make-main-window)
   (let [title (str "More-Speech:" (:name (get-mem :keys)) " - " config/version)
         title (if (config/is-test-run?) (str title " - TEST") title)
-        main-frame (frame :title title :size [1500 :by 1000])
+        main-frame (frame :title title :size [1000 :by 1000])
         _ (set-mem :frame main-frame)
         _ (prn 'make-main-window 'making-article-area)
         article-area (article-panel/make-article-area)
