@@ -53,11 +53,20 @@
         name (formatter-util/abbreviate (:name profile) 20)]
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
+(defn make-menubar []
+  (let [relays-item (menu-item :text "Relays...")
+        users-item (menu-item :text "Users...")
+        profile-item (menu-item :text "Profile...")
+        manage-menu (menu :text "Manage" :items [relays-item users-item profile-item])
+        menu-bar (menubar :items [manage-menu])
+        ]
+    menu-bar))
+
 (defn make-main-window []
   (prn 'make-main-window)
   (let [title (str "More-Speech:" (:name (get-mem :keys)) " - " config/version)
         title (if (config/is-test-run?) (str title " - TEST") title)
-        main-frame (frame :title title :size [1000 :by 1000])
+        main-frame (frame :title title :size [1000 :by 1000] :menubar (make-menubar))
         _ (set-mem :frame main-frame)
         _ (prn 'make-main-window 'making-article-area)
         article-area (article-panel/make-article-area)
