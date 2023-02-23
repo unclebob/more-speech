@@ -8,7 +8,7 @@
 
 (defn- connection? [c]
   (= (::relay/type c) ::ws-relay/websocket))
-(s/def ::read #{:read-all :read-trusted :read-web-of-trust})
+(s/def ::read #{:read-all :read-trusted :read-web-of-trust :read-none})
 (s/def ::write boolean?)
 (s/def ::retries integer?)
 (s/def ::retrying boolean?)

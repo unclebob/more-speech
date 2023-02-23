@@ -51,26 +51,31 @@
 (defn unsubscribe [relay id]
   (relay/send relay ["CLOSE" id]))
 
+(defn close-relay [relay]
+  (relay/close relay)
+  (swap! relays assoc-in [(::ws-relay/url relay) :connection] nil))
+
 (defn close-connection [relay id]
   (unsubscribe relay id)
-  (relay/close relay))
+  (close-relay relay)
+  )
 
 (defn handle-relay-message [relay message]
   (let [url (::ws-relay/url relay)]
     (swap! config/websocket-backlog inc)
     (send-off events/event-agent handlers/handle-event message url)))
 
-(defn subscribe-to-relay [url id date now]
+(defn subscribe-to-relay [url id since now]
   (let [relay (get-in @relays [url :connection])
         read-type (get-in @relays [url :read])]
     (when (and (or (not= :false read-type)
                    (not= :no-read read-type))
                (some? relay))
       (condp = read-type
-        true (subscribe-all relay id date now)
-        :read-all (subscribe-all relay id date now)
-        :read-trusted (subscribe-trusted relay id date now)
-        :read-web-of-trust (subscribe-web-of-trust relay id date now)
+        true (subscribe-all relay id since now)
+        :read-all (subscribe-all relay id since now)
+        :read-trusted (subscribe-trusted relay id since now)
+        :read-web-of-trust (subscribe-web-of-trust relay id since now)
         nil)
       (swap! relays assoc-in [url :subscribed] true))))
 
@@ -114,8 +119,10 @@
         now (quot (System/currentTimeMillis) 1000)
         minutes-10 600
         date (- now minutes-10)
-        retrying (get-in @relays [url :retrying])]
-    (when-not retrying
+        retrying (get-in @relays [url :retrying])
+        active (or (get-in @relays [url :write])
+                   (not= :read-none (get-in @relays [url :read])))]
+    (when (and (not retrying) active)
       (prn 'relay-closed url)
       (swap! relays assoc-in [url :retrying] true)
       (swap! relays assoc-in [url :connection] nil)
@@ -131,10 +138,12 @@
           (connect-to-relay relay)
           (subscribe-to-relay url (str config/subscription-id-base "-reconnect") date now))))))
 
+(defn make-relay [url]
+  (ws-relay/make url {:recv handle-relay-message
+                      :close handle-close}))
 (defn connect-to-relays []
   (doseq [url (keys @relays)]
-    (let [relay (ws-relay/make url {:recv handle-relay-message
-                                    :close handle-close})]
+    (let [relay (make-relay url)]
       (connect-to-relay relay)))
   (prn 'relay-connection-attempts-complete))
 
