@@ -10,7 +10,8 @@
             [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
             [more-speech.db.gateway :as gateway]
             [more-speech.config :refer [get-db]]
-            [more-speech.nostr.event-composers :as composers])
+            [more-speech.nostr.event-composers :as composers]
+            [more-speech.config :as config])
   (:use [seesaw core border]))
 
 (defn bold-label [s]
@@ -146,7 +147,7 @@
       items
       (let [[id content] (first reactions)
             name (formatters/format-user-id id 50)]
-        (recur (rest reactions) (conj items (str content " "name)))))))
+        (recur (rest reactions) (conj items (str content " " name)))))))
 
 (defn load-article-info [selected-id]
   (let [main-frame (get-mem :frame)
@@ -202,4 +203,8 @@
                :text (util/num32->hex-string root-id))
       (text! root-label ""))
     (text! subject-label (formatters/get-subject (:tags event)))
-    (text! relays-label (pr-str (count (:relays event)) (first (:relays event))))))
+    (text! relays-label (format "%d %s"
+                                (count (:relays event))
+                                (f-util/abbreviate
+                                  (re-find config/relay-pattern (first (:relays event)))
+                                  40)))))

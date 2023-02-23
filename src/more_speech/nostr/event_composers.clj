@@ -197,7 +197,7 @@
     (body->event body)))
 
 (defn remove-arguments [url]
-  (re-find #"ws+\://[\w.]+" url))
+  (re-find config/relay-pattern url))
 
 (defn compose-and-send-metadata-event []
   (send-event (compose-metadata-event))
