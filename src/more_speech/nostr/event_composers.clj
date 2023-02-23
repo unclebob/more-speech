@@ -4,7 +4,6 @@
             [more-speech.nostr.util :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]
             [more-speech.nostr.util :as util]
-            [more-speech.nostr.relays :refer [relays]]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.config :as config :refer [get-db]]
             [clojure.string :as string]

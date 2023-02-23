@@ -7,7 +7,6 @@
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.mem :refer :all]
-            [more-speech.nostr.relays :refer [relays]]
             [more-speech.config :as config]))
 
 (defrecord event-handler-dummy []

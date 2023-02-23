@@ -4,7 +4,7 @@
             [more-speech.mem :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.event-handlers :as handlers]
-            [more-speech.nostr.relays :refer [relays]]
+            [more-speech.mem :refer [relays]]
             [more-speech.config :as config]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.nostr.util :as util])
@@ -14,8 +14,7 @@
 (defn- format-time [time]
   (let [time (* time 1000)
         date (Date. (long time))]
-    (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date))
-  )
+    (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date)))
 
 (defn request-contact-lists [relay id]
   (let [now (quot (System/currentTimeMillis) 1000)
@@ -114,19 +113,23 @@
   (let [url (::ws-relay/url relay)
         now (quot (System/currentTimeMillis) 1000)
         minutes-10 600
-        date (- now minutes-10)]
-    (prn 'relay-closed url)
-    (swap! relays assoc-in [url :connection] nil)
-    (swap! relays increment-relay-retry url)
-    (future
-      (let [retries (get-in @relays [url :retries])
-            seconds-to-wait (min 300 (* retries 10))]
-        (prn 'retries retries url)
-        (prn 'waiting seconds-to-wait 'seconds url)
-        (Thread/sleep (* 1000 seconds-to-wait)))
-      (prn 'reconnecting-to url)
-      (connect-to-relay relay)
-      (subscribe-to-relay url (str config/subscription-id-base "-reconnect") date now))))
+        date (- now minutes-10)
+        retrying (get-in @relays [url :retrying])]
+    (when-not retrying
+      (prn 'relay-closed url)
+      (swap! relays assoc-in [url :retrying] true)
+      (swap! relays assoc-in [url :connection] nil)
+      (swap! relays increment-relay-retry url)
+      (future
+        (let [retries (get-in @relays [url :retries])
+              seconds-to-wait (min 300 (* retries 10))]
+          (prn 'retries retries url)
+          (prn 'waiting seconds-to-wait 'seconds url)
+          (Thread/sleep (* 1000 seconds-to-wait))
+          (swap! relays assoc-in [url :retrying] false)
+          (prn 'reconnecting-to url)
+          (connect-to-relay relay)
+          (subscribe-to-relay url (str config/subscription-id-base "-reconnect") date now))))))
 
 (defn connect-to-relays []
   (doseq [url (keys @relays)]

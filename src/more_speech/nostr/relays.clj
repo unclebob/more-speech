@@ -3,18 +3,20 @@
             [more-speech
              [config :as config]
              [relay :as relay]
-             [websocket-relay :as ws-relay]]))
+             [websocket-relay :as ws-relay]]
+            [more-speech.mem :refer [relays]]))
 
 (defn- connection? [c]
   (= (::relay/type c) ::ws-relay/websocket))
-(s/def ::read boolean?)
+(s/def ::read #{:read-all :read-trusted :read-web-of-trust})
 (s/def ::write boolean?)
+(s/def ::retries integer?)
+(s/def ::retrying boolean?)
 (s/def ::subscribed boolean?)
 (s/def ::connection (s/nilable connection?))
-(s/def ::relay (s/keys :req-un [::read ::write ::subscribed ::connection]))
+(s/def ::relay (s/keys :req-un [::read ::write ::subscribed ::connection]
+                       :req-opt [::retries ::retrying]))
 (s/def ::relays (s/map-of string? ::relay))
-
-(def relays (atom nil))
 
 (defn set-relay-defaults [relays]
   (loop [urls (keys relays)

@@ -1,5 +1,6 @@
 (ns more-speech.nostr.relays-spec
   (:require [speclj.core :refer :all]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.relays :refer :all :as relays]
             [clojure.spec.alpha :as s]))
 

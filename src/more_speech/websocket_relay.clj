@@ -1,6 +1,7 @@
 (ns more-speech.websocket-relay
   (:require [more-speech
-             [relay :as relay]]
+             [relay :as relay]
+             [mem :as mem]]
             [clojure.data.json :as json])
   (:import (java.net.http HttpClient WebSocket$Listener WebSocket)
            (java.net URI)
@@ -51,15 +52,40 @@
     ((:close (::callbacks relay)) relay))
   )
 
+(defmethod relay/close ::websocket [relay]
+  (let [{::keys [socket timer]} relay]
+    (when (and socket (not (.isOutputClosed socket)))
+      (try
+        (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done"))
+        (catch Exception e
+          (prn 'on-send-close-error (:reason e)))))
+    (when timer (.cancel timer))
+    (assoc relay ::socket nil ::timer nil)))
+
 (defn send-ping [relay]
   (let [{::keys [socket]} relay]
     (.sendPing socket (ByteBuffer/allocate 4))))
 
+(defn check-open [relay]
+  (let [{::keys [socket url]} relay
+        close-callback (:close (::callbacks relay))]
+    (when-not (get-in @mem/relays [url :retrying])
+      (when (or (.isOutputClosed socket)
+                (.isInputClosed socket))
+        (prn 'relay-check-open-was-closed url)
+        (relay/close relay)
+        (future (close-callback relay))
+        )))
+  )
+
 (defn start-timer [relay]
   (let [timer (Timer. (format "Ping timer for %s" (::url relay)))
         ping-task (proxy [TimerTask] []
-                    (run [] (send-ping relay)))]
+                    (run [] (send-ping relay)))
+        check-open-task (proxy [TimerTask] []
+                          (run [] (check-open relay)))]
     (.schedule timer ping-task (long 30000) (long 30000))
+    (.schedule timer check-open-task (long 10000) (long 10000))
     timer))
 
 (defmethod relay/open ::websocket [relay]
@@ -82,16 +108,6 @@
         (prn 'connect-to-relay-failed url (:reason e))
         (future ((:close (::callbacks relay)) relay))
         relay))))
-
-(defmethod relay/close ::websocket [relay]
-  (let [{::keys [socket timer]} relay]
-    (when (and socket (not (.isOutputClosed socket)))
-      (try
-        (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done"))
-        (catch Exception e
-          (prn 'on-send-close-error (:reason e)))))
-    (when timer (.cancel timer))
-    (assoc relay ::socket nil)))
 
 (defmethod relay/send ::websocket [relay message]
   (let [{::keys [socket url]} relay]

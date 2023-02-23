@@ -165,7 +165,8 @@
         reacted? (has-my-reaction? event)
         reactions (count (:reactions event))
         reactions-label (select main-frame [:#reactions-count])
-        reactions-popup (config reactions-label :user-data)]
+        reactions-popup (config reactions-label :user-data)
+        relay-names (map #(re-find config/relay-pattern %) (:relays event))]
     (text! reactions-label (str reactions))
     (if reacted?
       (do
@@ -176,7 +177,7 @@
         (text! dn-arrow "⬇")))
     (swing-util/clear-popup relays-popup)
     (swing-util/clear-popup reactions-popup)
-    (config! relays-popup :items (:relays event))
+    (config! relays-popup :items relay-names)
     (config! reactions-popup :items (reaction-items (:reactions event)))
     (text! article-area (formatters/reformat-article
                           (formatters/replace-references event)))
@@ -204,7 +205,5 @@
       (text! root-label ""))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (format "%d %s"
-                                (count (:relays event))
-                                (f-util/abbreviate
-                                  (re-find config/relay-pattern (first (:relays event)))
-                                  40)))))
+                                (count relay-names)
+                                (f-util/abbreviate (first relay-names) 40)))))

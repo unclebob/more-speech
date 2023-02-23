@@ -3,7 +3,6 @@
             [more-speech.mem :refer :all]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.nostr.event-composers :as composers]
-            [more-speech.nostr.relays :as relays]
             [more-speech.relay :as relay]
             [more-speech.mem :refer :all]
             [clojure.core.async :as async]
@@ -11,9 +10,9 @@
 
 (defn process-send-channel []
   (let [send-chan (get-mem :send-chan)
-        urls (keys @relays/relays)
-        send-urls (filter #(:write (get @relays/relays %)) urls)
-        writeable-relays (map #(get-in @relays/relays [% :connection]) send-urls)
+        urls (keys @relays)
+        send-urls (filter #(:write (get @relays %)) urls)
+        writeable-relays (map #(get-in @relays [% :connection]) send-urls)
         writeable-relays (filter some? writeable-relays)]
     (loop [[type msg] (async/<!! send-chan)]
       (condp = type

@@ -2,7 +2,6 @@
   (:require [more-speech.config :as config :refer [get-db]]
             [more-speech.mem :refer :all]
             [more-speech.nostr.event-handlers :as handlers]
-            [more-speech.nostr.relays :as relays]
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.user-configuration :as user-configuration]
             [clojure.string :as string]
@@ -10,7 +9,8 @@
             [more-speech.ui.formatter-util :as fu]
             [more-speech.db.in-memory :as in-memory]
             [more-speech.util.files :refer :all]
-            [more-speech.db.gateway :as gateway])
+            [more-speech.db.gateway :as gateway]
+            [more-speech.nostr.relays :as relays])
   (:import (java.util Date TimeZone Locale)
            (java.text SimpleDateFormat)))
 
@@ -65,7 +65,7 @@
     (set-mem :event-history [])
     (set-mem :back-count 0)
     (if (config/is-test-run?)
-      (reset! relays/relays config/test-relays)
+      (reset! relays config/test-relays)
       (relays/load-relays-from-file @config/relays-filename))))
 
 (defn load-events [old-events handler]

@@ -44,7 +44,7 @@
 (s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))
 
 (def memory (atom nil))
-
+(def relays (atom nil)) ;ick.  Should be in memory.
 
 (defn get-mem
   ([]
