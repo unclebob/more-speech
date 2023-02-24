@@ -5,6 +5,12 @@
             [more-speech.config :as config]
             [more-speech.nostr.util :as util]))
 
+(def manager-width 800)
+(def manager-height 500)
+(def element-height 50)
+(def field-height 20)
+(def url-height 45)
+
 (defn reconnect-to-relay [url]
   (let [relay (get-in @relays [url :connection])
         relay (if (some? relay) relay (protocol/make-relay url))
@@ -45,29 +51,78 @@
                            ])]
       (.show p (to-widget e) x y))))
 
+(defn valid-relay-url? [url]
+  (let [prefix (re-find config/relay-pattern url)]
+    (and (re-matches config/url-pattern url)
+         (some? prefix)
+         (.startsWith url prefix))))
+
+(defn commit-url [field new-url old-url]
+  (if-not (valid-relay-url? new-url)
+    (do
+      (config! field :text old-url)
+      (when (nil? old-url)
+        (config! field :foreground :darkgrey)
+        (alert (str new-url " is invalid."))))
+    (swap! relays assoc new-url {:read :read-none :write false})))
+
+(defn key-pressed-in-name [url e]
+  (let [char (.getKeyChar e)
+        field (.getComponent e)]
+    (if (= char \newline)
+      (config! field :foreground :black)
+      (config! field :foreground :darkgrey))
+    (when (= char \newline)
+      (let [new-url (.trim (config field :text))]
+        (commit-url field new-url url)))))
+
+(defn mouse-pressed-in-name [url e]
+  (let [field (.getComponent e)]
+    (when (and (nil? url)
+               (.startsWith (config field :text) "<"))
+      (config! field :text ""))))
+
 (defn is-connected? [url]
   (some? (get-in @relays [url :connection])))
 
-(defn make-relay-element [url]
-  (let [relay (get @relays url)
-        name (label :text (re-find config/relay-pattern url) :size [250 :by 20])
-        connection-label (label :text (if (is-connected? url) "✓" "X") :size [10 :by 20])
-        read-label (text :text (str (:read relay)) :editable? false :size [100 :by 20])
-        write-label (text :text (str (:write relay)) :size [50 :by 20])
-        element (horizontal-panel :size [500 :by 20] :items [name connection-label read-label write-label])]
-    (listen read-label :mouse-pressed (partial read-click url))
-    (listen write-label :mouse-pressed (partial write-click url))
-    element))
+(defn make-relay-element
+  ([url]
+   (let [relay (get @relays url)
+         relay-name (re-find config/relay-pattern url)
+         connection-mark (if (is-connected? url) "✓" "X")
+         write-status (str (:write relay))
+         read-status (str (:read relay))]
+     (make-relay-element url relay-name connection-mark read-status write-status)))
+
+  ([url relay-name connection-mark read-status write-status]
+   (let [name-field (text :text relay-name :size [450 :by element-height]
+                          :font :monospaced :editable? true :multi-line? true :wrap-lines? true
+                          :id :relay-name :user-data relay-name)
+         connection-label (label :text connection-mark :size [10 :by field-height])
+         read-label (text :text read-status :editable? false :size [100 :by field-height])
+         write-label (text :text write-status :size [50 :by field-height])
+         element (horizontal-panel :size [manager-width :by element-height]
+                                   :border (seesaw.border/line-border)
+                                   :items [name-field connection-label read-label write-label])]
+     (listen read-label :mouse-pressed (partial read-click url))
+     (listen write-label :mouse-pressed (partial write-click url))
+     (listen name-field :key-pressed (partial key-pressed-in-name url))
+     (listen name-field :mouse-pressed (partial mouse-pressed-in-name url))
+     element)))
 
 (defn show-relay-manager [_e]
-  (let [relay-frame (frame :title "Relays" :size [500 :by 500])
+  (let [relay-frame (frame :title "Relays" :size [manager-width :by manager-height])
         all-relay-urls (set (keys @relays))
         active-urls (sort (filter protocol/is-active-url? all-relay-urls))
         inactive-urls (sort (remove protocol/is-active-url? all-relay-urls))
         connected-elements (map make-relay-element active-urls)
         unconnected-elements (map make-relay-element inactive-urls)
-        relay-box (scrollable (vertical-panel :items (concat connected-elements unconnected-elements)))
+        new-element (make-relay-element nil "<add-relay>" "X" ":read-none" "false")
+        _ (config! (select new-element [:#relay-name]) :foreground :darkgrey)
+        all-elements (concat [new-element] connected-elements unconnected-elements)
+        relay-box (scrollable (vertical-panel :items all-elements))
         ]
     (config! relay-frame :content relay-box)
-    (show! relay-frame)))
+    (show! relay-frame)
+    (scroll! relay-box :to :top)))
 

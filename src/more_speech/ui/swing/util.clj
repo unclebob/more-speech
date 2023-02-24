@@ -53,7 +53,7 @@
          new-tabs-list []]
     (cond
       (empty? tabs-list)
-      (set-mem :tabs-list new-tabs-list)
+      new-tabs-list
 
       (= tab-name (:name (first tabs-list)))
       (recur (rest tabs-list) new-tabs-list)
