@@ -52,7 +52,7 @@
   (context "delete-tab-from-tabs-list"
     (it "deletes an existing tab"
       (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
-      (delete-tab-from-tabs-list "old-name")
+      (update-mem :tabs-list delete-tab-from-tabs-list "old-name")
       (should= [{:name "some-name"}]
                (get-mem :tabs-list))))
 

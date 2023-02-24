@@ -134,7 +134,7 @@
                  :content "wss://relay-url"
                  :sig 0xdddddd}]
       (process-server-recommendation event)
-      (should= {"wss://relay-url" {:read false, :write false}} @relays))))
+      (should= {"wss://relay-url" {:read :read-none, :write false}} @relays))))
 
 (describe "get references"
   (it "given no tags, finds no references"
