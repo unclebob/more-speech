@@ -49,9 +49,7 @@
     (let [urls ["ws://hi.com"
                 "wss://hi.com"
                 "wss://expensive-relay.fiatjaf.com"
-                "ws://hi.com:99"
-                "wss://freedom-relay.herokuapp.com/ws"
-                "ws://nostr-pub.wellorder.net:7000"]]
+                "wss://freedom-relay.herokuapp.com"]]
       (doseq [url urls]
         (should= url (validate-relay-url url))))
     )
@@ -60,6 +58,7 @@
     (let [urls ["junk"
                 "http://hi.com"
                 "https://hi.com"
+                "wss://hi.com/"
                 "ws://localhost:70"]]
       (doseq [url urls]
         (should-be-nil (validate-relay-url url)))))

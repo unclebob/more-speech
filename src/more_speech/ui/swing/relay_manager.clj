@@ -9,6 +9,7 @@
   (let [relay (get-in @relays [url :connection])
         relay (if (some? relay) relay (protocol/make-relay url))
         now (util/get-now)]
+    (swap! relays assoc-in [url :retries] 0)
     (-> relay protocol/close-relay protocol/connect-to-relay)
     (protocol/subscribe-to-relay url config/subscription-id-base (- now 3600) now)
     ))
@@ -58,21 +59,11 @@
     (listen write-label :mouse-pressed (partial write-click url))
     element))
 
-(defn is-active-url? [url]
-  (let [relay-descriptor (get @relays url)
-        read-state (:read relay-descriptor)
-        write-state (:write relay-descriptor)
-        is-reading? (or (= :read-all read-state)
-                        (= :read-trusted read-state)
-                        (= :read-web-of-trust read-state))
-        is-writing? write-state]
-    (or is-reading? is-writing?)))
-
 (defn show-relay-manager [_e]
   (let [relay-frame (frame :title "Relays" :size [500 :by 500])
         all-relay-urls (set (keys @relays))
-        active-urls (sort (filter is-active-url? all-relay-urls))
-        inactive-urls (sort (remove is-active-url? all-relay-urls))
+        active-urls (sort (filter protocol/is-active-url? all-relay-urls))
+        inactive-urls (sort (remove protocol/is-active-url? all-relay-urls))
         connected-elements (map make-relay-element active-urls)
         unconnected-elements (map make-relay-element inactive-urls)
         relay-box (scrollable (vertical-panel :items (concat connected-elements unconnected-elements)))

@@ -11,6 +11,16 @@
   (:import (java.util Date)
            (java.text SimpleDateFormat)))
 
+(defn is-active-url? [url]
+  (let [relay-descriptor (get @relays url)
+        read-state (:read relay-descriptor)
+        write-state (:write relay-descriptor)
+        is-reading? (or (= :read-all read-state)
+                        (= :read-trusted read-state)
+                        (= :read-web-of-trust read-state))
+        is-writing? write-state]
+    (or is-reading? is-writing?)))
+
 (defn- format-time [time]
   (let [time (* time 1000)
         date (Date. (long time))]
@@ -89,7 +99,8 @@
   (let [url (::ws-relay/url relay)
         relay-config (get @relays url)
         read-type (:read relay-config)
-        readable? (or (= read-type :read-all)
+        readable? (or (= read-type true)
+                      (= read-type :read-all)
                       (= read-type :read-trusted)
                       (= read-type :read-web-of-trust))
         writeable? (:write relay-config)
@@ -119,17 +130,16 @@
         now (quot (System/currentTimeMillis) 1000)
         minutes-10 600
         date (- now minutes-10)
-        retrying (get-in @relays [url :retrying])
-        active (or (get-in @relays [url :write])
-                   (not= :read-none (get-in @relays [url :read])))]
-    (when (and (not retrying) active)
+        retrying? (get-in @relays [url :retrying])
+        active? (is-active-url? url)]
+    (when (and (not retrying?) active?)
       (prn 'relay-closed url)
       (swap! relays assoc-in [url :retrying] true)
       (swap! relays assoc-in [url :connection] nil)
       (swap! relays increment-relay-retry url)
       (future
         (let [retries (get-in @relays [url :retries])
-              seconds-to-wait (min 300 (* retries 10))]
+              seconds-to-wait (min 300 (* retries 30))]
           (prn 'retries retries url)
           (prn 'waiting seconds-to-wait 'seconds url)
           (Thread/sleep (* 1000 seconds-to-wait))
@@ -169,4 +179,5 @@
       (when (some? relay)
         (prn 'closing url)
         (close-connection relay id)))))
+
 

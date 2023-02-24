@@ -48,8 +48,8 @@
       (recur (rest tabs-list)
              (conj new-tabs-list (first tabs-list))))))
 
-(defn delete-tab-from-tabs-list [tab-name]
-  (loop [tabs-list (get-mem :tabs-list)
+(defn delete-tab-from-tabs-list [tabs-list tab-name]
+  (loop [tabs-list tabs-list
          new-tabs-list []]
     (cond
       (empty? tabs-list)

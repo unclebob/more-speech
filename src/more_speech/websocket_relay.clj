@@ -53,12 +53,12 @@
   )
 
 (defmethod relay/close ::websocket [relay]
-  (let [{::keys [socket timer]} relay]
-    (when (and socket (not (.isOutputClosed socket)))
+  (let [{::keys [url socket timer]} relay]
+    (when (some? socket)
       (try
         (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done"))
         (catch Exception e
-          (prn 'on-send-close-error (:reason e)))))
+          (prn 'close-error url (:reason e)))))
     (when timer (.cancel timer))
     (assoc relay ::socket nil ::timer nil)))
 
@@ -74,18 +74,18 @@
                 (.isInputClosed socket))
         (prn 'relay-check-open-was-closed url)
         (relay/close relay)
-        (future (close-callback relay))
-        )))
-  )
+        (future (close-callback relay))))))
 
 (defn start-timer [relay]
   (let [timer (Timer. (format "Ping timer for %s" (::url relay)))
         ping-task (proxy [TimerTask] []
                     (run [] (send-ping relay)))
         check-open-task (proxy [TimerTask] []
-                          (run [] (check-open relay)))]
-    (.schedule timer ping-task (long 30000) (long 30000))
-    (.schedule timer check-open-task (long 10000) (long 10000))
+                          (run [] (check-open relay)))
+        s30 (long 30000)
+        s60 (long 60000)]
+    (.schedule timer ping-task s30 s30)
+    (.schedule timer check-open-task s60 s60)
     timer))
 
 (defmethod relay/open ::websocket [relay]

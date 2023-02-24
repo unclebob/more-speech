@@ -55,9 +55,7 @@
   (if (empty? url)
     nil
     (let [lurl (.trim (.toLowerCase url))]
-      (if (and (re-matches config/url-pattern lurl)
-               (or (.startsWith lurl "wss://")
-                   (.startsWith lurl "ws://"))
+      (if (and (re-matches config/relay-pattern lurl)
                (= -1 (.indexOf lurl "localhost")))
         lurl
         nil)))
@@ -71,7 +69,7 @@
     (when (and (not (empty? checked-url))
                (not (contains? @relays checked-url)))
       (prn 'adding-relay checked-url)
-      (swap! relays assoc checked-url {:read false :write false}))))
+      (swap! relays assoc checked-url {:read :read-none :write false}))))
 
 (defn add-recommended-relays-in-tags [event]
   (loop [tags (:tags event)]

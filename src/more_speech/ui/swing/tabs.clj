@@ -197,7 +197,7 @@
   (let [tab-name (config tab-label :text)
         tab-index (swing-util/get-tab-index tab-name)]
     (when (confirm (format "Confirm delete %s" tab-name))
-      (swing-util/delete-tab-from-tabs-list tab-name)
+      (update-mem :tabs-list swing-util/delete-tab-from-tabs-list tab-name)
       (let [frame (get-mem :frame)
             tab-panel (select frame [:#header-tab-panel])]
         (.remove tab-panel tab-index)))))
