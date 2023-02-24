@@ -55,7 +55,8 @@
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
 (defn make-menubar []
-  (let [relays-item (menu-item :action (action :name "Relays..." :handler relay-manager/show-relay-manager))
+  (let [relays-item (menu-item :action (action :name "Relays..." :handler relay-manager/show-relay-manager)
+                               :id :relays-menu)
         users-item (menu-item :text "Users...")
         profile-item (menu-item :text "Profile...")
         manage-menu (menu :text "Manage" :items [relays-item users-item profile-item])
