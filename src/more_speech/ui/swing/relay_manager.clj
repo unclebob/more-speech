@@ -158,7 +158,8 @@
       (config! field :foreground :darkgrey))
     (when (= char \newline)
       (let [new-url (.trim (config field :text))]
-        (commit-url field new-url url)))))
+        (when (not= new-url url)
+          (commit-url field new-url url))))))
 
 (defn mouse-pressed-in-name [url e]
   (let [field (.getComponent e)]
