@@ -199,6 +199,7 @@
         (clojure.pprint/pprint @event-counter)))))
 
 (defn handle-notification [envelope url]
+  (set-mem [:relay-notice url] (with-out-str (clojure.pprint/pprint envelope)))
   (prn 'NOTICE url envelope))
 
 (defn handle-event [_agent envelope url]

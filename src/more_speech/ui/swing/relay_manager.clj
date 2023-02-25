@@ -10,6 +10,8 @@
 (def element-height 50)
 (def field-height 20)
 (def url-height 45)
+(def name-width 450)
+(def info-width (- manager-width name-width))
 
 ;---CALLBACK DECLARATIONS
 (declare close-relay-manager read-click write-click key-pressed-in-name mouse-pressed-in-name)
@@ -46,15 +48,23 @@
      (make-relay-element url relay-name connection-mark read-status write-status)))
 
   ([url relay-name connection-mark read-status write-status]
-   (let [name-field (text :text relay-name :size [450 :by element-height]
+   (let [name-field (text :text relay-name :size [name-width :by element-height]
                           :font :monospaced :editable? true :multi-line? true :wrap-lines? true
                           :id :relay-name)
          connection-label (label :text connection-mark :size [10 :by field-height])
          read-label (text :text read-status :editable? false :size [100 :by field-height])
          write-label (text :text write-status :size [50 :by field-height])
-         element (horizontal-panel :size [manager-width :by element-height]
-                                   :border (seesaw.border/line-border)
-                                   :items [name-field connection-label read-label write-label])]
+         notice-label (label :text (get-mem [:relay-notice url])
+                             :size [info-width :by field-height]
+                             :halign :left)
+         status-bar (horizontal-panel :size [info-width :by field-height]
+                                      :border 0
+                                      :items [connection-label read-label write-label])
+         info-area (border-panel :north status-bar :south notice-label :drag-enabled? false :border 0)
+         element (left-right-split name-field info-area
+                                   :size [manager-width :by element-height]
+                                   :drag-enabled? false
+                                   :border (seesaw.border/line-border))]
      (listen read-label :mouse-pressed (partial read-click url))
      (listen write-label :mouse-pressed (partial write-click url))
      (listen name-field :key-pressed (partial key-pressed-in-name url))
@@ -72,6 +82,13 @@
     (config! (select add-relay-element [:#relay-name])
              :foreground :darkgrey)
     add-relay-element))
+
+(defn get-all-relay-elements []
+  (let [relay-frame (get-mem :relay-manager-frame)
+        relay-list (select relay-frame [:#relay-list])
+        relay-elements (config relay-list :items)]
+    relay-elements)
+  )
 
 (defn replace-element-in-manager-frame [new-url old-url]
   (let [relay-frame (get-mem :relay-manager-frame)
@@ -99,8 +116,7 @@
 
 (defn delete-url [url]
   (swap! relays dissoc url)
-  (replace-element-in-manager-frame nil url)
-  )
+  (replace-element-in-manager-frame nil url))
 
 (defn commit-valid-url [new-url old-url]
   (if (some? old-url)
@@ -145,7 +161,7 @@
       (config! relay-frame :content relay-box)
       (listen relay-frame :window-closing close-relay-manager)
       (show! relay-frame)
-      (scroll! relay-list :to :top))))
+      )))
 
 
 ;---------CALLBACKS
