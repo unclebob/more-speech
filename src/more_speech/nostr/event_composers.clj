@@ -37,6 +37,9 @@
         profile (if (some? (:nip05 keys))
                   (assoc profile :nip05 (:nip05 keys))
                   profile)
+        profile (if (some? (:lud16 keys))
+                  (assoc profile :lud16 (:lud16 keys))
+                  profile)
         content (events/to-json profile)
         body {:kind 0
               :tags []
