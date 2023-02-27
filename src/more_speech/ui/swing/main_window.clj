@@ -14,7 +14,7 @@
             [more-speech.nostr.util :as util]
             [clojure.string :as string])
   (:use [seesaw core])
-  (:import (javax.swing Timer)
+  (:import (java.util Timer TimerTask)
            (javax.swing.event HyperlinkEvent$EventType)))
 
 (defrecord seesawHandler []
@@ -45,21 +45,41 @@
               (prn (.getDescription e)))
           )))))
 
-(defn timer-action [_]
-  ;nothing for now.
-  )
-
 (defn make-profile-line [id]
   (let [profile (gateway/get-profile (get-db) id)
         name (formatter-util/abbreviate (:name profile) 20)]
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
+(defn show-status [backlog-data]
+  (config! backlog-data :text (str @config/websocket-backlog)))
+
+(defn close-stats-frame [timer menu _e]
+  (config! menu :enabled? true)
+  (.cancel timer))
+
+(defn make-stats-frame [_e]
+  (let [stats-frame (frame :title "Stats" :size [500 :by 500])
+        backlog-label (label "Backlog:")
+        backlog-data (label :text "" :id :backlog-data)
+        stats-timer (Timer. "stats timer")
+        show-status-task (proxy [TimerTask] []
+                           (run [] (show-status backlog-data)))
+        backlog-panel (horizontal-panel :items [backlog-label backlog-data])
+        stats-menu (select (get-mem :frame) [:#stats-menu])]
+    (config! stats-frame :content backlog-panel)
+    (config! stats-menu :enabled? false)
+    (listen stats-frame :window-closing (partial close-stats-frame stats-timer stats-menu))
+    (show! stats-frame)
+    (.schedule stats-timer show-status-task 1000 1000)))
+
 (defn make-menubar []
   (let [relays-item (menu-item :action (action :name "Relays..." :handler relay-manager/show-relay-manager)
                                :id :relays-menu)
+        stats-item (menu-item :action (action :name "Stats..." :handler make-stats-frame)
+                              :id :stats-menu)
         users-item (menu-item :text "Users...")
         profile-item (menu-item :text "Profile...")
-        manage-menu (menu :text "Manage" :items [relays-item users-item profile-item])
+        manage-menu (menu :text "Manage" :items [relays-item stats-item users-item profile-item])
         menu-bar (menubar :items [manage-menu])]
     menu-bar))
 
@@ -81,20 +101,16 @@
                          header-tab-panel
                          article-panel
                          :divider-location 1/2)
-        _ (prn 'make-main-window 'messages-panel-complete)
-        timer (Timer. 100 nil)]
+        _ (prn 'make-main-window 'messages-panel-complete)]
     (config! main-frame :content messages-panel)
-    (listen timer :action timer-action)
     (listen main-frame :window-closing
             (fn [_]
-              (.stop timer)
               (let [send-chan (get-mem :send-chan)]
                 (future (async/>!! send-chan [:closed])))
               (.dispose main-frame)))
     (prn 'make-main-window 'showing-main-frame)
     (show! main-frame)
-    (prn 'make-main-window 'shown)
-    (.start timer)))
+    (prn 'make-main-window 'shown)))
 
 (defn setup-main-window []
   (invoke-now (make-main-window))
