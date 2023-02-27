@@ -202,6 +202,33 @@
   (set-mem [:relay-notice url] (with-out-str (clojure.pprint/pprint envelope)))
   (prn 'NOTICE url envelope))
 
+(defn validate-and-process-event [url envelope]
+  (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
+        event (translate-event inner-event)
+        id (:id event)
+        dup? (contains? (get-mem [:processed-event-ids]) id)]
+    (if dup?
+      (when (is-text-event? event)
+        (gateway/add-relays-to-event (get-db) id [url]))
+      (let [computed-id (compute-id inner-event)
+            ui-handler (get-mem :event-handler)]
+        (update-mem :processed-event-ids conj id)
+        (if (= id computed-id)
+          (let [event (decrypt-dm-event event)]
+            (when (not (:private event))
+              (process-event event url)
+              (when (is-text-event? event)
+                (handle-text-event ui-handler event))))
+          (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope))))))
+
+(defn try-validate-and-process-event [url envelope]
+  (try
+    (validate-and-process-event url envelope)
+    (catch Exception e
+      (do (prn 'handle-event url (.getMessage e))
+          (prn "--on event: " envelope)
+          (st/print-stack-trace e)))))
+
 (defn handle-event [_agent envelope url]
   (swap! config/websocket-backlog dec)
   (when (and (> @config/websocket-backlog 0)
@@ -213,23 +240,4 @@
     (count-event envelope url))
   (if (not= "EVENT" (first envelope))
     (handle-notification envelope url)
-    (try
-      (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
-            event (translate-event inner-event)
-            id (:id event)
-            computed-id (compute-id inner-event)
-            ui-handler (get-mem :event-handler)
-            dup? (some? (gateway/get-event (get-db) id))
-            ]
-        (if (= id computed-id)
-          (let [event (decrypt-dm-event event)]
-            (when (not (:private event))
-              (process-event event url)
-              (when (and (not dup?)
-                         (is-text-event? event))
-                (handle-text-event ui-handler event))))
-          (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope)))
-      (catch Exception e
-        (do (prn 'handle-event url (.getMessage e))
-            (prn "--on event: " envelope)
-            (st/print-stack-trace e))))))
+    (try-validate-and-process-event url envelope)))
