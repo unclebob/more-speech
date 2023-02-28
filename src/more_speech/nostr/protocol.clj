@@ -4,7 +4,7 @@
             [more-speech.mem :refer :all]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.event-handlers :as handlers]
-            [more-speech.mem :refer [relays]]
+            [more-speech.mem :refer :all]
             [more-speech.config :as config]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.nostr.util :as util])
@@ -72,7 +72,7 @@
 
 (defn handle-relay-message [relay message]
   (let [url (::ws-relay/url relay)]
-    (swap! config/websocket-backlog inc)
+    (update-mem :websocket-backlog inc)
     (send-off events/event-agent handlers/handle-event message url)))
 
 (defn subscribe-to-relay [url id since now]

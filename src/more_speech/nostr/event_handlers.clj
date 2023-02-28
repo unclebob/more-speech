@@ -195,7 +195,7 @@
       (swap! event-counter update :total inc)
       (swap! event-counter update key #(inc (if (nil? %) 0 %)))
       (when (zero? (mod (:total @event-counter) 1000))
-        (prn 'websocket-backlog @config/websocket-backlog)
+        (prn 'websocket-backlog (get-mem :websocket-backlog))
         (clojure.pprint/pprint @event-counter)))))
 
 (defn handle-notification [envelope url]
@@ -230,10 +230,10 @@
           (st/print-stack-trace e)))))
 
 (defn handle-event [_agent envelope url]
-  (swap! config/websocket-backlog dec)
-  (when (and (> @config/websocket-backlog 0)
-             (zero? (mod @config/websocket-backlog 100)))
-    (prn 'websocket-backlog @config/websocket-backlog))
+  (update-mem :websocket-backlog dec)
+  (when (and (> (get-mem :websocket-backlog) 0)
+             (zero? (mod (get-mem :websocket-backlog) 100)))
+    (prn 'websocket-backlog (get-mem :websocket-backlog)))
   (if (and (not= "OK" (first envelope))
            (not (.startsWith (second envelope) config/subscription-id-base)))
     (prn 'strange-message-source url envelope)

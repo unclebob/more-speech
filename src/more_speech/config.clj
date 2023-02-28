@@ -74,6 +74,3 @@
 
     (throw (Exception. "No Database Specified"))))
 
-;------Websocket backlog
-
-(def websocket-backlog (atom 0))

@@ -65,6 +65,7 @@
     (set-mem :event-history [])
     (set-mem :back-count 0)
     (set-mem :processed-event-ids #{})
+    (set-mem :websocket-backlog 0)
     (if (config/is-test-run?)
       (reset! relays config/test-relays)
       (relays/load-relays-from-file @config/relays-filename))))
@@ -76,11 +77,11 @@
       (prn 'done-loading-events)
       (let [event (first events)]
         (when (zero? (rem event-count 100))
-          (prn event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog @config/websocket-backlog)
+          (prn event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog (get-mem :websocket-backlog))
           (Thread/sleep 5000))
         (try
           (handlers/handle-text-event handler event)
-          (if (> @config/websocket-backlog 10)
+          (if (> (get-mem :websocket-backlog) 10)
             (Thread/sleep 100)
             (Thread/sleep 50))                              ;take a breath
           (catch Exception e

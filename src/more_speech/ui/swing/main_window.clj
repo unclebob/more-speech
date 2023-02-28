@@ -51,16 +51,17 @@
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
 (defn show-status [backlog-data]
-  (config! backlog-data :text (str @config/websocket-backlog)))
+  (config! backlog-data :text (str (get-mem :websocket-backlog))))
 
 (defn close-stats-frame [timer menu _e]
   (config! menu :enabled? true)
   (.cancel timer))
 
 (defn make-stats-frame [_e]
-  (let [stats-frame (frame :title "Stats" :size [500 :by 500])
+  (let [stats-frame (frame :title "Stats")
         backlog-label (label "Backlog:")
-        backlog-data (label :text "" :id :backlog-data)
+        backlog-data (label :text "" :id :backlog-data
+                            :size [100 :by 30])
         stats-timer (Timer. "stats timer")
         show-status-task (proxy [TimerTask] []
                            (run [] (show-status backlog-data)))
@@ -69,6 +70,7 @@
     (config! stats-frame :content backlog-panel)
     (config! stats-menu :enabled? false)
     (listen stats-frame :window-closing (partial close-stats-frame stats-timer stats-menu))
+    (pack! stats-frame)
     (show! stats-frame)
     (.schedule stats-timer show-status-task 1000 1000)))
 
