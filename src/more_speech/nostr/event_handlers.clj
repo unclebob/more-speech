@@ -185,12 +185,11 @@
      :sig sig
      :tags (process-tags (get event "tags"))}))
 
-(defn count-event [envelope url]
-  (let [source (second envelope)
-        key (str url "|" source)]
+(defn count-event [url]
+  (let [relay (re-find config/relay-pattern url)]
     (update-mem :websocket-backlog dec)
     (update-mem [:event-counter :total] inc)
-    (update-mem [:event-counter key] #(inc (if (nil? %) 0 %)))
+    (update-mem [:event-counter relay] #(inc (if (nil? %) 0 %)))
     (when (zero? (mod (get-mem [:event-counter :total]) 1000))
       (prn 'websocket-backlog (get-mem :websocket-backlog))
       (clojure.pprint/pprint (get-mem :event-counter)))))
@@ -199,14 +198,20 @@
   (set-mem [:relay-notice url] (with-out-str (clojure.pprint/pprint envelope)))
   (prn 'NOTICE url envelope))
 
+(defn inc-if-nil [n]
+  (if (nil? n) 1 (inc n)))
+
 (defn validate-and-process-event [url envelope]
   (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
         event (translate-event inner-event)
         id (:id event)
         dup? (contains? (get-mem [:processed-event-ids]) id)]
+    (update-mem [:event-counter :kinds (:kind event)] inc-if-nil)
     (if dup?
-      (when (is-text-event? event)
-        (gateway/add-relays-to-event (get-db) id [url]))
+      (do
+        (update-mem [:event-counter :dups] inc-if-nil)
+        (when (is-text-event? event)
+          (gateway/add-relays-to-event (get-db) id [url])))
       (let [computed-id (compute-id inner-event)
             ui-handler (get-mem :event-handler)]
         (update-mem :processed-event-ids conj id)
@@ -227,7 +232,7 @@
           (st/print-stack-trace e)))))
 
 (defn handle-event [_agent envelope url]
-  (count-event envelope url)
+  (count-event url)
   (when (and (> (get-mem :websocket-backlog) 0)
              (zero? (mod (get-mem :websocket-backlog) 100)))
     (prn 'websocket-backlog (get-mem :websocket-backlog)))
