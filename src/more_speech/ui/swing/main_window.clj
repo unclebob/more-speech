@@ -50,8 +50,15 @@
         name (formatter-util/abbreviate (:name profile) 20)]
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
-(defn show-status [backlog-data]
-  (config! backlog-data :text (str (get-mem :websocket-backlog))))
+(defn show-status [stats-panel]
+  (config! (select stats-panel [:#backlog-data])
+           :text (str (get-mem :websocket-backlog)))
+  (config! (select stats-panel [:#processed-data])
+           :text (str (get-mem [:event-counter :total])))
+  (config! (select stats-panel [:#incoming-data])
+             :text (str (get-mem [:incoming-events])))
+
+  )
 
 (defn close-stats-frame [timer menu _e]
   (config! menu :enabled? true)
@@ -59,15 +66,27 @@
 
 (defn make-stats-frame [_e]
   (let [stats-frame (frame :title "Stats")
-        backlog-label (label "Backlog:")
-        backlog-data (label :text "" :id :backlog-data
-                            :size [100 :by 30])
+
+        incoming-label (label "Incoming events.")
+        incoming-data (label :text "" :id :incoming-data :size [100 :by 20])
+        incoming-panel (left-right-split incoming-data incoming-label)
+
+        backlog-label (label "Backlog.")
+        backlog-data (label :text "" :id :backlog-data :size [100 :by 20])
+        backlog-panel (left-right-split backlog-data backlog-label)
+
+        processed-label (label "Processed events.")
+        processed-data (label :text "" :id :processed-data :size [100 :by 20])
+        processed-panel (left-right-split processed-data processed-label)
+
+        stats-panel (vertical-panel :items [incoming-panel processed-panel backlog-panel])
+
         stats-timer (Timer. "stats timer")
         show-status-task (proxy [TimerTask] []
-                           (run [] (show-status backlog-data)))
-        backlog-panel (horizontal-panel :items [backlog-label backlog-data])
+                           (run [] (show-status stats-panel)))
+
         stats-menu (select (get-mem :frame) [:#stats-menu])]
-    (config! stats-frame :content backlog-panel)
+    (config! stats-frame :content stats-panel)
     (config! stats-menu :enabled? false)
     (listen stats-frame :window-closing (partial close-stats-frame stats-timer stats-menu))
     (pack! stats-frame)

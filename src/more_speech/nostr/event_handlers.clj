@@ -185,18 +185,15 @@
      :sig sig
      :tags (process-tags (get event "tags"))}))
 
-(def event-counter (atom {:total 0}))
-
 (defn count-event [envelope url]
-  (let [type (first envelope)
-        source (second envelope)
+  (let [source (second envelope)
         key (str url "|" source)]
-    (when (= type "EVENT")
-      (swap! event-counter update :total inc)
-      (swap! event-counter update key #(inc (if (nil? %) 0 %)))
-      (when (zero? (mod (:total @event-counter) 1000))
-        (prn 'websocket-backlog (get-mem :websocket-backlog))
-        (clojure.pprint/pprint @event-counter)))))
+    (update-mem :websocket-backlog dec)
+    (update-mem [:event-counter :total] inc)
+    (update-mem [:event-counter key] #(inc (if (nil? %) 0 %)))
+    (when (zero? (mod (get-mem [:event-counter :total]) 1000))
+      (prn 'websocket-backlog (get-mem :websocket-backlog))
+      (clojure.pprint/pprint (get-mem :event-counter)))))
 
 (defn handle-notification [envelope url]
   (set-mem [:relay-notice url] (with-out-str (clojure.pprint/pprint envelope)))
@@ -230,14 +227,10 @@
           (st/print-stack-trace e)))))
 
 (defn handle-event [_agent envelope url]
-  (update-mem :websocket-backlog dec)
+  (count-event envelope url)
   (when (and (> (get-mem :websocket-backlog) 0)
              (zero? (mod (get-mem :websocket-backlog) 100)))
     (prn 'websocket-backlog (get-mem :websocket-backlog)))
-  (if (and (not= "OK" (first envelope))
-           (not (.startsWith (second envelope) config/subscription-id-base)))
-    (prn 'strange-message-source url envelope)
-    (count-event envelope url))
   (if (not= "EVENT" (first envelope))
     (handle-notification envelope url)
     (try-validate-and-process-event url envelope)))

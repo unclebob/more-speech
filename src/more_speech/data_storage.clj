@@ -66,6 +66,9 @@
     (set-mem :back-count 0)
     (set-mem :processed-event-ids #{})
     (set-mem :websocket-backlog 0)
+    (set-mem :event-counter {:total 0})
+    (set-mem :incoming-events 0)
+
     (if (config/is-test-run?)
       (reset! relays config/test-relays)
       (relays/load-relays-from-file @config/relays-filename))))
