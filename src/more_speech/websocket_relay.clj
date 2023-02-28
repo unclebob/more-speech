@@ -85,7 +85,7 @@
         s30 (long 30000)
         s60 (long 60000)]
     (.schedule timer ping-task s30 s30)
-    (.schedule timer check-open-task s60 s60)
+    ;(.schedule timer check-open-task s60 s60)
     timer))
 
 (defmethod relay/open ::websocket [relay]

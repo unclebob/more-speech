@@ -65,9 +65,7 @@
            :text (str (get-mem [:incoming-events])))
   (config! (select stats-panel [:#dups-data])
            :text (str (get-mem [:event-counter :dups])))
-  (show-kinds stats-panel)
-
-  )
+  (show-kinds stats-panel))
 
 (defn close-stats-frame [timer menu _e]
   (config! menu :enabled? true)
