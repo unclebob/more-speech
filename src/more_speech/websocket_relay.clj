@@ -1,8 +1,9 @@
 (ns more-speech.websocket-relay
   (:require [more-speech
              [relay :as relay]
-             [mem :as mem]]
-            [clojure.data.json :as json])
+             [mem :refer :all]]
+            [clojure.data.json :as json]
+            [more-speech.nostr.util :as util])
   (:import (java.net.http HttpClient WebSocket$Listener WebSocket)
            (java.net URI)
            (java.util Timer TimerTask)
@@ -40,9 +41,11 @@
   (onBinary [_this _webSocket _data _last]
     (prn 'binary))
   (onPing [_this webSocket message]
+    (set-mem [:deadman (::url relay)] (util/get-now))
     (.sendPong webSocket message)
     (.request webSocket 1))
   (onPong [_this webSocket _message]
+    (set-mem [:deadman (::url relay)] (util/get-now))
     (.request webSocket 1))
   (onClose [_this _webSocket _statusCode _reason]
     (prn 'websocket-closed (::url relay))
@@ -66,13 +69,19 @@
   (let [{::keys [socket]} relay]
     (.sendPing socket (ByteBuffer/allocate 4))))
 
+(defn is-dead? [url]
+  (let [now (util/get-now)
+        deadman (get-mem [:deadman url])
+        deadman (if (nil? deadman) now deadman)
+        dead-time (- now deadman)]
+    (> dead-time 120)))
+
 (defn check-open [relay]
-  (let [{::keys [socket url]} relay
+  (let [{::keys [url]} relay
         close-callback (:close (::callbacks relay))]
-    (when-not (get-in @mem/relays [url :retrying])
-      (when (or (.isOutputClosed socket)
-                (.isInputClosed socket))
-        (prn 'relay-check-open-was-closed url)
+    (when-not (get-in @relays [url :retrying])
+      (when (is-dead? url)
+        (prn 'relay-check-open-deadman-timeout url)
         (relay/close relay)
         (future (close-callback relay))))))
 
@@ -85,7 +94,7 @@
         s30 (long 30000)
         s60 (long 60000)]
     (.schedule timer ping-task s30 s30)
-    ;(.schedule timer check-open-task s60 s60)
+    (.schedule timer check-open-task s60 s60)
     timer))
 
 (defmethod relay/open ::websocket [relay]
