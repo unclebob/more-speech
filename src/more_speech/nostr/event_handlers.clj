@@ -189,10 +189,7 @@
   (let [relay (re-find config/relay-pattern url)]
     (update-mem :websocket-backlog dec)
     (update-mem [:event-counter :total] inc)
-    (update-mem [:event-counter relay] #(inc (if (nil? %) 0 %)))
-    (when (zero? (mod (get-mem [:event-counter :total]) 1000))
-      (prn 'websocket-backlog (get-mem :websocket-backlog))
-      (clojure.pprint/pprint (get-mem :event-counter)))))
+    (update-mem [:event-counter relay] #(inc (if (nil? %) 0 %)))))
 
 (defn handle-notification [envelope url]
   (set-mem [:relay-notice url] (with-out-str (clojure.pprint/pprint envelope)))
@@ -233,9 +230,6 @@
 
 (defn handle-event [_agent envelope url]
   (count-event url)
-  (when (and (> (get-mem :websocket-backlog) 0)
-             (zero? (mod (get-mem :websocket-backlog) 100)))
-    (prn 'websocket-backlog (get-mem :websocket-backlog)))
   (if (not= "EVENT" (first envelope))
     (handle-notification envelope url)
     (try-validate-and-process-event url envelope)))
