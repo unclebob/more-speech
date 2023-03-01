@@ -24,24 +24,21 @@
           (recur (async/<!! send-chan)))))))
 
 (defn start-nostr [subscription-time]
-  (let [subscription-id config/subscription-id-base
-        metadata-request-id (str subscription-id "-metadata")
-        contact-lists-request-id (str subscription-id "-contact-lists")
-        now-in-seconds (quot (System/currentTimeMillis) 1000)]
+  (let [now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (protocol/connect-to-relays)
     (when (user-configuration/should-import-metadata? now-in-seconds)
-      (protocol/request-metadata-from-relays metadata-request-id (- now-in-seconds 86400))
+      (protocol/request-metadata-from-relays (- now-in-seconds 86400))
       (user-configuration/set-last-time-metadata-imported now-in-seconds))
-    (protocol/subscribe-to-relays subscription-id subscription-time now-in-seconds)
+    (protocol/subscribe-to-relays subscription-time now-in-seconds)
     (when (and config/read-contacts (not (config/is-test-run?)))
-      (protocol/request-contact-lists-from-relays contact-lists-request-id))
+      (protocol/request-contact-lists-from-relays))
     (if (user-configuration/should-export-profile? now-in-seconds)
       (do
         (user-configuration/set-last-time-profile-exported now-in-seconds)
         (future (composers/compose-and-send-metadata-event)))
       (println "Not time to export profile yet."))
     (let [exit-condition (process-send-channel)]
-      (protocol/unsubscribe-from-relays subscription-id)
+      (protocol/close-all-relays)
       (Thread/sleep 100)
       (prn 'done)
       exit-condition)))

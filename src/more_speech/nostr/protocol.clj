@@ -33,30 +33,44 @@
         since (int (- now seconds-ago))]
     (relay/send relay ["REQ" id {"kinds" [3] "since" since}])))
 
-(defn request-metadata [relay id since]
-  (relay/send relay ["REQ" id {"kinds" [0] "since" since}]))
+(defn request-metadata [relay since]
+  (let [id (str (::ws-relay/url relay) "-metadata")]
+    (relay/send relay ["REQ" id {"kinds" [0] "since" since}])))
+
+
+(defn add-authors [filters who]
+  (if (some? who)
+    (assoc filters "authors" who)
+    filters))
+
+(defn send-subscription
+  ([relay since now]
+   (send-subscription relay since now nil))
+
+  ([relay since now who]
+   (let [past-filters (add-authors {"since" since "until" now} who)
+         future-filters (add-authors {"since" now} who)]
+     (relay/send relay ["REQ" "ms-past" past-filters])
+     (relay/send relay ["REQ" "ms-future" future-filters]))))
 
 (defn subscribe-all
-  ([relay id]
-   (let [now (int (quot (System/currentTimeMillis) 1000))]
-     (subscribe-all relay id (- now 86400) now)))
-  ([relay id since now]
-   (relay/send relay ["REQ" id {"since" since "until" now}])
-   (relay/send relay ["REQ" (str id "-all") {"since" now}])))
+  ([relay]
+   (let [now (util/get-now)
+         since (- now 86400)]
+     (send-subscription relay since now)))
+  ([relay since now]
+     (send-subscription relay since now)))
 
-(defn subscribe-trusted [relay id since now]
-  (let [trustee-ids (contact-list/get-trustees)
-        trustees (map util/hexify trustee-ids)
+(defn subscribe-to-pubkeys [relay since now pubkeys]
+  (let [trustees (map util/hexify pubkeys)
         short-trustees (map #(subs % 0 10) trustees)]
-    (relay/send relay ["REQ" id {"since" since "until" now "authors" short-trustees}])
-    (relay/send relay ["REQ" (str id "-trusted") {"since" now "authors" short-trustees}])))
+    (send-subscription relay since now short-trustees)))
 
-(defn subscribe-web-of-trust [relay id since now]
-  (let [trustee-ids (contact-list/get-web-of-trust)
-        trustees (map util/hexify trustee-ids)
-        short-trustees (map #(subs % 0 10) trustees)]
-    (relay/send relay ["REQ" id {"since" since "until" now "authors" short-trustees}])
-    (relay/send relay ["REQ" (str id "-trust-web") {"since" now "authors" short-trustees}])))
+(defn subscribe-trusted [relay since now]
+  (subscribe-to-pubkeys relay since now (contact-list/get-trustees)))
+
+(defn subscribe-web-of-trust [relay since now]
+  (subscribe-to-pubkeys relay since now (contact-list/get-web-of-trust)))
 
 (defn unsubscribe [relay id]
   (relay/send relay ["CLOSE" id]))
@@ -65,37 +79,41 @@
   (relay/close relay)
   (swap! relays assoc-in [(::ws-relay/url relay) :connection] nil))
 
-(defn close-connection [relay id]
-  (unsubscribe relay id)
-  (close-relay relay)
-  )
+(defn add-event-time [[earliest latest] time]
+  (let [earliest (if (nil? earliest) time (min earliest time))
+        latest (if (nil? latest) time (max latest time))]
+    [earliest latest]))
 
 (defn handle-relay-message [relay message]
-  (let [url (::ws-relay/url relay)]
+  (let [url (::ws-relay/url relay)
+        [type id event] message]
+    (when (= type "EVENT")
+      (let [created-at (get event "created_at")]
+        (update-mem [:relay-subscription-event-times url id] add-event-time created-at)))
     (update-mem :websocket-backlog inc)
     (update-mem :incoming-events inc)
     (update-mem [:events-by-relay url] #(if (nil? %) 1 (inc %)))
     (send-off events/event-agent handlers/handle-event message url)))
 
-(defn subscribe-to-relay [url id since now]
+(defn subscribe-to-relay [url since now]
   (let [relay (get-in @relays [url :connection])
         read-type (get-in @relays [url :read])]
     (when (and (or (not= :false read-type)
                    (not= :no-read read-type))
                (some? relay))
       (condp = read-type
-        true (subscribe-all relay id since now)
-        :read-all (subscribe-all relay id since now)
-        :read-trusted (subscribe-trusted relay id since now)
-        :read-web-of-trust (subscribe-web-of-trust relay id since now)
+        true (subscribe-all relay since now)
+        :read-all (subscribe-all relay since now)
+        :read-trusted (subscribe-trusted relay since now)
+        :read-web-of-trust (subscribe-web-of-trust relay since now)
         nil)
       (swap! relays assoc-in [url :subscribed] true))))
 
-(defn subscribe-to-relays [id subscription-time now]
+(defn subscribe-to-relays [subscription-time now]
   (let [date (- subscription-time 100)]
     (prn 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
-      (subscribe-to-relay url id date now))))
+      (subscribe-to-relay url date now))))
 
 (defn connect-to-relay [relay]
   (let [url (::ws-relay/url relay)
@@ -148,7 +166,7 @@
           (swap! relays assoc-in [url :retrying] false)
           (prn 'reconnecting-to url)
           (connect-to-relay relay)
-          (subscribe-to-relay url (str config/subscription-id-base "-reconnect") date now))))))
+          (subscribe-to-relay url date now))))))
 
 (defn make-relay [url]
   (ws-relay/make url {:recv handle-relay-message
@@ -159,27 +177,27 @@
       (connect-to-relay relay)))
   (prn 'relay-connection-attempts-complete))
 
-(defn request-contact-lists-from-relays [id]
+(defn request-contact-lists-from-relays []
   (prn 'requesting-contact-lists)
   (doseq [url (keys @relays)]
     (let [relay (get-in @relays [url :connection])
-          read-type (get-in @relays [url :read])]
+          read-type (get-in @relays [url :read])
+          id (str (::ws-relay/url relay) "-contacts")]
       (when (= :read-all read-type)
         (request-contact-lists relay id)))))
 
-(defn request-metadata-from-relays [id since]
+(defn request-metadata-from-relays [since]
   (prn 'requesting-metadata)
   (doseq [url (keys @relays)]
     (let [relay (get-in @relays [url :connection])
           read? (get-in @relays [url :read])]
       (when (and read? (some? relay))
-        (request-metadata relay id since)))))
+        (request-metadata relay since)))))
 
-(defn unsubscribe-from-relays [id]
+(defn close-all-relays []
   (doseq [url (keys @relays)]
     (let [relay (get-in @relays [url :connection])]
       (when (some? relay)
-        (prn 'closing url)
-        (close-connection relay id)))))
+        (relay/close relay)))))
 
 

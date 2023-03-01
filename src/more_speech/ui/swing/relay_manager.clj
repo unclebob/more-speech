@@ -24,7 +24,7 @@
     (swap! relays assoc-in [url :retries] 0)
     (protocol/close-relay relay)
     (protocol/connect-to-relay relay)
-    (protocol/subscribe-to-relay url config/subscription-id-base (- now 3600) now)
+    (protocol/subscribe-to-relay url (- now 3600) now)
     ))
 
 (defn set-relay-read [label url read-type _e]
@@ -40,7 +40,9 @@
 (defn is-connected? [url]
   (some? (get-in @relays [url :connection])))
 
-(defn relay-dns [url]
+(defn relay-id
+  "converts a url to a string suitable for a select id"
+  [url]
   (if (nil? url)
     ""
     (let [dns-and-stuff (re-find config/relay-pattern url)]
@@ -65,14 +67,16 @@
          connection-label (label :text connection-mark :size [10 :by field-height])
          read-label (text :text read-status :editable? false :size [100 :by field-height])
          write-label (text :text write-status :size [50 :by field-height])
-         relay-id (keyword (str "events-" (relay-dns relay-name)))
-         events-label (label :text "" :size [60 :by field-height] :id relay-id)
+         relay-event-counter-id (keyword (str "events-" (relay-id relay-name)))
+         events-label (label :text "" :size [60 :by field-height] :id relay-event-counter-id)
+         notice-label-id (keyword (str "notice-" (relay-id relay-name)))
          notice-label (label :text (get-mem [:relay-notice url])
                              :size [info-width :by field-height]
+                             :id notice-label-id
                              :halign :left)
          status-bar (horizontal-panel :size [info-width :by field-height]
                                       :border 0
-                                      :items [connection-label read-label write-label events-label])
+                                      :items [connection-label read-label write-label events-label (label "")])
          info-area (border-panel :north status-bar :south notice-label :drag-enabled? false :border 0)
          element (left-right-split name-field info-area
                                    :size [manager-width :by element-height]
@@ -159,11 +163,15 @@
 (defn show-relay-status [relay-panel]
   (let [urls (keys @relays)]
     (doseq [url urls]
-      (let [id (keyword (str "#events-" (relay-dns url)))
-            event-label (select relay-panel [id])]
+      (let [event-counter-selector (keyword (str "#events-" (relay-id url)))
+            event-label (select relay-panel [event-counter-selector])
+            notice-label-selector (keyword (str "#notice-" (relay-id url)))
+            notice-label (select relay-panel [notice-label-selector])]
         (config! event-label
-                 :text (str (get-mem [:events-by-relay url]))))))
-  )
+                 :text (str (get-mem [:events-by-relay url])))
+        (config! notice-label
+                 :text (get-mem [:relay-notice url]))))
+    ))
 
 (defn show-relay-manager [_e]
   (when-not (get-mem :relay-manager-frame)
