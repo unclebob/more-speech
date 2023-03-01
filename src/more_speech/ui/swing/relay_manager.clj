@@ -64,7 +64,9 @@
    (let [name-field (text :text relay-name :size [name-width :by element-height]
                           :font :monospaced :editable? true :multi-line? true :wrap-lines? true
                           :id :relay-name)
-         connection-label (label :text connection-mark :size [10 :by field-height])
+         connection-label-id (keyword (str "connection-" (relay-id relay-name)))
+         connection-label (label :text connection-mark :size [10 :by field-height]
+                                 :id connection-label-id)
          read-label (text :text read-status :editable? false :size [100 :by field-height])
          write-label (text :text write-status :size [50 :by field-height])
          relay-event-counter-id (keyword (str "events-" (relay-id relay-name)))
@@ -76,7 +78,7 @@
                              :halign :left)
          status-bar (horizontal-panel :size [info-width :by field-height]
                                       :border 0
-                                      :items [connection-label read-label write-label events-label (label "")])
+                                      :items [connection-label read-label write-label events-label])
          info-area (border-panel :north status-bar :south notice-label :drag-enabled? false :border 0)
          element (left-right-split name-field info-area
                                    :size [manager-width :by element-height]
@@ -161,16 +163,23 @@
       (commit-valid-url new-url old-url))))
 
 (defn show-relay-status [relay-panel]
-  (let [urls (keys @relays)]
-    (doseq [url urls]
+  (let [urls (keys @relays)
+        active-urls (sort (filter protocol/is-active-url? urls))]
+    (doseq [url active-urls]
       (let [event-counter-selector (keyword (str "#events-" (relay-id url)))
             event-label (select relay-panel [event-counter-selector])
             notice-label-selector (keyword (str "#notice-" (relay-id url)))
-            notice-label (select relay-panel [notice-label-selector])]
+            notice-label (select relay-panel [notice-label-selector])
+            connection-label-selector (keyword (str "#connection-" (relay-id url)))
+            connection-label (select relay-panel [connection-label-selector])
+            ]
         (config! event-label
                  :text (str (get-mem [:events-by-relay url])))
         (config! notice-label
-                 :text (get-mem [:relay-notice url]))))
+                 :text (get-mem [:relay-notice url]))
+        (config! connection-label
+                 :text (if (is-connected? url) "✓" "X"))
+        ))
     ))
 
 (defn show-relay-manager [_e]
