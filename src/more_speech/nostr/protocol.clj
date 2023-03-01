@@ -74,6 +74,7 @@
   (let [url (::ws-relay/url relay)]
     (update-mem :websocket-backlog inc)
     (update-mem :incoming-events inc)
+    (update-mem [:events-by-relay url] #(if (nil? %) 1 (inc %)))
     (send-off events/event-agent handlers/handle-event message url)))
 
 (defn subscribe-to-relay [url id since now]

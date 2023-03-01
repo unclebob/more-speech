@@ -3,7 +3,8 @@
   (:require [more-speech.mem :refer :all]
             [more-speech.nostr.protocol :as protocol]
             [more-speech.config :as config]
-            [more-speech.nostr.util :as util]))
+            [more-speech.nostr.util :as util])
+  (:import (java.util Timer TimerTask)))
 
 (def manager-width 800)
 (def manager-height 500)
@@ -39,6 +40,15 @@
 (defn is-connected? [url]
   (some? (get-in @relays [url :connection])))
 
+(defn relay-dns [url]
+  (if (nil? url)
+    ""
+    (let [dns-and-stuff (re-find config/relay-pattern url)]
+      (if (nil? dns-and-stuff)
+        ""
+        (let [last-stuff (.lastIndexOf dns-and-stuff "/")]
+          (apply str (remove #(= \. %) (subs dns-and-stuff (inc last-stuff)))))))))
+
 (defn make-relay-element
   ([url]
    (let [relay (get @relays url)
@@ -55,12 +65,14 @@
          connection-label (label :text connection-mark :size [10 :by field-height])
          read-label (text :text read-status :editable? false :size [100 :by field-height])
          write-label (text :text write-status :size [50 :by field-height])
+         relay-id (keyword (str "events-" (relay-dns relay-name)))
+         events-label (label :text "" :size [60 :by field-height] :id relay-id)
          notice-label (label :text (get-mem [:relay-notice url])
                              :size [info-width :by field-height]
                              :halign :left)
          status-bar (horizontal-panel :size [info-width :by field-height]
                                       :border 0
-                                      :items [connection-label read-label write-label])
+                                      :items [connection-label read-label write-label events-label])
          info-area (border-panel :north status-bar :south notice-label :drag-enabled? false :border 0)
          element (left-right-split name-field info-area
                                    :size [manager-width :by element-height]
@@ -144,6 +156,15 @@
         (alert (str new-url " is invalid.")))
       (commit-valid-url new-url old-url))))
 
+(defn show-relay-status [relay-panel]
+  (let [urls (keys @relays)]
+    (doseq [url urls]
+      (let [id (keyword (str "#events-" (relay-dns url)))
+            event-label (select relay-panel [id])]
+        (config! event-label
+                 :text (str (get-mem [:events-by-relay url]))))))
+  )
+
 (defn show-relay-manager [_e]
   (when-not (get-mem :relay-manager-frame)
     (let [relay-frame (frame :title "Relays" :size [manager-width :by manager-height])
@@ -156,12 +177,17 @@
           all-elements (concat [new-element] connected-elements unconnected-elements)
           relay-list (vertical-panel :items all-elements :id :relay-list)
           relay-box (scrollable relay-list)
-          relays-menu (select (get-mem :frame) [:#relays-menu])]
+          relays-menu (select (get-mem :frame) [:#relays-menu])
+          relay-manager-timer (Timer. "Relay manager timer")
+          relay-manager-task (proxy [TimerTask] []
+                               (run [] (show-relay-status relay-list)))
+          ]
       (config! relays-menu :enabled? false)
       (set-mem :relay-manager-frame relay-frame)
       (config! relay-frame :content relay-box)
       (listen relay-frame :window-closing close-relay-manager)
       (show! relay-frame)
+      (.schedule relay-manager-timer relay-manager-task 1000 1000)
       )))
 
 
