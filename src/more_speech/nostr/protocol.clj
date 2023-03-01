@@ -72,8 +72,10 @@
 (defn subscribe-web-of-trust [relay since now]
   (subscribe-to-pubkeys relay since now (contact-list/get-web-of-trust)))
 
-(defn unsubscribe [relay id]
-  (relay/send relay ["CLOSE" id]))
+(defn unsubscribe [relay]
+  (relay/send relay ["CLOSE" "ms-past"])
+  (relay/send relay ["CLOSE" "ms-future"])
+  )
 
 (defn close-relay [relay]
   (relay/close relay)

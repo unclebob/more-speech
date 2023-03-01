@@ -22,6 +22,7 @@
         relay (if (some? relay) relay (protocol/make-relay url))
         now (util/get-now)]
     (swap! relays assoc-in [url :retries] 0)
+    (protocol/unsubscribe relay)
     (protocol/close-relay relay)
     (protocol/connect-to-relay relay)
     (protocol/subscribe-to-relay url (- now 3600) now)
