@@ -40,7 +40,7 @@
 
 (defn add-authors [filters who]
   (if (some? who)
-    (assoc filters "authors" (take 999 (shuffle who)))
+    (assoc filters "authors" (set (take 999 (shuffle who))))
     filters))
 
 (defn send-subscription

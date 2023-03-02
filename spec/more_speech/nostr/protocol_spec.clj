@@ -2,10 +2,9 @@
   (:require [speclj.core :refer :all]
             [more-speech.nostr.protocol :refer :all]
             [more-speech.nostr.util :as util]
-            [more-speech.relay :as relay]
-            [more-speech.websocket-relay :as ws-relay]))
+            [more-speech.relay :as relay]))
 
-(declare now relay)
+(declare now)
 (describe "protocol utilities"
   (with-stubs)
   (with now 100)
@@ -36,27 +35,27 @@
     )
 
   (context "sending subscriptions"
-    (with relay {::ws-relay/url "wss://url"})
-
     (it "sends subscriptions for authors"
       (with-redefs [relay/send (stub :send)]
-        (send-subscription @relay 0 100 [:author1 :author2])
-        (should-have-invoked :send {:with [@relay
-                                           ["REQ" "wss://url-past"
-                                            {"since" 0
-                                             "until" 100
-                                             "authors" [:author1 :author2]}]]})
-
-        ))
+        (send-subscription :relay 0 100 [:author1 :author2])
+        (should-have-invoked
+          :send {:with [:relay ["REQ" "ms-past"
+                                {"since" 0
+                                 "until" 100
+                                 "authors" #{:author1 :author2}}]]})
+        (should-have-invoked
+          :send {:with [:relay ["REQ" "ms-future"
+                                {"since" 100
+                                 "authors" #{:author1 :author2}}]]})))
 
     (it "sends subscriptions without authors"
       (with-redefs [relay/send (stub :send)]
-        (send-subscription @relay 0 100)
-        (should-have-invoked :send {:with [@relay
-                                           ["REQ" "wss://url-past"
+        (send-subscription :relay 0 100)
+        (should-have-invoked :send {:with [:relay
+                                           ["REQ" "ms-past"
                                             {"since" 0
                                              "until" 100}]]})
-
-        ))
+        (should-have-invoked :send {:with [:relay ["REQ" "ms-future"
+                                                   {"since" 100}]]})))
     )
   )
