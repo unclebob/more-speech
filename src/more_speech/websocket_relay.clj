@@ -33,8 +33,9 @@
 
 (defrecord listener [buffer relay]
   WebSocket$Listener
-  (onOpen [_this _webSocket]
-    (prn 'open (::url relay)))
+  (onOpen [_this webSocket]
+    (prn 'open (::url relay))
+    (.request webSocket 1))
   (onText [this webSocket data last]
     (handle-text this data last)
     (.request webSocket 1))
@@ -63,38 +64,19 @@
         (catch Exception e
           (prn 'close-error url (:reason e)))))
     (when timer (.cancel timer))
+    (set-mem [:deadman url] (util/get-now))
     (assoc relay ::socket nil ::timer nil)))
 
 (defn send-ping [relay]
   (let [{::keys [socket]} relay]
     (.sendPing socket (ByteBuffer/allocate 4))))
 
-(defn is-dead? [url]
-  (let [now (util/get-now)
-        deadman (get-mem [:deadman url])
-        deadman (if (nil? deadman) now deadman)
-        dead-time (- now deadman)]
-    (> dead-time 120)))
-
-(defn check-open [relay]
-  (let [{::keys [url]} relay
-        close-callback (:close (::callbacks relay))]
-    (when-not (get-in @relays [url :retrying])
-      (when (is-dead? url)
-        (prn 'relay-check-open-deadman-timeout url)
-        (relay/close relay)
-        (future (close-callback relay))))))
-
 (defn start-timer [relay]
   (let [timer (Timer. (format "Ping timer for %s" (::url relay)))
         ping-task (proxy [TimerTask] []
                     (run [] (send-ping relay)))
-        check-open-task (proxy [TimerTask] []
-                          (run [] (check-open relay)))
-        s30 (long 30000)
-        s60 (long 60000)]
+        s30 (long 30000)]
     (.schedule timer ping-task s30 s30)
-    (.schedule timer check-open-task s60 s60)
     timer))
 
 (defmethod relay/open ::websocket [relay]
@@ -112,7 +94,8 @@
             (future ((:close (::callbacks relay)) relay))
             relay)
           (let [open-relay (assoc relay ::socket ws)]
-            (assoc open-relay :timer (start-timer open-relay)))))
+            (send-ping open-relay)
+            (assoc open-relay ::timer (start-timer open-relay)))))
       (catch Exception e
         (prn 'connect-to-relay-failed url (:reason e))
         (future ((:close (::callbacks relay)) relay))

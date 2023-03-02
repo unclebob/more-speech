@@ -2,8 +2,7 @@
   (:use [seesaw core])
   (:require [more-speech.mem :refer :all]
             [more-speech.nostr.protocol :as protocol]
-            [more-speech.config :as config]
-            [more-speech.nostr.util :as util])
+            [more-speech.config :as config])
   (:import (java.util Timer TimerTask)))
 
 (def manager-width 800)
@@ -19,14 +18,10 @@
 
 (defn reconnect-to-relay [url]
   (let [relay (get-in @relays [url :connection])
-        relay (if (some? relay) relay (protocol/make-relay url))
-        now (util/get-now)]
+        relay (if (some? relay) relay (protocol/make-relay url))]
     (swap! relays assoc-in [url :retries] 0)
     (protocol/unsubscribe relay)
-    (protocol/close-relay relay)
-    (protocol/connect-to-relay relay)
-    (protocol/subscribe-to-relay url (- now 3600) now)
-    ))
+    (protocol/close-relay relay)))
 
 (defn set-relay-read [label url read-type _e]
   (swap! relays assoc-in [url :read] read-type)

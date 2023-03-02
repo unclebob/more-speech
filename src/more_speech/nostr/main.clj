@@ -24,6 +24,7 @@
           (recur (async/<!! send-chan)))))))
 
 (defn start-nostr [subscription-time]
+  (protocol/initialize)
   (let [now-in-seconds (quot (System/currentTimeMillis) 1000)]
     (protocol/connect-to-relays)
     (when (user-configuration/should-import-metadata? now-in-seconds)

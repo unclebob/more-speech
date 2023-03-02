@@ -8,7 +8,8 @@
             [more-speech.config :as config :refer [get-db]]
             [clojure.string :as string]
             [clojure.core.async :as async]
-            [more-speech.db.gateway :as gateway])
+            [more-speech.db.gateway :as gateway]
+            [more-speech.bech32 :as bech32])
   (:import (ecdhJava SECP256K1)))
 
 (defn body->event
@@ -109,19 +110,48 @@
 (defn add-abbreviated-pubkey [pubkey-string]
   (let [pubkey (util/hex-string->num pubkey-string)
         abbreviated-pubkey (str (subs pubkey-string 0 11) "-")
-        now (util/get-now-ms)]
-    (gateway/add-profile (get-db) pubkey {:name abbreviated-pubkey
-                                          :created-at now})
+        now (util/get-now)
+        profile (gateway/get-profile (get-db) pubkey)]
+    (when (nil? profile)
+      (gateway/add-profile (get-db) pubkey {:name abbreviated-pubkey
+                                            :created-at now}))
     pubkey))
+
+(defn add-abbreviated-npub [npub]
+  (try
+    (let [pubkey (bech32/address->number npub)
+          abbreviated-npub (str (subs npub 0 16) "-")
+          now (util/get-now)
+          profile (gateway/get-profile (get-db) pubkey)]
+      (prn 'add-abbreviated-npub profile)
+      (when (nil? profile)
+        (gateway/add-profile (get-db) pubkey {:name abbreviated-npub
+                                              :created-at now}))
+      pubkey)
+    (catch Exception e
+      (prn 'add-abbreviated-npub e)
+      nil)))
+
+(defn add-abbreviated-reference [user-reference]
+  (cond
+    (re-matches config/hex-key-pattern user-reference)
+    (add-abbreviated-pubkey user-reference)
+
+    (re-matches config/npub-reference user-reference)
+    (add-abbreviated-npub user-reference)
+
+    :else
+    nil
+    )
+  )
 
 (defn make-emplacement [reference tags]
   (let [tags (vec tags)                                     ;conj adds to end.
         tag-index (count tags)
         user-reference (subs reference 1)
         user-id (find-user-id user-reference)
-        user-id (if (and (nil? user-id)
-                         (re-matches config/hex-key-pattern user-reference))
-                  (add-abbreviated-pubkey user-reference)
+        user-id (if (nil? user-id)
+                  (add-abbreviated-reference user-reference)
                   user-id)]
     (if (nil? user-id)
       [reference tags]
@@ -194,8 +224,8 @@
 
 (defn compose-recommended-server-event [url]
   (let [body {:kind 2
-               :tags []
-               :content url}]
+              :tags []
+              :content url}]
     (body->event body)))
 
 (defn remove-arguments [url]

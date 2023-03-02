@@ -10,7 +10,8 @@
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.mem :refer :all]
-            [more-speech.config :as config])
+            [more-speech.config :as config]
+            [more-speech.bech32 :as bech32])
   (:import (ecdhJava SECP256K1)))
 
 (defn have-client-tag? [tags]
@@ -25,6 +26,7 @@
   (with db (in-memory/get-db))
   (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db))
+
   (context "composing metadata (kind:0) messages"
     (it "composes using the keys data structure"
       (with-redefs [config/proof-of-work-default 0]
@@ -277,6 +279,8 @@
 (describe "Emplacing references"
   (with-stubs)
   (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
+  (before (in-memory/clear-db @db))
 
   (context "replace @user with #[n] where n is the index of the 'p' tag."
     (it "emplaces nothing if there is no @user in the content"
@@ -312,8 +316,8 @@
         (should= ["hello @user-3." [[:e "blah"]]]
                  (emplace-references content tags))))
 
-    (it "adds an abbreviated profile name for an unamed pubkey"
-      (with-redefs [util/get-now-ms (stub :get-now {:return 1000})]
+    (it "adds an abbreviated profile name for an un-named pubkey"
+      (with-redefs [util/get-now (stub :get-now {:return 1000})]
         (let [tags [[:e "blah"]]
               user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
               pubkey (num32->hex-string user-id)
@@ -321,6 +325,31 @@
           (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
                    (emplace-references content tags))
           (should= {:name "0123456789a-" :created-at 1000}
+                   (gateway/get-profile @db user-id)))))
+
+    (it "emplaces a named npub"
+      (with-redefs [util/get-now (stub :get-now {:return 1000})]
+        (let [tags [[:e "blah"]]
+              user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
+              npub (bech32/encode "npub" user-id)
+              pubkey (num32->hex-string user-id)
+              content (str "hello @" npub ".")]
+          (gateway/add-profile @db user-id {:name "some-user" :created-at 0})
+          (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
+                   (emplace-references content tags))
+          (should= {:name "some-user" :created-at 0}
+                   (gateway/get-profile @db user-id)))))
+
+    (it "emplaces an un-named npub"
+      (with-redefs [util/get-now (stub :get-now {:return 1000})]
+        (let [tags [[:e "blah"]]
+              user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
+              npub (bech32/encode "npub" user-id)
+              pubkey (num32->hex-string user-id)
+              content (str "hello @" npub ".")]
+          (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
+                   (emplace-references content tags))
+          (should= {:name "npub1qy352euf40x-" :created-at 1000}
                    (gateway/get-profile @db user-id)))))
 
     (it "does not recognize pubkeys that aren't 32 bytes"

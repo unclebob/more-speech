@@ -9,17 +9,8 @@
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.nostr.util :as util])
   (:import (java.util Date)
-           (java.text SimpleDateFormat)))
-
-(defn is-active-url? [url]
-  (let [relay-descriptor (get @relays url)
-        read-state (:read relay-descriptor)
-        write-state (:write relay-descriptor)
-        is-reading? (or (= :read-all read-state)
-                        (= :read-trusted read-state)
-                        (= :read-web-of-trust read-state))
-        is-writing? write-state]
-    (or is-reading? is-writing?)))
+           (java.text SimpleDateFormat)
+           (java.util Timer TimerTask)))
 
 (defn- format-time [time]
   (let [time (* time 1000)
@@ -148,31 +139,64 @@
     relays))
 
 (defn handle-close [relay]
-  (let [url (::ws-relay/url relay)
-        now (quot (System/currentTimeMillis) 1000)
-        minutes-10 600
-        date (- now minutes-10)
-        retrying? (get-in @relays [url :retrying])
-        active? (is-active-url? url)]
-    (when (and (not retrying?) active?)
+  (let [url (::ws-relay/url relay)]
+    (prn url 'is-closed)))
+
+(defn make-relay [url]
+  (ws-relay/make url {:recv handle-relay-message
+                      :close handle-close}))
+
+(defn retry-relay [url since]
+  (let [now (util/get-now)
+        retrying? (get-in @relays [url :retrying])]
+    (when (not retrying?)
       (prn 'relay-closed url)
       (swap! relays assoc-in [url :retrying] true)
       (swap! relays assoc-in [url :connection] nil)
-      (swap! relays increment-relay-retry url)
       (future
         (let [retries (get-in @relays [url :retries])
               seconds-to-wait (min 300 (* retries 30))]
           (prn 'retries retries url)
           (prn 'waiting seconds-to-wait 'seconds url)
+          (swap! relays increment-relay-retry url)
           (Thread/sleep (* 1000 seconds-to-wait))
           (swap! relays assoc-in [url :retrying] false)
           (prn 'reconnecting-to url)
-          (connect-to-relay relay)
-          (subscribe-to-relay url date now))))))
+          (connect-to-relay (make-relay url))
+          (subscribe-to-relay url since now))))))
 
-(defn make-relay [url]
-  (ws-relay/make url {:recv handle-relay-message
-                      :close handle-close}))
+(defn is-dead? [url]
+  (let [now (util/get-now)
+        deadman (get-mem [:deadman url])
+        deadman (if (nil? deadman) now deadman)
+        dead-time (- now deadman)]
+    (prn 'is-dead? dead-time url)
+    (> dead-time 120)))
+
+(defn check-open [url]
+  (let [relay (get-in @relays [url :connection])]
+    (when-not (get-in @relays [url :retrying])
+      (when (is-dead? url)
+        (prn 'relay-check-open-deadman-timeout url)
+        (when (some? relay)
+          (relay/close relay))
+        (future (retry-relay url (get-mem [:deadman url])))))))
+
+(defn is-active-url? [url]
+  (let [relay-descriptor (get @relays url)
+        read-state (:read relay-descriptor)
+        write-state (:write relay-descriptor)
+        is-reading? (or (= :read-all read-state)
+                        (= :read-trusted read-state)
+                        (= :read-web-of-trust read-state))
+        is-writing? write-state]
+    (or is-reading? is-writing?)))
+
+(defn check-all-active-relays []
+  (doseq [url (keys @relays)]
+      (when (is-active-url? url)
+        (check-open url))))
+
 (defn connect-to-relays []
   (doseq [url (keys @relays)]
     (let [relay (make-relay url)]
@@ -201,5 +225,12 @@
     (let [relay (get-in @relays [url :connection])]
       (when (some? relay)
         (relay/close relay)))))
+
+(defn initialize []
+  (let [timer (Timer. "Dead socket timer")
+        check-open-task (proxy [TimerTask] []
+                          (run [] (check-all-active-relays)))
+        s60 (long 60000)]
+    (.schedule timer check-open-task s60 s60)))
 
 
