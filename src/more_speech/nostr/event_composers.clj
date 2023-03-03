@@ -107,42 +107,20 @@
       pet-pubkey
       (gateway/get-id-from-username (get-db) user-name))))
 
-(defn add-abbreviated-pubkey [pubkey-string]
-  (let [pubkey (util/hex-string->num pubkey-string)
-        abbreviated-pubkey (str (subs pubkey-string 0 11) "-")
-        now (util/get-now)
-        profile (gateway/get-profile (get-db) pubkey)]
-    (when (nil? profile)
-      (gateway/add-profile (get-db) pubkey {:name abbreviated-pubkey
-                                            :created-at now}))
-    pubkey))
-
-(defn add-abbreviated-npub [npub]
+(defn translate-reference [user-reference]
   (try
-    (let [pubkey (bech32/address->number npub)
-          abbreviated-npub (str (subs npub 0 16) "-")
-          now (util/get-now)
-          profile (gateway/get-profile (get-db) pubkey)]
-      (prn 'add-abbreviated-npub profile)
-      (when (nil? profile)
-        (gateway/add-profile (get-db) pubkey {:name abbreviated-npub
-                                              :created-at now}))
-      pubkey)
-    (catch Exception e
-      (prn 'add-abbreviated-npub e)
-      nil)))
+    (cond
+      (re-matches config/hex-key-pattern user-reference)
+      (util/hex-string->num user-reference)
 
-(defn add-abbreviated-reference [user-reference]
-  (cond
-    (re-matches config/hex-key-pattern user-reference)
-    (add-abbreviated-pubkey user-reference)
+      (re-matches config/npub-reference user-reference)
+      (bech32/address->number user-reference)
 
-    (re-matches config/npub-reference user-reference)
-    (add-abbreviated-npub user-reference)
-
-    :else
-    nil
-    )
+      :else
+      nil
+      )
+    (catch Exception _e
+      nil))
   )
 
 (defn make-emplacement [reference tags]
@@ -151,11 +129,13 @@
         user-reference (subs reference 1)
         user-id (find-user-id user-reference)
         user-id (if (nil? user-id)
-                  (add-abbreviated-reference user-reference)
+                  (translate-reference user-reference)
                   user-id)]
     (if (nil? user-id)
       [reference tags]
-      (let [tag [:p (util/num32->hex-string user-id)]
+      (let [is-event? (gateway/event-exists? (get-db) user-id)
+            tag [(if is-event? :e :p)
+                 (util/num32->hex-string user-id)]
             emplacement (str "#[" tag-index "]")]
         [emplacement (conj tags tag)]))))
 

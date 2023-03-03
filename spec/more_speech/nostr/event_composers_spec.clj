@@ -316,31 +316,26 @@
         (should= ["hello @user-3." [[:e "blah"]]]
                  (emplace-references content tags))))
 
-    (it "adds an abbreviated profile name for an un-named pubkey"
+    (it "adds an reference to a hex string that is not an event"
       (with-redefs [util/get-now (stub :get-now {:return 1000})]
         (let [tags [[:e "blah"]]
               user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
               pubkey (num32->hex-string user-id)
               content (str "hello @" pubkey ".")]
           (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
-                   (emplace-references content tags))
-          (should= {:name "0123456789a-" :created-at 1000}
-                   (gateway/get-profile @db user-id)))))
+                   (emplace-references content tags)))))
 
-    (it "emplaces a named npub"
+    (it "adds an reference to a hex string that is an event"
       (with-redefs [util/get-now (stub :get-now {:return 1000})]
         (let [tags [[:e "blah"]]
-              user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
-              npub (bech32/encode "npub" user-id)
-              pubkey (num32->hex-string user-id)
-              content (str "hello @" npub ".")]
-          (gateway/add-profile @db user-id {:name "some-user" :created-at 0})
-          (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
-                   (emplace-references content tags))
-          (should= {:name "some-user" :created-at 0}
-                   (gateway/get-profile @db user-id)))))
+              event-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
+              event-id-hex (num32->hex-string event-id)
+              content (str "see @" event-id-hex ".")]
+          (gateway/add-event @db {:id event-id :content "event"})
+          (should= ["see #[1]." [[:e "blah"] [:e event-id-hex]]]
+                   (emplace-references content tags)))))
 
-    (it "emplaces an un-named npub"
+    (it "emplaces an npub"
       (with-redefs [util/get-now (stub :get-now {:return 1000})]
         (let [tags [[:e "blah"]]
               user-id 16r0123456789abcdef000000000000000000000000000000000000000000000000
@@ -348,9 +343,7 @@
               pubkey (num32->hex-string user-id)
               content (str "hello @" npub ".")]
           (should= ["hello #[1]." [[:e "blah"] [:p pubkey]]]
-                   (emplace-references content tags))
-          (should= {:name "npub1qy352euf40x-" :created-at 1000}
-                   (gateway/get-profile @db user-id)))))
+                   (emplace-references content tags)))))
 
     (it "does not recognize pubkeys that aren't 32 bytes"
       (let [tags [[:e "blah"]]
