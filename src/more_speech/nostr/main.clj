@@ -8,20 +8,21 @@
             [clojure.core.async :as async]
             [more-speech.config :as config]))
 
-(defn process-send-channel []
-  (let [send-chan (get-mem :send-chan)
-        urls (keys @relays)
+(defn send-event-to-relays [msg]
+  (let [urls (keys @relays)
         send-urls (filter #(:write (get @relays %)) urls)
         writeable-relays (map #(get-in @relays [% :connection]) send-urls)
         writeable-relays (filter some? writeable-relays)]
+    (doseq [relay writeable-relays] (relay/send relay msg))))
+
+(defn process-send-channel []
+  (let [send-chan (get-mem :send-chan)]
     (loop [[type msg] (async/<!! send-chan)]
       (condp = type
         :closed :quit
         :relaunch :relaunch
-        :event
-        (do
-          (doseq [relay writeable-relays] (relay/send relay msg))
-          (recur (async/<!! send-chan)))))))
+        :event (do (send-event-to-relays msg)
+                   (recur (async/<!! send-chan)))))))
 
 (defn start-nostr [subscription-time]
   (protocol/initialize)
