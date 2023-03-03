@@ -41,7 +41,8 @@
   ([relay since now who]
    (let [past-filters (add-authors {"since" since "until" now} who)
          future-filters (add-authors {"since" now} who)]
-     (relay/send relay ["REQ" "ms-past" past-filters])
+     (when (> now since)
+       (relay/send relay ["REQ" "ms-past" past-filters]))
      (relay/send relay ["REQ" "ms-future" future-filters]))))
 
 (defn subscribe-all
@@ -170,7 +171,6 @@
         deadman (get-mem [:deadman url])
         deadman (if (nil? deadman) now deadman)
         dead-time (- now deadman)]
-    (prn 'is-dead? dead-time url)
     (> dead-time 120)))
 
 (defn check-open [url]
