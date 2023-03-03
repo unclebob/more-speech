@@ -64,7 +64,7 @@
     (set-mem :user-configuration user-configuration)
     (set-mem :event-history [])
     (set-mem :back-count 0)
-    (set-mem :processed-event-ids #{})
+    (set-mem :processed-event-ids {})
     (set-mem :websocket-backlog 0)
     (set-mem :event-counter {:total 0})
     (set-mem :incoming-events 0)

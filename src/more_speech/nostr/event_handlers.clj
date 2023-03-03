@@ -198,20 +198,30 @@
 (defn inc-if-nil [n]
   (if (nil? n) 1 (inc n)))
 
+(defn add-relay-to-processed-event-ids [relays url]
+  (if (some? relays)
+    (conj relays url)
+    #{url}))
+
+(defn handle-duplicate-event [event id relays-already-sent-this-id url]
+  (do
+    (update-mem [:event-counter :dups] inc-if-nil)
+    (when (is-text-event? event)
+      (when-not (contains? relays-already-sent-this-id url)
+        (update-mem [:processed-event-ids id] add-relay-to-processed-event-ids url)
+        (gateway/add-relays-to-event (get-db) id [url])))))
+
 (defn validate-and-process-event [url envelope]
   (let [[_name _subscription-id inner-event :as _decoded-msg] envelope
         event (translate-event inner-event)
         id (:id event)
-        dup? (contains? (get-mem [:processed-event-ids]) id)]
+        relays-already-sent-this-id (get-mem [:processed-event-ids id])]
     (update-mem [:event-counter :kinds (:kind event)] inc-if-nil)
-    (if dup?
-      (do
-        (update-mem [:event-counter :dups] inc-if-nil)
-        (when (is-text-event? event)
-          (gateway/add-relays-to-event (get-db) id [url])))
+    (if (some? relays-already-sent-this-id)
+      (handle-duplicate-event event id relays-already-sent-this-id url)
       (let [computed-id (compute-id inner-event)
             ui-handler (get-mem :event-handler)]
-        (update-mem :processed-event-ids conj id)
+        (update-mem :processed-event-ids assoc id #{url})
         (if (= id computed-id)
           (let [event (decrypt-dm-event event)]
             (when (not (:private event))
