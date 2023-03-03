@@ -159,12 +159,25 @@
 (defn ms-linkify [type subject]
   (str "<a href=\"" (str type "://" subject) "\">" subject "</a>"))
 
+(defn img-ify [seg]
+  (str "<a href=\"" seg "\"><img src=\"" seg "\"></a><br>" (linkify seg)))
+
 (defn combine-patterns
   "patterns are a list of [:name pattern]"
   [& patterns]
   (let [grouped-patterns (map #(str "(?<" (name (first %)) ">" (second %) ")") patterns)
         combined-patterns (interpose "|" grouped-patterns)]
     (re-pattern (apply str combined-patterns))))
+
+
+(defn alter-segment-type [type segment]
+  (if-not (= type :url)
+    type
+    (if (or (.endsWith segment ".jpg")
+            (.endsWith segment ".jpeg")
+            (.endsWith segment ".gif")
+            (.endsWith segment ".png")
+            ) :img :url)))
 
 (defn segment-article
   ([content]
@@ -192,7 +205,8 @@
                  url-end-index (+ url-start-index (.length segment))
                  text-sub (subs content 0 url-start-index)
                  url-sub (subs content url-start-index url-end-index)
-                 rest (subs content url-end-index)]
+                 rest (subs content url-end-index)
+                 segment-type (alter-segment-type segment-type url-sub)]
              (recur rest
                     (concat segments
                             (if (empty? text-sub)
@@ -223,6 +237,9 @@
 
           :idreference
           (str formatted-content (ms-linkify "ms-idreference" seg))
+
+          :img
+          (str formatted-content (img-ify seg))
 
           formatted-content
           ))
