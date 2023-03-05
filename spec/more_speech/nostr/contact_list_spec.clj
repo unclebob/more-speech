@@ -113,17 +113,23 @@
     )
 
   (describe "trust accessors"
+    (with db (in-memory/get-db))
+      (before-all (config/set-db! :in-memory))
+      (before (clear-mem)
+              (in-memory/clear-db @db))
+
     (it "gets trustees"
+      (set-mem :pubkey 99)
       (gateway/add-contacts @db 1 [{:pubkey 2} {:pubkey 3}])
-      (should= #{2 3} (set (get-trustees 1))))
+      (should= #{99 2 3} (set (get-trustees 1))))
 
     (it "gets web of trust"
+      (set-mem :pubkey 99)
       (gateway/add-contacts @db 1 [{:pubkey 2} {:pubkey 3}])
       (gateway/add-contacts @db 2 [{:pubkey 201} {:pubkey 202}])
       (gateway/add-contacts @db 3 [{:pubkey 201} {:pubkey 302}])
       (let [web-of-trust (get-web-of-trust 1)]
-        (should= 5 (count web-of-trust))
-        (should= #{2 3 201 202 302} web-of-trust)))
+        (should= #{99 2 3 201 202 302} web-of-trust)))
     )
 
   )

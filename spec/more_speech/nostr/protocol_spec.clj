@@ -42,11 +42,16 @@
           :send {:with [:relay ["REQ" "ms-past"
                                 {"since" 0
                                  "until" 100
-                                 "authors" #{:author1 :author2}}]]})
+                                 "authors" #{:author1 :author2}}
+                                {"since" 0
+                                 "until" 100
+                                 "#p" #{:author1 :author2}}]]})
         (should-have-invoked
           :send {:with [:relay ["REQ" "ms-future"
                                 {"since" 100
-                                 "authors" #{:author1 :author2}}]]})))
+                                 "authors" #{:author1 :author2}}
+                                {"since" 100
+                                 "#p" #{:author1 :author2}}]]})))
 
     (it "sends subscriptions without authors"
       (with-redefs [relay/send (stub :send)]

@@ -69,7 +69,8 @@
    (get-trustees (get-mem :pubkey)))
   ([id]
    (let [contacts (gateway/get-contacts (get-db) id)]
-     (map :pubkey contacts))))
+     (set (concat [(get-mem :pubkey)]
+             (map :pubkey contacts))))))
 
 (defn get-web-of-trust
   ([]
@@ -77,5 +78,7 @@
   ([id]
    (let [trustees (get-trustees id)
          trusted-of-trustees (mapcat get-trustees trustees)]
-     (set (concat trustees trusted-of-trustees)))))
+     (set (concat [(get-mem :pubkey)]
+                  trustees
+                  trusted-of-trustees)))))
 

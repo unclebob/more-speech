@@ -29,9 +29,10 @@
     (relay/send relay ["REQ" id {"kinds" [0] "since" since}])))
 
 
-(defn add-authors [filters who]
+(defn add-trustees [type filters who]
   (if (some? who)
-    (assoc filters "authors" (set (take 999 (shuffle who))))
+    (let [selected-keys (set (take 999 (shuffle who)))]
+      (assoc filters type selected-keys))
     filters))
 
 (defn send-subscription
@@ -39,11 +40,19 @@
    (send-subscription relay since now nil))
 
   ([relay since now who]
-   (let [past-filters (add-authors {"since" since "until" now} who)
-         future-filters (add-authors {"since" now} who)]
+   (let [past-filter {"since" since "until" now}
+         future-filter {"since" now}
+         past-author-filter (add-trustees "authors" past-filter who)
+         future-author-filter (add-trustees "authors" future-filter who)
+         past-mention-filter (add-trustees "#p" past-filter who)
+         future-mention-filter (add-trustees "#p" future-filter who)]
      (when (> now since)
-       (relay/send relay ["REQ" "ms-past" past-filters]))
-     (relay/send relay ["REQ" "ms-future" future-filters]))))
+       (if (some? who)
+         (relay/send relay ["REQ" "ms-past" past-author-filter past-mention-filter])
+         (relay/send relay ["REQ" "ms-past" past-filter])))
+     (if (some? who)
+       (relay/send relay ["REQ" "ms-future" future-author-filter future-mention-filter])
+       (relay/send relay ["REQ" "ms-future" future-filter])))))
 
 (defn subscribe-all
   ([relay]
@@ -51,7 +60,7 @@
          since (- now 86400)]
      (send-subscription relay since now)))
   ([relay since now]
-     (send-subscription relay since now)))
+   (send-subscription relay since now)))
 
 (defn subscribe-to-pubkeys [relay since now pubkeys]
   (let [trustees (map util/hexify pubkeys)
@@ -194,8 +203,8 @@
 
 (defn check-all-active-relays []
   (doseq [url (keys @relays)]
-      (when (is-active-url? url)
-        (check-open url))))
+    (when (is-active-url? url)
+      (check-open url))))
 
 (defn connect-to-relays []
   (doseq [url (keys @relays)]
