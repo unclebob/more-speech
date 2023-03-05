@@ -64,7 +64,7 @@
               (str "@" name))
             reference))
         (catch Exception e
-          (prn lookup-reference 'bad-id index tags)
+          (prn 'lookup-reference 'bad-id index tags)
           (prn (.getMessage e))
           "@-unknown-")))))
 
