@@ -17,17 +17,15 @@
         date (Date. (long time))]
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date)))
 
-(defn request-contact-lists [relay id]
+(defn request-contact-lists [relay]
   (let [now (quot (System/currentTimeMillis) 1000)
         days-ago config/read-contact-lists-days-ago
         seconds-ago (int (* days-ago 86400))
         since (int (- now seconds-ago))]
-    (relay/send relay ["REQ" id {"kinds" [3] "since" since}])))
+    (relay/send relay ["REQ" "ms-contacts" {"kinds" [3] "since" since}])))
 
 (defn request-metadata [relay since]
-  (let [id (str (::ws-relay/url relay) "-metadata")]
-    (relay/send relay ["REQ" id {"kinds" [0] "since" since}])))
-
+  (relay/send relay ["REQ" "ms-profiles" {"kinds" [0] "since" since}]))
 
 (defn add-trustees [type filters who]
   (if (some? who)
@@ -48,10 +46,10 @@
          future-mention-filter (add-trustees "#p" future-filter who)]
      (when (> now since)
        (if (some? who)
-         (relay/send relay ["REQ" "ms-past" past-author-filter past-mention-filter])
+         (relay/send relay ["REQ" "ms-past" past-author-filter #_past-mention-filter])
          (relay/send relay ["REQ" "ms-past" past-filter])))
      (if (some? who)
-       (relay/send relay ["REQ" "ms-future" future-author-filter future-mention-filter])
+       (relay/send relay ["REQ" "ms-future" future-author-filter #_future-mention-filter])
        (relay/send relay ["REQ" "ms-future" future-filter])))))
 
 (defn subscribe-all
@@ -164,7 +162,7 @@
       (swap! relays assoc-in [url :retrying] true)
       (swap! relays assoc-in [url :connection] nil)
       (future
-        (let [retries (get-in @relays [url :retries])
+        (let [retries (get-in @relays [url :retries] 0)
               seconds-to-wait (min 300 (* retries 30))]
           (prn 'retries retries url)
           (prn 'waiting seconds-to-wait 'seconds url)
@@ -216,10 +214,9 @@
   (prn 'requesting-contact-lists)
   (doseq [url (keys @relays)]
     (let [relay (get-in @relays [url :connection])
-          read-type (get-in @relays [url :read])
-          id (str (::ws-relay/url relay) "-contacts")]
+          read-type (get-in @relays [url :read])]
       (when (= :read-all read-type)
-        (request-contact-lists relay id)))))
+        (request-contact-lists relay)))))
 
 (defn request-metadata-from-relays [since]
   (prn 'requesting-metadata)
