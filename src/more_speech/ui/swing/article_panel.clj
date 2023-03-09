@@ -13,7 +13,9 @@
             [more-speech.nostr.event-composers :as composers]
             [more-speech.config :as config]
             [clojure.java.browse :as browse]
-            [clojure.string :as string])
+            [clojure.string :as string]
+            [seesaw.mouse :as mouse]
+            [more-speech.bech32 :as bech32])
   (:use [seesaw core border])
   (:import (javax.swing.event HyperlinkEvent$EventType)))
 
@@ -215,6 +217,33 @@
                                 (count relay-names)
                                 (f-util/abbreviate (first relay-names) 40)))))
 
+(defn get-user-id-from-subject [subject]
+  (cond
+    (.startsWith subject "@")
+    (composers/find-user-id (subs subject 1))
+
+    (.startsWith subject "npub")
+    (bech32/address->number subject)
+
+    :else nil))
+
+(defn show-profile [profile]
+  (alert
+    (with-out-str
+      (clojure.pprint/pprint profile))))
+
+(defn get-user-info [subject _e]
+  (when-let [id (get-user-id-from-subject subject)]
+    (when-let [profile (gateway/get-profile (get-db) id)]
+      (show-profile profile))))
+
+(defn pop-up-name-menu [e subject]
+  (let [p (popup :items [(action :name "Get Info..."
+                                 :handler (partial get-user-info subject))])
+        ev (.getInputEvent e)
+        [x y] (mouse/location ev)]
+    (.show p (to-widget e) x y)))
+
 (defn open-link [e]
   (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
     (when-let [url (str (.getURL e))]
@@ -230,6 +259,9 @@
           (= type "ms-idreference")
           (let [id (util/unhexify (subs subject 1))]
             (swing-util/select-event id))
+
+          (= type "ms-namereference")
+          (pop-up-name-menu e subject)
 
           :else
           (do (prn 'open-link url 'type type 'subject subject)
