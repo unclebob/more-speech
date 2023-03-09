@@ -1,21 +1,17 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
-            [clojure.java.browse :as browse]
             [more-speech.db.gateway :as gateway]
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.ui.swing.article-tree :as article-tree]
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.tabs :as tabs]
-            [more-speech.ui.swing.util :as swing-util]
             [more-speech.ui.swing.relay-manager :as relay-manager]
             [more-speech.mem :refer :all]
             [more-speech.config :as config :refer [get-db]]
             [more-speech.ui.formatter-util :as formatter-util]
-            [more-speech.nostr.util :as util]
-            [clojure.string :as string])
+            [more-speech.nostr.util :as util])
   (:use [seesaw core])
-  (:import (java.util Timer TimerTask)
-           (javax.swing.event HyperlinkEvent$EventType)))
+  (:import (java.util Timer TimerTask)))
 
 (defrecord seesawHandler []
   handlers/event-handler
@@ -23,27 +19,6 @@
     (invoke-later (article-tree/add-event event)))
   (immediate-add-text-event [_handler event]
     (article-tree/add-event event)))
-
-(defn open-link [e]
-  (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
-    (when-let [url (str (.getURL e))]
-      (let [[type subject] (string/split (.getDescription e) #"://")]
-        (cond
-          (or (= type "http") (= type "https"))
-          (try
-            (browse/browse-url url)
-            (catch Exception ex
-              (prn 'open-link url (.getMessage ex))
-              (prn ex)))
-
-          (= type "ms-idreference")
-          (let [id (util/unhexify (subs subject 1))]
-            (swing-util/select-event id))
-
-          :else
-          (do (prn 'open-link url 'type type 'subject subject)
-              (prn (.getDescription e)))
-          )))))
 
 (defn make-profile-line [id]
   (let [profile (gateway/get-profile (get-db) id)
@@ -133,7 +108,7 @@
         _ (set-mem :frame main-frame)
         _ (prn 'make-main-window 'making-article-area)
         article-area (article-panel/make-article-area)
-        _ (listen article-area :hyperlink open-link)
+        _ (listen article-area :hyperlink article-panel/open-link)
         header-tab-panel (tabbed-panel :tabs (tabs/make-tabs) :id :header-tab-panel)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)

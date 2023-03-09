@@ -11,8 +11,11 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.config :refer [get-db]]
             [more-speech.nostr.event-composers :as composers]
-            [more-speech.config :as config])
-  (:use [seesaw core border]))
+            [more-speech.config :as config]
+            [clojure.java.browse :as browse]
+            [clojure.string :as string])
+  (:use [seesaw core border])
+  (:import (javax.swing.event HyperlinkEvent$EventType)))
 
 (defn bold-label [s]
   (label :text s :font (uconfig/get-bold-font)))
@@ -211,3 +214,24 @@
     (text! relays-label (format "%d %s"
                                 (count relay-names)
                                 (f-util/abbreviate (first relay-names) 40)))))
+
+(defn open-link [e]
+  (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
+    (when-let [url (str (.getURL e))]
+      (let [[type subject] (string/split (.getDescription e) #"://")]
+        (cond
+          (or (= type "http") (= type "https"))
+          (try
+            (browse/browse-url url)
+            (catch Exception ex
+              (prn 'open-link url (.getMessage ex))
+              (prn ex)))
+
+          (= type "ms-idreference")
+          (let [id (util/unhexify (subs subject 1))]
+            (swing-util/select-event id))
+
+          :else
+          (do (prn 'open-link url 'type type 'subject subject)
+              (prn (.getDescription e)))
+          )))))

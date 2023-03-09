@@ -35,6 +35,8 @@
     )
 
   (context "sending subscriptions"
+    (it "has some comments to be removed..."
+      (pending "delete them."))
     (it "sends subscriptions for authors"
       (with-redefs [relay/send (stub :send)]
         (send-subscription :relay 0 100 [:author1 :author2])
@@ -43,14 +45,14 @@
                                 {"since" 0
                                  "until" 100
                                  "authors" #{:author1 :author2}}
-                                {"since" 0
+                                #_{"since" 0
                                  "until" 100
                                  "#p" #{:author1 :author2}}]]})
         (should-have-invoked
           :send {:with [:relay ["REQ" "ms-future"
                                 {"since" 100
                                  "authors" #{:author1 :author2}}
-                                {"since" 100
+                                #_{"since" 100
                                  "#p" #{:author1 :author2}}]]})))
 
     (it "sends subscriptions without authors"
