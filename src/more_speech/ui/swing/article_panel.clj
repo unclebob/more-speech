@@ -37,6 +37,19 @@
     (copy-click e)
     (swing-util/select-event (config e :user-data))))
 
+(defn author-name-click [e]
+  (let [x (.x (.getPoint e))
+        y (.y (.getPoint e))
+        node (.getComponent e)
+        pubkey (config node :user-data)
+        hex-id (util/hexify pubkey)
+        npub (bech32/encode "npub" pubkey)
+        p (popup :items [(action :name "Copy Hex ID"
+                                 :handler (partial copy-to-clipboard hex-id))
+                         (action :name "Copy npub"
+                                 :handler (partial copy-to-clipboard npub))])]
+    (.show p (to-widget e) x y)))
+
 (defn reaction-click [polarity]
   (let [frame (get-mem :frame)
         up-arrow (select frame [:#up-arrow])
@@ -57,7 +70,6 @@
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
         label-font (uconfig/get-small-font)
-        author-id-label (text :id :author-id-label :editable? false :font label-font)
         created-time-label (label :id :created-time-label)
         reactions-popup (popup :enabled? false)
         reactions-label (label :id :reactions-count :user-data reactions-popup)
@@ -68,8 +80,8 @@
         root-label (text :id :root-label :editable? false :font label-font)
         relays-popup (popup :enabled? false)
         relays-label (label :id :relays-label :user-data relays-popup)
-        up-arrow (label :text " " :id :up-arrow :font (uconfig/get-bold-font))
-        dn-arrow (label :text " " :id :dn-arrow :font (uconfig/get-bold-font))]
+        up-arrow (label :text " " :id :up-arrow)
+        dn-arrow (label :text " " :id :dn-arrow)]
     (listen relays-label
             :mouse-entered (fn [e]
                              (-> relays-popup
@@ -85,25 +97,23 @@
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
     (listen id-label :mouse-pressed copy-click)
-    (listen author-id-label :mouse-pressed copy-click)
     (listen up-arrow :mouse-pressed up-click)
     (listen dn-arrow :mouse-pressed dn-click)
+    (listen author-name-label :mouse-pressed author-name-click)
     (let [grid
           (grid-panel
             :columns 3
             :preferred-size [-1 :by 70]                     ;icky.
             :items [
-                    (flow-panel :align :left :items [up-arrow
-                                                     (bold-label "Author:") author-name-label
-                                                     (bold-label "Reactions:") reactions-label])
+                    (flow-panel :align :left :items [(bold-label "Author:") author-name-label])
                     (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
-                    (flow-panel :align :left :items [(bold-label "pubkey:") author-id-label])
+                    (flow-panel :align :left :items [(bold-label "Reactions:") reactions-label up-arrow dn-arrow])
 
                     (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
                     (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
                     (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
 
-                    (flow-panel :align :left :items [dn-arrow (bold-label "id:") id-label])
+                    (flow-panel :align :left :items [(bold-label "id:") id-label])
                     (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
                     (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
       grid)))
@@ -174,28 +184,27 @@
         reactions-label (select main-frame [:#reactions-count])
         reactions-popup (config reactions-label :user-data)
         relay-names (map #(re-find config/relay-pattern %) (:relays event))
-        author-id (select main-frame [:#author-id-label])
-        event-id (select main-frame [:#id-label])]
+        event-id (select main-frame [:#id-label])
+        author-name-label (select main-frame [:#author-name-label])]
     (text! reactions-label (str reactions))
     (if reacted?
       (do
         (text! up-arrow " ")
         (text! dn-arrow " "))
       (do
-        (text! up-arrow "⬆")
-        (text! dn-arrow "⬇")))
+        (text! up-arrow "👍🏻")
+        (text! dn-arrow "👎🏻")))
     (swing-util/clear-popup relays-popup)
     (swing-util/clear-popup reactions-popup)
     (config! relays-popup :items relay-names)
     (config! reactions-popup :items (reaction-items (:reactions event)))
     (text! article-area (formatters/reformat-article
                           (formatters/replace-references event)))
-    (text! (select main-frame [:#author-name-label])
+    (text! author-name-label
            (formatters/format-user-id (:pubkey event) 50))
+    (config! author-name-label :user-data (:pubkey event))
     (text! (select main-frame [:#created-time-label])
            (f-util/format-time (:created-at event)))
-    (config! author-id :user-data (:pubkey event)
-             :text (f-util/abbreviate (util/num32->hex-string (:pubkey event)) 20))
     (config! event-id
              :user-data (:id event)
              :text (f-util/abbreviate (util/num32->hex-string (:id event)) 20))
