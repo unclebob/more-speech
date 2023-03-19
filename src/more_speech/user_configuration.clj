@@ -70,3 +70,6 @@
 
 (defn get-small-font []
   (get-config :small-font config/small-font))
+
+(defn get-small-bold-font []
+  (get-config :small-bold-font config/small-bold-font))

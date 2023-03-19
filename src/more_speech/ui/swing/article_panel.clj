@@ -213,7 +213,11 @@
         (text! reply-to (formatters/format-user-id (:pubkey replied-event) 50))
         (config! citing
                  :user-data referent
-                 :text (f-util/abbreviate (util/num32->hex-string referent) 20)))
+                 :text (f-util/abbreviate (util/num32->hex-string referent) 20)
+                 :font (if (nil? replied-event)
+                         (uconfig/get-small-font)
+                         (uconfig/get-small-bold-font))
+                 ))
       (do (text! reply-to "")
           (text! citing "")))
     (if (some? root-id)

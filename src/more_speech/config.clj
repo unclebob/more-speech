@@ -5,7 +5,8 @@
 
 (def default-font "COURIER-PLAIN-14")
 (def bold-font "COURIER-BOLD-14")
-(def small-font "COURIER_PLAIN-9")
+(def small-font "COURIER-PLAIN-12")
+(def small-bold-font "COURIER-BOLD-12")
 
 (def article-width 120)
 
