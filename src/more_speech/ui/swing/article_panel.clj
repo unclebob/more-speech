@@ -27,9 +27,13 @@
     (let [x (.x (.getPoint e))
           y (.y (.getPoint e))
           node (.getComponent e)
-          hex-id (util/hexify (config node :user-data))
-          p (popup :items [(action :name "Copy"
-                                   :handler (partial copy-to-clipboard hex-id))])]
+          id (config node :user-data)
+          hex-id (util/hexify id)
+          note-id (bech32/encode "note" id)
+          p (popup :items [(action :name (str "Copy " (subs hex-id 0 10) "...")
+                                   :handler (partial copy-to-clipboard hex-id))
+                           (action :name (str "Copy " (subs note-id 0 10) "...")
+                                   :handler (partial copy-to-clipboard note-id))])]
       (.show p (to-widget e) x y))))
 
 (defn id-click [e]
@@ -44,9 +48,9 @@
         pubkey (config node :user-data)
         hex-id (util/hexify pubkey)
         npub (bech32/encode "npub" pubkey)
-        p (popup :items [(action :name "Copy Hex ID"
+        p (popup :items [(action :name (str "Copy " (subs hex-id 0 10) "...")
                                  :handler (partial copy-to-clipboard hex-id))
-                         (action :name "Copy npub"
+                         (action :name (str "Copy " (subs npub 0 10) "...")
                                  :handler (partial copy-to-clipboard npub))])]
     (.show p (to-widget e) x y)))
 
