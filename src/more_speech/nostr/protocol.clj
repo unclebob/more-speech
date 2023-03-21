@@ -154,6 +154,11 @@
   (ws-relay/make url {:recv handle-relay-message
                       :close handle-close}))
 
+(defn reconnect-to-relay [url since now]
+  (prn 'reconnecting-to url)
+  (connect-to-relay (make-relay url))
+  (subscribe-to-relay url since now))
+
 (defn retry-relay [url since]
   (let [now (util/get-now)
         retrying? (get-in @relays [url :retrying])]
@@ -169,9 +174,7 @@
           (swap! relays increment-relay-retry url)
           (Thread/sleep (* 1000 seconds-to-wait))
           (swap! relays assoc-in [url :retrying] false)
-          (prn 'reconnecting-to url)
-          (connect-to-relay (make-relay url))
-          (subscribe-to-relay url since now))))))
+          (reconnect-to-relay url since now))))))
 
 (defn is-dead? [url]
   (let [now (util/get-now)
