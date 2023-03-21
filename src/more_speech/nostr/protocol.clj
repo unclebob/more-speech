@@ -40,16 +40,19 @@
   ([relay since now who]
    (let [past-filter {"since" since "until" now}
          future-filter {"since" now}
-         past-author-filter (add-trustees "authors" past-filter who)
-         future-author-filter (add-trustees "authors" future-filter who)
-         past-mention-filter (add-trustees "#p" past-filter who)
-         future-mention-filter (add-trustees "#p" future-filter who)]
+         short-who (map #(subs % 0 10) who)
+         trustees (contact-list/get-trustees)
+         trustees (if (empty? trustees) [] (map util/hexify trustees))
+         past-author-filter (add-trustees "authors" past-filter short-who)
+         future-author-filter (add-trustees "authors" future-filter short-who)
+         past-mention-filter (add-trustees "#p" past-filter trustees)
+         future-mention-filter (add-trustees "#p" future-filter trustees)]
      (when (> now since)
        (if (some? who)
-         (relay/send relay ["REQ" "ms-past" past-author-filter #_past-mention-filter])
+         (relay/send relay ["REQ" "ms-past" past-author-filter past-mention-filter])
          (relay/send relay ["REQ" "ms-past" past-filter])))
      (if (some? who)
-       (relay/send relay ["REQ" "ms-future" future-author-filter #_future-mention-filter])
+       (relay/send relay ["REQ" "ms-future" future-author-filter future-mention-filter])
        (relay/send relay ["REQ" "ms-future" future-filter])))))
 
 (defn subscribe-all
@@ -61,9 +64,8 @@
    (send-subscription relay since now)))
 
 (defn subscribe-to-pubkeys [relay since now pubkeys]
-  (let [trustees (map util/hexify pubkeys)
-        short-trustees (map #(subs % 0 10) trustees)]
-    (send-subscription relay since now short-trustees)))
+  (let [trustees (map util/hexify pubkeys)]
+    (send-subscription relay since now trustees)))
 
 (defn subscribe-trusted [relay since now]
   (subscribe-to-pubkeys relay since now (contact-list/get-trustees)))

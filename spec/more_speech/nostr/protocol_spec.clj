@@ -1,13 +1,21 @@
 (ns more-speech.nostr.protocol-spec
   (:require [speclj.core :refer :all]
+            [more-speech.mem :as mem]
             [more-speech.nostr.protocol :refer :all]
             [more-speech.nostr.util :as util]
-            [more-speech.relay :as relay]))
+            [more-speech.relay :as relay]
+            [more-speech.config :as config]
+            [more-speech.db.in-memory :as in-memory]
+            [more-speech.db.gateway :as gateway]))
 
-(declare now)
+(declare now db)
 (describe "protocol utilities"
   (with-stubs)
   (with now 100)
+  (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
+  (before (in-memory/clear-db @db))
+  (before (mem/clear-mem))
   (it "increments relay retries on un-retried relays"
     (with-redefs [util/get-now-ms (stub :get-now {:return @now})]
       (should= {"relay" {:retries 1, :retry-time @now}}
@@ -35,28 +43,31 @@
     )
 
   (context "sending subscriptions"
-    (it "has some comments to be removed..."
-      (pending "delete them."))
     (it "sends subscriptions for authors"
       (with-redefs [relay/send (stub :send)]
-        (send-subscription :relay 0 100 [:author1 :author2])
+        (mem/set-mem :pubkey 1)
+        (gateway/add-contacts @db 1 [{:pubkey 2}])
+        (send-subscription :relay 0 100 ["author1xxxxx" "author2xxxxxxxx"])
         (should-have-invoked
           :send {:with [:relay ["REQ" "ms-past"
                                 {"since" 0
                                  "until" 100
-                                 "authors" #{:author1 :author2}}
-                                #_{"since" 0
+                                 "authors" #{"author1xxx" "author2xxx"}}
+                                {"since" 0
                                  "until" 100
-                                 "#p" #{:author1 :author2}}]]})
+                                 "#p" #{"0000000000000000000000000000000000000000000000000000000000000001"
+                                        "0000000000000000000000000000000000000000000000000000000000000002"}}]]})
         (should-have-invoked
           :send {:with [:relay ["REQ" "ms-future"
                                 {"since" 100
-                                 "authors" #{:author1 :author2}}
-                                #_{"since" 100
-                                 "#p" #{:author1 :author2}}]]})))
+                                 "authors" #{"author1xxx" "author2xxx"}}
+                                {"since" 100
+                                 "#p" #{"0000000000000000000000000000000000000000000000000000000000000001"
+                                        "0000000000000000000000000000000000000000000000000000000000000002"}}]]})))
 
     (it "sends subscriptions without authors"
       (with-redefs [relay/send (stub :send)]
+        (mem/set-mem :pubkey 1)
         (send-subscription :relay 0 100)
         (should-have-invoked :send {:with [:relay
                                            ["REQ" "ms-past"
