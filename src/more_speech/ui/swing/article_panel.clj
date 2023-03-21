@@ -225,9 +225,13 @@
       (do (text! reply-to "")
           (text! citing "")))
     (if (some? root-id)
-      (config! root-label
-               :user-data root-id
-               :text (f-util/abbreviate (util/num32->hex-string root-id) 20))
+      (let [root-event-exists? (gateway/event-exists? (get-db) root-id)]
+        (config! root-label
+                 :user-data root-id
+                 :text (f-util/abbreviate (util/num32->hex-string root-id) 20)
+                 :font (if root-event-exists?
+                         (uconfig/get-small-bold-font)
+                         (uconfig/get-small-font))))
       (text! root-label ""))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (format "%d %s"
