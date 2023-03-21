@@ -57,9 +57,10 @@
     (let [lurl (.trim (.toLowerCase url))]
       (if (and (re-matches config/relay-pattern lurl)
                (= -1 (.indexOf lurl "localhost")))
-        lurl
-        nil)))
-  )
+        (if (.endsWith lurl "/")
+          (subs lurl 0 (dec (count lurl)))
+          lurl)
+        nil))))
 
 (defn add-relay [url]
   (let [checked-url (validate-relay-url url)]

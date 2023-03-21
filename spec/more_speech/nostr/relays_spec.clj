@@ -58,10 +58,12 @@
     (let [urls ["junk"
                 "http://hi.com"
                 "https://hi.com"
-                "wss://hi.com/"
                 "ws://localhost:70"]]
       (doseq [url urls]
         (should-be-nil (validate-relay-url url)))))
+
+  (it "changes removes dangling / from valid urls"
+    (should= "wss://hi.com" (validate-relay-url "wss://hi.com/")))
 
   (it "trims and lower cases urls"
     (should= "wss://hi.com" (validate-relay-url " wss://HI.com\t")))
