@@ -1,22 +1,22 @@
 (ns more-speech.ui.swing.article-panel
-  (:require [more-speech.user-configuration :as uconfig]
+  (:require [clojure.java.browse :as browse]
+            [clojure.string :as string]
+            [more-speech.bech32 :as bech32]
+            [more-speech.config :refer [get-db]]
+            [more-speech.config :as config]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.mem :refer :all]
+            [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.formatters :as formatters]
             [more-speech.ui.formatter-util :as f-util]
+            [more-speech.ui.formatters :as formatters]
             [more-speech.ui.swing.article-panel-util :as article-panel-util]
             [more-speech.ui.swing.edit-window :as edit-window]
-            [more-speech.mem :refer :all]
             [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.config :refer [get-db]]
-            [more-speech.nostr.event-composers :as composers]
-            [more-speech.config :as config]
-            [clojure.java.browse :as browse]
-            [clojure.string :as string]
-            [seesaw.mouse :as mouse]
-            [more-speech.bech32 :as bech32])
-  (:use [seesaw core border])
+            [more-speech.user-configuration :as uconfig]
+            [seesaw.mouse :as mouse])
+  (:use (seesaw [border] [core]))
   (:import (javax.swing.event HyperlinkEvent$EventType)))
 
 (defn bold-label [s]
@@ -41,6 +41,16 @@
     (copy-click e)
     (swing-util/select-event (config e :user-data))))
 
+
+(defn show-profile [profile]
+  (alert
+    (with-out-str
+      (clojure.pprint/pprint profile))))
+
+(defn show-user-profile [id]
+  (when-let [profile (gateway/get-profile (get-db) id)]
+    (show-profile profile)))
+
 (defn author-name-click [e]
   (let [x (.x (.getPoint e))
         y (.y (.getPoint e))
@@ -51,7 +61,9 @@
         p (popup :items [(action :name (str "Copy " (subs hex-id 0 10) "...")
                                  :handler (partial copy-to-clipboard hex-id))
                          (action :name (str "Copy " (subs npub 0 10) "...")
-                                 :handler (partial copy-to-clipboard npub))])]
+                                 :handler (partial copy-to-clipboard npub))
+                         (action :name "Get info..."
+                                 :handler (fn [_e] (show-user-profile pubkey)))])]
     (.show p (to-widget e) x y)))
 
 (defn reaction-click [polarity]
@@ -248,15 +260,9 @@
 
     :else nil))
 
-(defn show-profile [profile]
-  (alert
-    (with-out-str
-      (clojure.pprint/pprint profile))))
-
 (defn get-user-info [subject _e]
   (when-let [id (get-user-id-from-subject subject)]
-    (when-let [profile (gateway/get-profile (get-db) id)]
-      (show-profile profile))))
+    (show-user-profile id)))
 
 (defn pop-up-name-menu [e subject]
   (let [p (popup :items [(action :name "Get Info..."
