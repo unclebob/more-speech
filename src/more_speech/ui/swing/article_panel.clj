@@ -51,7 +51,7 @@
   (when-let [profile (gateway/get-profile (get-db) id)]
     (show-profile profile)))
 
-(defn author-name-click [e]
+(defn user-name-click [e]
   (let [x (.x (.getPoint e))
         y (.y (.getPoint e))
         node (.getComponent e)
@@ -115,7 +115,8 @@
     (listen id-label :mouse-pressed copy-click)
     (listen up-arrow :mouse-pressed up-click)
     (listen dn-arrow :mouse-pressed dn-click)
-    (listen author-name-label :mouse-pressed author-name-click)
+    (listen author-name-label :mouse-pressed user-name-click)
+    (listen reply-to-label :mouse-pressed user-name-click)
     (let [grid
           (grid-panel
             :columns 3
@@ -225,8 +226,11 @@
              :user-data (:id event)
              :text (f-util/abbreviate (util/num32->hex-string (:id event)) 20))
     (if (some? referent)
-      (let [replied-event (gateway/get-event (get-db) referent)]
-        (text! reply-to (formatters/format-user-id (:pubkey replied-event) 50))
+      (let [replied-event (gateway/get-event (get-db) referent)
+            reply-to-id (:pubkey replied-event)]
+        (config! reply-to
+                 :user-data reply-to-id
+                 :text (formatters/format-user-id reply-to-id 50))
         (config! citing
                  :user-data referent
                  :text (f-util/abbreviate (util/num32->hex-string referent) 20)
