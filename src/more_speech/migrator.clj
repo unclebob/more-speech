@@ -34,11 +34,7 @@
   (when-not (file-exists? @config/nicknames-filename)
     (spit @config/nicknames-filename {16r2ef93f01cd2493e04235a6b87b10d3c4a74e2a7eb7c3caf168268f6af73314b5 "unclebobmartin"}))
   (when-not (file-exists? @config/relays-filename)
-    (spit @config/relays-filename
-          {
-           "wss://relay.damus.io" {:read :read-web-of-trust :write true}
-           "wss://relay.snort.social" {:read :read-web-of-trust :write true}
-           }))
+    (spit @config/relays-filename config/test-relays))
   (when-not (file-exists? @config/read-event-ids-filename)
     (spit @config/read-event-ids-filename #{}))
   (when-not (file-exists? @config/tabs-filename)

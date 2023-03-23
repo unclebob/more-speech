@@ -55,6 +55,9 @@
         (let [last-stuff (.lastIndexOf dns-and-stuff "/")]
           (apply str (remove #(= \. %) (subs dns-and-stuff (inc last-stuff)))))))))
 
+(defn make-relay-element-id [type relay-name]
+  (keyword (str type (relay-id relay-name))))
+
 (defn make-relay-element
   ([url]
    (let [relay (get @relays url)
@@ -65,17 +68,19 @@
      (make-relay-element url relay-name connection-mark read-status write-status)))
 
   ([url relay-name connection-mark read-status write-status]
-   (let [name-field (text :text relay-name :size [name-width :by element-height]
+   (let [dummy? (= relay-name :dummy)
+         relay-name (if dummy? "<add-relay>" relay-name)
+         name-field (text :text relay-name :size [name-width :by element-height]
                           :font :monospaced :editable? true :multi-line? true :wrap-lines? true
                           :id :relay-name)
-         connection-label-id (keyword (str "connection-" (relay-id relay-name)))
+         connection-label-id (if dummy? nil (make-relay-element-id "connection-" relay-name))
          connection-label (label :text connection-mark :size [10 :by field-height]
                                  :id connection-label-id)
          read-label (text :text read-status :editable? false :size [100 :by field-height])
          write-label (text :text write-status :size [50 :by field-height])
-         relay-event-counter-id (keyword (str "events-" (relay-id relay-name)))
+         relay-event-counter-id (if dummy? nil (make-relay-element-id "events-" relay-name))
          events-label (label :text "" :size [60 :by field-height] :id relay-event-counter-id)
-         notice-label-id (keyword (str "notice-" (relay-id relay-name)))
+         notice-label-id (if dummy? nil (make-relay-element-id "notice-" relay-name))
          notice-label (label :text (get-mem [:relay-notice url])
                              :size [info-width :by field-height]
                              :id notice-label-id
@@ -101,7 +106,7 @@
          (.startsWith url prefix))))
 
 (defn make-add-relay-element []
-  (let [add-relay-element (make-relay-element nil "<add-relay>" "X" ":read-none" "false")]
+  (let [add-relay-element (make-relay-element nil :dummy "X" ":read-none" "false")]
     (config! (select add-relay-element [:#relay-name])
              :foreground :darkgrey)
     add-relay-element))

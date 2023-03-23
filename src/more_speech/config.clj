@@ -16,13 +16,17 @@
 (def read-contact-lists-days-ago 0.5)
 
 (def migration-level 10)
-(def version "2023-02-21T15:39")
+(def version "2023-03-23T15:27")
 
 (def subscription-id-base "ms")
 
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)
 (def test-relays {"wss://eden.nostr.land" {:read :read-all :write true}
+                  "wss://atlas.nostr.land" {:read :read-all :write true}
+                  "wss://bitcoiner.social" {:read :read-all :write true}
+                  "wss://relay.nostrplebs.com" {:read :read-all :write true}
+                  "wss://relay.nostrview.com" {:read :read-all :write true}
                   "wss://relay.thes.ai" {:read :read-all :write true}
                   "wss://nostr-dev.wellorder.net" {:read :read-trusted, :write true}
                   "wss://nostr-pub.wellorder.net" {:read :read-trusted, :write true}
