@@ -47,6 +47,7 @@
       (let [url (first urls)
             relay (get @relays url)
             read (:read relay)
+            read (condp = read false :read-none true :read-all read)
             write (:write relay)]
         (recur (rest urls)
                (assoc relays-to-write url {:read read :write write}))))))

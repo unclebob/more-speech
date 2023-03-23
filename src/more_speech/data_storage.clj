@@ -1,26 +1,28 @@
 (ns more-speech.data-storage
-  (:require [more-speech.config :as config :refer [get-db]]
+  (:require [clojure.string :as string]
+            [more-speech.config :as config :refer [get-db]]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory]
             [more-speech.mem :refer :all]
             [more-speech.nostr.event-handlers :as handlers]
-            [more-speech.ui.swing.tabs :as tabs]
-            [more-speech.user-configuration :as user-configuration]
-            [clojure.string :as string]
+            [more-speech.nostr.relays :as relays]
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatter-util :as fu]
-            [more-speech.db.in-memory :as in-memory]
-            [more-speech.util.files :refer :all]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.nostr.relays :as relays])
-  (:import (java.util Date TimeZone Locale)
-           (java.text SimpleDateFormat)))
+            [more-speech.ui.swing.tabs :as tabs]
+            [more-speech.user-configuration :as user-configuration]
+            [more-speech.util.files :refer :all])
+  (:import (java.text SimpleDateFormat)
+           (java.util Date Locale TimeZone)))
 
+(defn write-relays []
+  (when (not (config/is-test-run?))
+    (spit @config/relays-filename
+          (with-out-str
+            (clojure.pprint/pprint (relays/relays-for-writing))))))
 
 (defn write-configuration []
   (prn 'writing-relays)
-  (spit @config/relays-filename
-        (with-out-str
-          (clojure.pprint/pprint (relays/relays-for-writing))))
-
+  (write-relays)
   (prn 'writing-tabs)
   (spit @config/tabs-list-filename
         (with-out-str

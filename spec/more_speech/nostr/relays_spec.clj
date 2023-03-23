@@ -37,11 +37,13 @@
   )
 
 (describe "relays-for-writing"
-  (it "trims off the dynamic components"
+  (it "trims off the dynamic components and translates read from boolean"
     (reset! relays {"url1" {:read true :write true :junk "junk"}
-                    "url2" {:read false :write false :junk "junk2"}})
-    (should= {"url1" {:read true :write true}
-              "url2" {:read false :write false}}
+                    "url2" {:read false :write false :junk "junk2"}
+                    "url3" {:read :read-trusted :write false}})
+    (should= {"url1" {:read :read-all :write true}
+              "url2" {:read :read-none :write false}
+              "url3" {:read :read-trusted :write false}}
              (relays-for-writing))))
 
 (describe "validate-relay-url"

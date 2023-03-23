@@ -1,9 +1,11 @@
 (ns more-speech.ui.swing.relay-manager
   (:use [seesaw core])
-  (:require [more-speech.mem :refer :all]
-            [more-speech.nostr.protocol :as protocol]
-            [more-speech.config :as config]
-            [more-speech.nostr.util :as util])
+  (:require
+    [more-speech.data-storage :as data-storage]
+    [more-speech.mem :refer :all]
+    [more-speech.nostr.protocol :as protocol]
+    [more-speech.config :as config]
+    [more-speech.nostr.util :as util])
   (:import (java.util Timer TimerTask)))
 
 (def manager-width 800)
@@ -28,11 +30,13 @@
 
 (defn set-relay-read [label url read-type _e]
   (swap! relays assoc-in [url :read] read-type)
+  (data-storage/write-relays)
   (config! label :text (str read-type))
   (reconnect-to-relay url))
 
 (defn set-relay-write [label url write-type _e]
   (swap! relays assoc-in [url :write] write-type)
+  (data-storage/write-relays)
   (config! label :text (str write-type))
   (reconnect-to-relay url))
 
