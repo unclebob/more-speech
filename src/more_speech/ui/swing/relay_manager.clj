@@ -6,7 +6,8 @@
     [more-speech.nostr.protocol :as protocol]
     [more-speech.config :as config]
     [more-speech.nostr.util :as util])
-  (:import (java.util Timer TimerTask)))
+  (:import (java.awt Point)
+           (java.util Timer TimerTask)))
 
 (def manager-width 800)
 (def manager-height 500)
@@ -185,6 +186,9 @@
         ))
     ))
 
+(defn scroll-to-top [scrollable-panel]
+  (invoke-later (.setViewPosition (.getViewport scrollable-panel) (Point. 0 0))))
+
 (defn show-relay-manager [_e]
   (when-not (get-mem :relay-manager-frame)
     (let [relay-frame (frame :title "Relays" :size [manager-width :by manager-height])
@@ -206,6 +210,7 @@
       (set-mem :relay-manager-frame relay-frame)
       (config! relay-frame :content relay-box)
       (listen relay-frame :window-closing close-relay-manager)
+      (scroll-to-top relay-box)
       (show! relay-frame)
       (.schedule relay-manager-timer relay-manager-task 1000 1000)
       )))
