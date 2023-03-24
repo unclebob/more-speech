@@ -251,28 +251,28 @@
 
 (describe "Format article"
   (it "should escape HTML entities"
-    (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article "<b>text</b>")))
+    (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article-into-html "<b>text</b>")))
 
   (it "should linkify url"
-    (should= "<a href=\"https://nostr.com\">nostr.com</a>" (reformat-article "https://nostr.com")))
+    (should= "<a href=\"https://nostr.com\">nostr.com</a>" (reformat-article-into-html "https://nostr.com")))
 
   (it "should ms-link a namereference"
     (should= "<a href=\"ms-namereference://@name\">@name</a>"
-             (reformat-article "@name")))
+             (reformat-article-into-html "@name")))
 
   (it "should ms-link an idreference"
-     (should= "<a href=\"ms-idreference://@0000000000000000000000000000000000000000000000000000000000000000\">@0000000000000000000000000000000000000000000000000000000000000000</a>"
-              (reformat-article "@0000000000000000000000000000000000000000000000000000000000000000")))
+    (should= "<a href=\"ms-idreference://@0000000000000000000000000000000000000000000000000000000000000000\">@0000000000000000000000000000000000000000000000000000000000000000</a>"
+             (reformat-article-into-html "@0000000000000000000000000000000000000000000000000000000000000000")))
 
   (it "should escape HTML entities and linkify url"
     (should= "&lt;b&gt;Clojure&lt;&#x2F;b&gt;: <a href=\"https://clojure.org/\">clojure.org/</a>"
-             (reformat-article "<b>Clojure</b>: https://clojure.org/")))
+             (reformat-article-into-html "<b>Clojure</b>: https://clojure.org/")))
 
   (it "should format replies and escape HTML entities properly"
-    (should= "&gt;this is<br>&gt;a reply" (reformat-article ">this is >a reply")))
+    (should= "&gt;this is<br>&gt;a reply" (reformat-article-into-html ">this is >a reply")))
 
   (it "should replace multiple spaces with &nbsp"
-    (should= "one two&nbsp three&nbsp&nbsp ." (reformat-article "one two  three   .")))
+    (should= "one two&nbsp three&nbsp&nbsp ." (reformat-article-into-html "one two  three   .")))
 
 
   )

@@ -183,6 +183,16 @@
             name (formatters/format-user-id id 50)]
         (recur (rest reactions) (conj items (str content " " name)))))))
 
+(defn make-html-document [style body]
+  (str "<head>" style "</head>"
+       "<body>" body "</body>"))
+
+(defn make-article-html [event]
+  (make-html-document
+    editor-pane-stylesheet
+    (formatters/reformat-article-into-html
+      (formatters/replace-references event))))
+
 (defn load-article-info [selected-id]
   (let [main-frame (get-mem :frame)
         event (gateway/get-event (get-db) selected-id)
@@ -215,8 +225,7 @@
     (swing-util/clear-popup reactions-popup)
     (config! relays-popup :items relay-names)
     (config! reactions-popup :items (reaction-items (:reactions event)))
-    (text! article-area (formatters/reformat-article
-                          (formatters/replace-references event)))
+    (text! article-area (make-article-html event))
     (text! author-name-label
            (formatters/format-user-id (:pubkey event) 50))
     (config! author-name-label :user-data (:pubkey event))

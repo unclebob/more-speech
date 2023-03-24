@@ -215,7 +215,7 @@
            :else
            (concat segments (list [:text content]))))))))
 
-(defn reformat-article [article]
+(defn reformat-article-into-html [article]
   (let [segments (segment-article article)]
     (reduce
       (fn [formatted-content [seg-type seg]]
