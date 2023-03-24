@@ -9,6 +9,7 @@
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.util :as util]
+            [more-speech.ui.formatter-util :as formatter-util]
             [more-speech.ui.formatter-util :as f-util]
             [more-speech.ui.formatters :as formatters]
             [more-speech.ui.swing.article-panel-util :as article-panel-util]
@@ -41,11 +42,32 @@
     (copy-click e)
     (swing-util/select-event (config e :user-data))))
 
+(defn make-html-document [style body]
+  (str "<head>" style "</head>"
+       "<body>" body "</body>"))
+
 
 (defn show-profile [profile]
-  (alert
-    (with-out-str
-      (clojure.pprint/pprint profile))))
+  (let [created-at (:created-at profile)
+        html-doc (make-html-document
+                   config/editor-pane-stylesheet
+                   (str "<h2> Name:</h2>" (:name profile)
+                        "<h2> About: </h2>" (:about profile)
+                        "<h2> As of: </h2>" (if (nil? created-at) "?" (formatter-util/format-time created-at))
+                        "<p><img src=\"" (:picture profile) "\" width=\"350\">"
+                        "<p>" (:picture profile)
+                        "<p>" (apply str (keys profile)))
+                   )
+        profile-pane (editor-pane
+                       :content-type "text/html"
+                       :editable? false
+                       :id :article-area
+                       :text html-doc)
+        profile-frame (frame :title (str "User Profile for " (:name profile))
+                             :content (scrollable profile-pane)
+                             :size [500 :by 600])]
+    (show! profile-frame)))
+
 
 (defn show-user-profile [id]
   (when-let [profile (gateway/get-profile (get-db) id)]
@@ -135,17 +157,12 @@
                     (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
       grid)))
 
-(def editor-pane-stylesheet
-  "<style>
-    body {font-family: courier; font-style: normal; font-size: 14; font-weight: lighter;}
-    a {color: #6495ED; text-decoration: none;}</style>")
-
 (defn make-article-area []
   (editor-pane
     :content-type "text/html"
     :editable? false
     :id :article-area
-    :text editor-pane-stylesheet))
+    :text config/editor-pane-stylesheet))
 
 (defn go-back [_e]
   (article-panel-util/go-back-by 1))
@@ -183,13 +200,9 @@
             name (formatters/format-user-id id 50)]
         (recur (rest reactions) (conj items (str content " " name)))))))
 
-(defn make-html-document [style body]
-  (str "<head>" style "</head>"
-       "<body>" body "</body>"))
-
 (defn make-article-html [event]
   (make-html-document
-    editor-pane-stylesheet
+    config/editor-pane-stylesheet
     (formatters/reformat-article-into-html
       (formatters/replace-references event))))
 
