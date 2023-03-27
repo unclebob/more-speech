@@ -1,10 +1,10 @@
 (ns more-speech.ui.swing.article-tree
   (:require
-    [more-speech.ui.swing.article-tree-util :refer :all]
-    [more-speech.nostr.events :as events]
     [more-speech.mem :refer :all]
+    [more-speech.nostr.events :as events]
+    [more-speech.ui.swing.article-tree-util :refer :all]
     [more-speech.ui.swing.tabs :as tabs])
-  (:use [seesaw core font tree color])
+  (:use (seesaw [color] [core] [font] [tree]))
   (:import (javax.swing.tree DefaultMutableTreeNode)))
 
 (defn add-orphaned-reference [referent id]
@@ -63,7 +63,9 @@
 (defn build-orphan-node [orphan-id]
   (let [node-map (get-mem :node-map)
         orphan-nodes (get node-map orphan-id)]
-    (copy-node (first orphan-nodes))))
+    (if (empty? orphan-nodes)
+      nil
+      (copy-node (first orphan-nodes)))))
 
 (defn resolve-any-orphans [parent-id]
   (let [parent-nodes (get-mem [:node-map parent-id])
@@ -77,8 +79,9 @@
             (let [orphan-id (first orphan-set)]
               (doseq [parent-node parent-nodes]
                 (let [orphan-node (build-orphan-node orphan-id)]
-                  (.add ^DefaultMutableTreeNode parent-node orphan-node)
-                  (update-mem [:node-map orphan-id] conj orphan-node)))
+                  (when (some? orphan-node)
+                    (.add ^DefaultMutableTreeNode parent-node orphan-node)
+                    (update-mem [:node-map orphan-id] conj orphan-node))))
               (recur (rest orphan-set)))))
         (set-mem [:orphaned-references parent-id] #{})))))
 

@@ -10,8 +10,7 @@
             [more-speech.ui.swing.util :refer :all]
             [more-speech.ui.swing.util :as swing-util]
             [speclj.core :refer :all])
-  (:use (seesaw [core] [font] [tree])
-        (seesaw [core] [tree]))
+  (:use (seesaw [core] [font] [tree]))
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel)))
 (declare db)
 
