@@ -1,17 +1,18 @@
 (ns more-speech.ui.swing.tabs-spec
-  (:use [seesaw core font tree])
-  (:require [speclj.core :refer :all]
-            [more-speech.ui.swing.tabs :refer :all]
-            [more-speech.ui.swing.util :refer :all]
+  (:require [more-speech.config :as config]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.db.in-memory :as in-memory]
             [more-speech.mem :refer :all]
             [more-speech.nostr.util :as util :refer [hexify]]
-            [more-speech.db.in-memory :as in-memory]
-            [more-speech.config :as config]
             [more-speech.ui.swing.article-panel :as article-panel]
-            [more-speech.db.gateway :as gateway]
+            [more-speech.ui.swing.article-tree :as article-tree]
+            [more-speech.ui.swing.tabs :refer :all]
+            [more-speech.ui.swing.util :refer :all]
             [more-speech.ui.swing.util :as swing-util]
-            [more-speech.ui.swing.article-tree :as article-tree])
-  (:import (javax.swing.tree DefaultMutableTreeNode)))
+            [speclj.core :refer :all])
+  (:use (seesaw [core] [font] [tree])
+        (seesaw [core] [tree]))
+  (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel)))
 (declare db)
 
 (describe "tabs"
@@ -320,4 +321,77 @@
           _ (.add child2 (DefaultMutableTreeNode. 4))
           copied-node (article-tree/copy-node node)]
       (should= [1 [2] [3 [4]]] (depict-node copied-node))))
+  )
+
+(describe "deleting nodes from a tab"
+  (before clear-mem)
+
+  (it "can delete a node"
+    (let [root (DefaultMutableTreeNode. 1)
+          model (DefaultTreeModel. root)
+          node (DefaultMutableTreeNode. 2)]
+      (.insertNodeInto model node root 0)
+      (should= 1 (.getChildCount root))
+      (.removeNodeFromParent model node)
+      (should= 0 (.getChildCount root))
+      ))
+
+  (it "deletes last node"
+    (let [root (DefaultMutableTreeNode. 0)
+          model (DefaultTreeModel. root)
+          node1 (DefaultMutableTreeNode. 1)
+          last-event-id 99
+          last-node (DefaultMutableTreeNode. last-event-id)]
+      (.insertNodeInto model node1 root 0)
+      (.insertNodeInto model last-node root 1)
+      (set-mem [:node-map last-event-id] [:dummy last-node])
+      (should= 2 (.getChildCount root))
+      (delete-last-event-from-tree-model model)
+      (should= 1 (.getChildCount root))
+      (should= 1 (.getUserObject ^DefaultMutableTreeNode (.getChild model root 0)))
+      (should= [:dummy] (get-mem [:node-map last-event-id]))))
+
+  (it "deletes last nodes if too many"
+    (let [root (DefaultMutableTreeNode. 0)
+          model (DefaultTreeModel. root)
+          node1 (DefaultMutableTreeNode. 1)
+          node2 (DefaultMutableTreeNode. 2)
+          node3 (DefaultMutableTreeNode. 3)]
+      (.insertNodeInto model node1 root 0)
+      (.insertNodeInto model node2 root 1)
+      (.insertNodeInto model node3 root 2)
+      (should= 3 (.getChildCount root))
+      (delete-last-event-if-too-many model 1)
+      (should= 1 (.getChildCount root))))
+
+  (it "does not delete last node if not too many"
+    (let [root (DefaultMutableTreeNode. 0)
+          model (DefaultTreeModel. root)
+          node1 (DefaultMutableTreeNode. 1)
+          node2 (DefaultMutableTreeNode. 2)
+          node3 (DefaultMutableTreeNode. 3)]
+      (.insertNodeInto model node1 root 0)
+      (.insertNodeInto model node2 root 1)
+      (.insertNodeInto model node3 root 2)
+      (should= 3 (.getChildCount root))
+      (delete-last-event-if-too-many model 3)
+      (should= 3 (.getChildCount root))))
+
+  (it "prunes tabs"
+    (with-redefs [config/max-nodes-per-tab 2]
+      (let [root (DefaultMutableTreeNode. 0)
+            model (DefaultTreeModel. root)
+            node1 (DefaultMutableTreeNode. 1)
+            node2 (DefaultMutableTreeNode. 2)
+            node3 (DefaultMutableTreeNode. 3)
+            the-tree (tree :model model)]
+        (set-mem :tabs-list [{:name "tab"}])
+        (set-mem :tab-tree-map {"tab" the-tree})
+        (.insertNodeInto model node1 root 0)
+        (.insertNodeInto model node2 root 1)
+        (.insertNodeInto model node3 root 2)
+        (should= 3 (.getChildCount root))
+        (prune-tabs)
+        (should= 2 (.getChildCount root)))))
+
   )

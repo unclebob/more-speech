@@ -3,7 +3,6 @@
     [more-speech.ui.swing.article-tree-util :refer :all]
     [more-speech.nostr.events :as events]
     [more-speech.mem :refer :all]
-    [more-speech.config :refer [get-db]]
     [more-speech.ui.swing.tabs :as tabs])
   (:use [seesaw core font tree color])
   (:import (javax.swing.tree DefaultMutableTreeNode)))
@@ -84,7 +83,7 @@
         (set-mem [:orphaned-references parent-id] #{})))))
 
 (defn add-event [event]
-  (when (nil? (get-mem [:node-map (:id event)]))
+  (when (empty? (get-mem [:node-map (:id event)]))
     (loop [tabs (get-mem :tabs-list)]
       (if (empty? tabs)
         nil

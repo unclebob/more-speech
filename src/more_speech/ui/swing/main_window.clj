@@ -129,7 +129,18 @@
     (show! main-frame)
     (prn 'make-main-window 'shown)))
 
+(defn setup-main-timer []
+  (let [main-timer (Timer. "main timer")
+        prune-tabs-task (proxy [TimerTask][]
+                         (run [] (tabs/prune-tabs)))
+        prune-tabs-frequency (* config/prune-tabs-frequency-in-minutes 60 1000)]
+    (.schedule main-timer
+               prune-tabs-task
+               (long prune-tabs-frequency)
+               (long prune-tabs-frequency))))
+
 (defn setup-main-window []
+  (setup-main-timer)
   (invoke-now (make-main-window))
   (prn 'setup-main-window 'creating-seesaw-handler)
   (->seesawHandler))

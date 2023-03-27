@@ -104,7 +104,7 @@
     (.setContents (get-clipboard) selection selection)))
 
 (defn load-event [id]
-  (when-not (contains? (get-mem :node-map) id)
+  (when (empty? (get-mem [:node-map id]))
     (let [event (gateway/get-event (config/get-db) id)
           handler (get-mem :event-handler)]
       (when (some? event)

@@ -39,12 +39,10 @@
         (let [found-child (search-for-node child matcher)]
           (if (some? found-child)
             found-child
-            (recur (rest children)))
-          ))
-      )))
+            (recur (rest children))))))))
 
 (defn find-header-node [root id]
-  (search-for-node root #(= id %)))
+  (search-for-node root #(= (bigint id) (bigint %))))
 
 (defn select-tree-node [tree node]
   (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]

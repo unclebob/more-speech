@@ -1,23 +1,24 @@
 (ns more-speech.ui.swing.tabs
-  (:use [seesaw core font tree])
-  (:require [more-speech.ui.swing.util :as swing-util]
-            [more-speech.nostr.util :as util]
-            [more-speech.mem :refer :all]
-            [more-speech.config :refer [get-db]]
-            [more-speech.ui.formatters :as formatters]
-            [more-speech.user-configuration :as uconfig]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.nostr.events :as events]
-            [more-speech.ui.swing.article-panel :as article-panel]
-            [more-speech.ui.swing.article-tree-util :as at-util]
-            [clojure.set :as set]
-            [more-speech.nostr.trust-updater :as trust-updater]
-            [more-speech.ui.swing.edit-window :as edit-window]
-            [more-speech.ui.formatter-util :as f-util]
-            [more-speech.nostr.tab-searcher :as tab-searcher])
-  (:use [seesaw core]
-        [seesaw core font tree color])
-  (:import (javax.swing.tree DefaultTreeModel DefaultMutableTreeNode TreePath)))
+  (:require
+    [clojure.set :as set]
+    [more-speech.config :as config]
+    [more-speech.config :refer [get-db]]
+    [more-speech.db.gateway :as gateway]
+    [more-speech.mem :refer :all]
+    [more-speech.nostr.events :as events]
+    [more-speech.nostr.tab-searcher :as tab-searcher]
+    [more-speech.nostr.trust-updater :as trust-updater]
+    [more-speech.nostr.util :as util]
+    [more-speech.ui.formatter-util :as f-util]
+    [more-speech.ui.formatters :as formatters]
+    [more-speech.ui.swing.article-panel :as article-panel]
+    [more-speech.ui.swing.article-tree-util :as at-util]
+    [more-speech.ui.swing.edit-window :as edit-window]
+    [more-speech.ui.swing.util :as swing-util]
+    [more-speech.user-configuration :as uconfig])
+  (:use (seesaw [core] [font] [tree])
+        (seesaw [color] [core] [font] [tree]))
+  (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
 (declare mouse-pressed tab-menu)
 
@@ -124,24 +125,28 @@
   (= 64 (count (second ptag))))
 
 (defn should-add-event? [filters event]
-  (let [selected (:selected filters)
-        blocked (:blocked filters)
-        [root _mentions _referent] (events/get-references event)
-        tags (:tags event)
-        ptags (filter #(= :p (first %)) tags)
-        ptags (filter valid-ptag? ptags)
-        pubkey-citings (map #(util/hex-string->num (second %)) ptags)]
-    (and
-      (or
-        (empty? selected)
-        (some #(= % (:pubkey event)) selected)
-        (some #(= % (:id event)) selected)
-        (some #(= % root) selected)
-        (not-empty (set/intersection (set pubkey-citings) (set selected))))
-      (not
+  (try
+    (let [selected (:selected filters)
+          blocked (:blocked filters)
+          [root _mentions _referent] (events/get-references event)
+          tags (:tags event)
+          ptags (filter #(= :p (first %)) tags)
+          ptags (filter valid-ptag? ptags)
+          pubkey-citings (map #(util/hex-string->num (second %)) ptags)]
+      (and
         (or
-          (some #(= % (:pubkey event)) blocked)
-          (some #(= % (:id event)) blocked))))))
+          (empty? selected)
+          (some #(= % (:pubkey event)) selected)
+          (some #(= % (:id event)) selected)
+          (some #(= % root) selected)
+          (not-empty (set/intersection (set pubkey-citings) (set selected))))
+        (not
+          (or
+            (some #(= % (:pubkey event)) blocked)
+            (some #(= % (:id event)) blocked)))))
+    (catch Exception _e
+      (prn 'should-add-event? 'bad-tag event)
+      false)))
 
 (defn add-event-to-tab-tree [tree event-id]
   (let [model (config tree :model)
@@ -298,5 +303,33 @@
     (if (.isPopupTrigger e)
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
       (swing-util/select-tab tab-index))))
+
+(defn delete-last-event-from-tree-model [model]
+  (let [root (.getRoot model)
+        child-count (.getChildCount root)
+        last-node (.getChild model root (dec child-count))
+        event-id (.getUserObject last-node)]
+
+    (.removeNodeFromParent model last-node)
+    (update-mem [:node-map event-id] (fn [nodes] (remove #(= last-node %) nodes)))))
+
+(defn delete-last-event-if-too-many [model max-nodes]
+  (let [root (.getRoot model)]
+    (when (> (.getChildCount root) max-nodes)
+      (prn 'nodes (.getChildCount root))
+      (while (> (.getChildCount root) max-nodes)
+        (delete-last-event-from-tree-model model))
+      (prn 'nodes-remaining (.getChildCount root)))))
+
+(defn prune-tabs []
+  (loop [tabs-list (get-mem :tabs-list)]
+    (if (empty? tabs-list)
+      nil
+      (let [tab-name (:name (first tabs-list))
+            tree (get-mem [:tab-tree-map tab-name])
+            model (config tree :model)]
+        (prn 'pruning tab-name)
+        (delete-last-event-if-too-many model config/max-nodes-per-tab)
+        (recur (rest tabs-list))))))
 
 
