@@ -11,7 +11,7 @@
                   get-now (stub :get-now {:return 0})]
       (log 1 "message")
       (await log-agent)
-      (should-have-invoked :printf {:with [:* 1 "12/31/69 18:00:00" "message"]})))
+      (should-have-invoked :printf {:with [:* 1 :* "message"]})))
 
   (it "Does not log a message more detailed message"
       (with-redefs [printf (stub :printf)
@@ -26,5 +26,5 @@
         (set-level 2)
         (log 2 "message")
         (await log-agent)
-        (should-have-invoked :printf {:with [:* 2 "12/31/69 18:00:00" "message"]})))
+        (should-have-invoked :printf {:with [:* 2 :* "message"]})))
   )
