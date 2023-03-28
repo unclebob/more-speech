@@ -305,6 +305,17 @@
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
       (swing-util/select-tab tab-index))))
 
+
+(defn remove-node-and-children-from-node-map [id node]
+  (update-mem [:node-map id] (fn [nodes] (remove #(= node %) nodes)))
+  (loop [children (enumeration-seq (.children node))]
+    (if (empty? children)
+      nil
+      (let [child (first children)
+            id (.getUserObject child)]
+        (remove-node-and-children-from-node-map id child)
+        (recur (rest children))))))
+
 (defn delete-last-event-from-tree-model [model]
   (let [root (.getRoot model)
         child-count (.getChildCount root)
@@ -312,7 +323,7 @@
         event-id (.getUserObject last-node)]
 
     (.removeNodeFromParent model last-node)
-    (update-mem [:node-map event-id] (fn [nodes] (remove #(= last-node %) nodes)))))
+    (remove-node-and-children-from-node-map event-id last-node)))
 
 (defn delete-last-event-if-too-many [model max-nodes]
   (let [root (.getRoot model)]
@@ -323,6 +334,7 @@
       (log-pr 1 'nodes-remaining (.getChildCount root)))))
 
 (defn prune-tabs []
+  (log-pr 1 'prune-tabs)
   (loop [tabs-list (get-mem :tabs-list)]
     (if (empty? tabs-list)
       nil

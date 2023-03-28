@@ -322,7 +322,7 @@
       (should= [1 [2] [3 [4]]] (depict-node copied-node))))
   )
 
-(describe "deleting nodes from a tab"
+(describe "Pruning tabs"
   (before clear-mem)
 
   (it "can delete a node"
@@ -349,6 +349,36 @@
       (should= 1 (.getChildCount root))
       (should= 1 (.getUserObject ^DefaultMutableTreeNode (.getChild model root 0)))
       (should= [:dummy] (get-mem [:node-map last-event-id]))))
+
+  (it "deletes last node and all its children"
+    (let [root (DefaultMutableTreeNode. 0)
+          model (DefaultTreeModel. root)
+          node1 (DefaultMutableTreeNode. 1)
+          last-event-id 99
+          last-node (DefaultMutableTreeNode. last-event-id)
+          child1-id 199
+          child2-id 299
+          child3-id 399
+          child1-node (DefaultMutableTreeNode. child1-id)
+          child2-node (DefaultMutableTreeNode. child2-id)
+          child3-node (DefaultMutableTreeNode. child3-id)]
+      (.add last-node child1-node)
+      (.add child1-node child2-node)
+      (.add last-node child3-node)
+      (.insertNodeInto model node1 root 0)
+      (.insertNodeInto model last-node root 1)
+      (set-mem [:node-map last-event-id] [:dummy last-node])
+      (set-mem [:node-map child1-id] [:dummy child1-node])
+      (set-mem [:node-map child2-id] [:dummy child2-node])
+      (set-mem [:node-map child3-id] [:dummy child3-node])
+      (should= 2 (.getChildCount root))
+      (delete-last-event-from-tree-model model)
+      (should= 1 (.getChildCount root))
+      (should= 1 (.getUserObject ^DefaultMutableTreeNode (.getChild model root 0)))
+      (should= [:dummy] (get-mem [:node-map last-event-id]))
+      (should= [:dummy] (get-mem [:node-map child1-id]))
+      (should= [:dummy] (get-mem [:node-map child2-id]))
+      (should= [:dummy] (get-mem [:node-map child3-id]))))
 
   (it "deletes last nodes if too many"
     (let [root (DefaultMutableTreeNode. 0)

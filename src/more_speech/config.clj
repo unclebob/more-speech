@@ -62,8 +62,11 @@
 (def reference-pattern #"\#\[\d+\]")
 
 (def proof-of-work-default 16)
-(def max-nodes-per-tab 1000)
-(def prune-tabs-frequency-in-minutes 60)
+;(def max-nodes-per-tab 1000)
+;(def prune-tabs-frequency-in-minutes 60)
+
+(def max-nodes-per-tab 50)
+(def prune-tabs-frequency-in-minutes 1)
 
 (def editor-pane-stylesheet
   "<style>

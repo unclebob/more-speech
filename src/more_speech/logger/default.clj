@@ -35,7 +35,8 @@
   (log level (apply pr-str args)))
 
 (defn do-log [_ time level message]
-  (printf "L%d %s | %s\n" level time message))
+  (printf "L%d %s | %s\n" level time message)
+  (flush))
 
 (defmethod log-msg ::default [_logger time level message]
   (send log-agent do-log time level message)

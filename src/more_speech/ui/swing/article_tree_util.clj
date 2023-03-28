@@ -44,6 +44,19 @@
 (defn find-header-node [root id]
   (search-for-node root #(= (bigint id) (bigint %))))
 
+(defn find-top-level-node [root id]
+  (loop [children (enumeration-seq (.children root))]
+    (let [child (first children)]
+      (cond
+        (empty? children)
+        nil
+
+        (= id (.getUserObject child))
+        child
+
+        :else
+        (recur (rest children))))))
+
 (defn select-tree-node [tree node]
   (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]
     (.clearSelection tree)

@@ -19,7 +19,9 @@
   (handle-text-event [_handler event]
     (invoke-later (article-tree/add-event event)))
   (immediate-add-text-event [_handler event]
-    (article-tree/add-event event)))
+    (more-speech.logger.default/set-level 3)
+    (article-tree/add-event event)
+    (more-speech.logger.default/set-level 1)))
 
 (defn make-profile-line [id]
   (let [profile (gateway/get-profile (get-db) id)

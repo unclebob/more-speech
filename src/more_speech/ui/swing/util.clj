@@ -1,11 +1,11 @@
 (ns more-speech.ui.swing.util
-  (:require [more-speech.mem :refer :all]
-            [clojure.core.async :as async]
-            [more-speech.db.gateway :as gateway]
+  (:require [clojure.core.async :as async]
             [more-speech.config :as config]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.event-handlers :as event-handlers]
             [more-speech.ui.swing.article-tree-util :as at-util])
-  (:use [seesaw core])
+  (:use (seesaw [core]))
   (:import (java.awt.datatransfer StringSelection)))
 
 (defn clear-popup [popup]
@@ -104,11 +104,10 @@
     (.setContents (get-clipboard) selection selection)))
 
 (defn load-event [id]
-  (when (empty? (get-mem [:node-map id]))
-    (let [event (gateway/get-event (config/get-db) id)
-          handler (get-mem :event-handler)]
-      (when (some? event)
-        (event-handlers/immediate-add-text-event handler event)))))
+  (let [event (gateway/get-event (config/get-db) id)
+        handler (get-mem :event-handler)]
+    (when (some? event)
+      (event-handlers/immediate-add-text-event handler event))))
 
 (defn get-node [tab-name id]
   (let [tree (get-mem [:tab-tree-map tab-name])]
@@ -129,10 +128,16 @@
         node (get-node tab-name id)]
     (if (some? node)
       (at-util/select-tree-node tree node)
-      (let [tree (get-mem [:tab-tree-map "all"])
-            model (config tree :model)
-            root-node (.getRoot model)
-            node (at-util/find-header-node root-node id)]
-        (when (some? node)
-          (select-tab "all")
-          (at-util/select-tree-node tree node))))))
+      (loop [tabs (get-mem :tabs-list)]
+        (if (empty? tabs)
+          nil
+          (let [tab-name (:name (first tabs))
+                tree (get-mem [:tab-tree-map tab-name])
+                model (config tree :model)
+                root-node (.getRoot model)
+                node (at-util/find-header-node root-node id)]
+            (if (some? node)
+              (do
+                (select-tab tab-name)
+                (at-util/select-tree-node tree node))
+              (recur (rest tabs)))))))))

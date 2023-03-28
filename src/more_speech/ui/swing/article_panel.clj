@@ -1,11 +1,11 @@
 (ns more-speech.ui.swing.article-panel
   (:require [clojure.java.browse :as browse]
             [clojure.string :as string]
-            [more-speech.logger.default :refer [log-pr]]
             [more-speech.bech32 :as bech32]
             [more-speech.config :refer [get-db]]
             [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.events :as events]
