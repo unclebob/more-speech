@@ -1,5 +1,6 @@
 (ns more-speech.data-storage
   (:require [clojure.string :as string]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.config :as config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
@@ -21,18 +22,18 @@
             (clojure.pprint/pprint (relays/relays-for-writing))))))
 
 (defn write-configuration []
-  (prn 'writing-relays)
+  (log-pr 1'writing-relays)
   (write-relays)
-  (prn 'writing-tabs)
+  (log-pr 1 'writing-tabs)
   (spit @config/tabs-list-filename
         (with-out-str
           (clojure.pprint/pprint (get-mem :tabs-list))))
 
-  (prn 'writing-user-configuration)
+  (log-pr 1 'writing-user-configuration)
   (spit @config/user-configuration-filename
         (with-out-str
           (clojure.pprint/pprint (user-configuration/get-config))))
-  (prn 'configuration-written)
+  (log-pr 1 'configuration-written)
   )
 
 (defn read-profiles []
@@ -79,10 +80,10 @@
   (loop [events old-events
          event-count 0]
     (if (empty? events)
-      (prn 'done-loading-events)
+      (log-pr 1 'done-loading-events)
       (let [event (first events)]
         (when (zero? (rem event-count 100))
-          (prn event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog (get-mem :websocket-backlog))
+          (log-pr 1 event-count 'events-loaded (fu/format-time (:created-at event)) 'backlog (get-mem :websocket-backlog))
           (Thread/sleep 5000))
         (try
           (handlers/handle-text-event handler event)
@@ -90,8 +91,7 @@
             (Thread/sleep 100)
             (Thread/sleep 50))                              ;take a breath
           (catch Exception e
-            (prn 'EXCEPTION 'load-events)
-            (prn e)))
+            (log-pr 1 'EXCEPTION 'load-events e)))
         (recur (rest events) (inc event-count))))))
 
 (defn partition-messages-by-day [message-map]
@@ -118,17 +118,17 @@
    (let []
      (doseq [day-partition daily-partitions]
        (let [file-name (file-name-from-day (first day-partition))]
-         (prn 'writing file-name)
+         (log-pr 1 'writing file-name)
          (spit (str @config/messages-directory "/" file-name)
                (with-out-str
                  (clojure.pprint/pprint
                    (second day-partition)))))))))
 
 (defn write-changed-days []
-  (prn 'writing-events-for-changed-days)
+  (log-pr 1 'writing-events-for-changed-days)
   (let [days-changed (get-mem :days-changed)
         earliest-loaded-time (get-mem :earliest-loaded-time)
-        _ (prn 'earliest-loaded-time earliest-loaded-time)
+        _ (log-pr 1 'earliest-loaded-time earliest-loaded-time)
         first-day-loaded (quot earliest-loaded-time 86400)
         days-to-write (set (filter #(>= % first-day-loaded) days-changed))
         daily-partitions (partition-messages-by-day (get @in-memory/db :text-event-map))
@@ -159,11 +159,11 @@
         now (quot (System/currentTimeMillis) 1000)
         start-time (int (- now (* config/days-to-read-messages-that-have-been-read 86400)))
         event-ids (gateway/get-ids-of-read-events-since db start-time)]
-    (prn 'reading (count event-ids) 'read-messages)
+    (log-pr 1 'reading (count event-ids) 'read-messages)
     event-ids))
 
 (defn load-event-history [handler]
-  (prn 'load-event-history 'starting)
+  (log-pr 1 'load-event-history 'starting)
   (let [db (get-db)
         read-event-ids (get-read-events)
         now (quot (System/currentTimeMillis) 1000)
@@ -175,8 +175,8 @@
         last-time (if (empty? times)
                     (- now 86400)
                     (apply max times))
-        _ (prn 'load-event-history 'last-time (fu/format-time last-time))]
+        _ (log-pr 1 'load-event-history 'last-time (fu/format-time last-time))]
     (future (load-events events handler))
-    (prn 'reading-files-complete)
+    (log-pr 1 'reading-files-complete)
     last-time))
 

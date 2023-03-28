@@ -1,5 +1,6 @@
 (ns more-speech.ui.formatters
   (:require [clojure.string :as string]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.nostr.util :as util :refer [hexify]]
             [more-speech.mem :refer :all]
             [more-speech.nostr.events :as events]
@@ -64,8 +65,8 @@
               (str "@" name))
             reference))
         (catch Exception e
-          (prn 'lookup-reference 'bad-id index tags)
-          (prn (.getMessage e))
+          (log-pr 1 'lookup-reference 'bad-id index tags)
+          (log-pr 1 (.getMessage e))
           "@-unknown-")))))
 
 (defn replace-references [event]

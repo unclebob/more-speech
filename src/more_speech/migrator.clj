@@ -1,5 +1,6 @@
 (ns more-speech.migrator
-  (:require [clojure.java.io :as io]
+  (:require [more-speech.logger.default :refer [log-pr]]
+            [clojure.java.io :as io]
             [clojure.set :as set]
             [more-speech.config :refer [migration-filename]]
             [more-speech.config :as config]
@@ -121,7 +122,7 @@
   (when (file-exists? filename)
     (let [id-map (read-string (slurp filename))
           n-ids (count (keys id-map))]
-      (prn 'adding n-ids 'records 'from filename)
+      (log-pr 1 'adding n-ids 'records 'from filename)
       (add-f (config/get-db) id-map)
       (rename-file filename (str filename ".migrated")))))
 
@@ -137,7 +138,7 @@
 (defn load-event-file [file-name]
   (let [events (read-string (slurp file-name))
         total-events (count events)]
-    (prn 'loading total-events 'from file-name)
+    (log-pr 1 'loading total-events 'from file-name)
     (gateway/add-events (config/get-db) events)))
 
 (defn migration-10-load-events []

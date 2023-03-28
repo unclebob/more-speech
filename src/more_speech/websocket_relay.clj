@@ -1,5 +1,6 @@
 (ns more-speech.websocket-relay
-  (:require [more-speech
+  (:require [more-speech.logger.default :refer [log-pr log]]
+            [more-speech
              [relay :as relay]
              [mem :refer :all]]
             [clojure.data.json :as json]
@@ -27,20 +28,20 @@
         (let [envelope (json/read-str (.toString buffer))]
           ((:recv callbacks) relay envelope))
         (catch Exception e
-          (prn 'onText url (.getMessage e))
-          (prn (.toString buffer))))
+          (log-pr 1 'onText url (.getMessage e))
+          (log-pr 1 (.toString buffer))))
       (.delete buffer 0 (.length buffer)))))
 
 (defrecord listener [buffer relay]
   WebSocket$Listener
   (onOpen [_this webSocket]
-    (prn 'open (::url relay))
+    (log-pr 1 'open (::url relay))
     (.request webSocket 1))
   (onText [this webSocket data last]
     (handle-text this data last)
     (.request webSocket 1))
   (onBinary [_this _webSocket _data _last]
-    (prn 'binary))
+    (log-pr 1 'binary))
   (onPing [_this webSocket message]
     (set-mem [:deadman (::url relay)] (util/get-now))
     (.sendPong webSocket message)
@@ -49,10 +50,10 @@
     (set-mem [:deadman (::url relay)] (util/get-now))
     (.request webSocket 1))
   (onClose [_this _webSocket _statusCode _reason]
-    (prn 'websocket-closed (::url relay))
+    (log-pr 1 'websocket-closed (::url relay))
     ((:close (::callbacks relay)) relay))
   (onError [_this _webSocket error]
-    (prn 'websocket-listener-error (::url relay) (:cause error))
+    (log-pr 1 'websocket-listener-error (::url relay) (:cause error))
     ((:close (::callbacks relay)) relay))
   )
 
@@ -62,7 +63,7 @@
       (try
         (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done"))
         (catch Exception e
-          (prn 'close-error url (:reason e)))))
+          (log-pr 1 'close-error url (:reason e)))))
     (when timer (.cancel timer))
     (set-mem [:deadman url] (util/get-now))
     (assoc relay ::socket nil ::timer nil)))
@@ -90,14 +91,14 @@
             ws (deref wsf 30000 :time-out)]
         (if (= ws :time-out)
           (do
-            (prn 'connection-time-out url)
+            (log-pr 1 'connection-time-out url)
             (future ((:close (::callbacks relay)) relay))
             relay)
           (let [open-relay (assoc relay ::socket ws)]
             (send-ping open-relay)
             (assoc open-relay ::timer (start-timer open-relay)))))
       (catch Exception e
-        (prn 'connect-to-relay-failed url (:reason e))
+        (log-pr 1 'connect-to-relay-failed url (:reason e))
         (future ((:close (::callbacks relay)) relay))
         relay))))
 
@@ -106,9 +107,9 @@
     (when (and socket (not (.isOutputClosed socket)))
       (try
         (let [json (to-json message)]
-          (println "sending to:" url " " json)
+          (log 1 (str "sending to:" url " " json))
           (.sendText socket json true)
           (.request socket 1))
         (catch Exception e
-          (prn 'send-to (.getMessage e)))))))
+          (log-pr 1 'send-to (.getMessage e)))))))
 

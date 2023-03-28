@@ -1,6 +1,7 @@
 (ns more-speech.ui.swing.article-panel
   (:require [clojure.java.browse :as browse]
             [clojure.string :as string]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.bech32 :as bech32]
             [more-speech.config :refer [get-db]]
             [more-speech.config :as config]
@@ -306,8 +307,8 @@
           (try
             (browse/browse-url url)
             (catch Exception ex
-              (prn 'open-link url (.getMessage ex))
-              (prn ex)))
+              (log-pr 1 'open-link url (.getMessage ex))
+              (log-pr 1 ex)))
 
           (= type "ms-idreference")
           (let [id (util/unhexify (subs subject 1))]
@@ -317,6 +318,6 @@
           (pop-up-name-menu e subject)
 
           :else
-          (do (prn 'open-link url 'type type 'subject subject)
-              (prn (.getDescription e)))
+          (do (log-pr 1 'open-link url 'type type 'subject subject)
+              (log-pr 1 (.getDescription e)))
           )))))

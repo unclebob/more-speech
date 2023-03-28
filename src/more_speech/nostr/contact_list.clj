@@ -1,5 +1,6 @@
 (ns more-speech.nostr.contact-list
   (:require [more-speech.nostr.util :as util]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
             [more-speech.db.gateway :as gateway]
             [more-speech.bech32 :as bech32]
@@ -13,8 +14,8 @@
                    (util/hex-string->num pubkey)
                    (bech32/address->number (.trim pubkey)))]
       {:pubkey pubkey :relay relay :petname petname})
-    (catch Exception _e
-      ;(prn 'make-contact-from-tag 'exception [pubkey relay petname] (.getMessage e))
+    (catch Exception e
+      (log-pr 2 'make-contact-from-tag 'exception [pubkey relay petname] (.getMessage e))
       nil)))
 
 (defn unpack-contact-list-event [event]

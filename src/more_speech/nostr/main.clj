@@ -1,5 +1,6 @@
 (ns more-speech.nostr.main
-  (:require [more-speech.nostr.protocol :as protocol]
+  (:require [more-speech.logger.default :refer [log log-pr]]
+            [more-speech.nostr.protocol :as protocol]
             [more-speech.mem :refer :all]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.nostr.event-composers :as composers]
@@ -38,9 +39,9 @@
       (do
         (user-configuration/set-last-time-profile-exported now-in-seconds)
         (future (composers/compose-and-send-metadata-event)))
-      (println "Not time to export profile yet."))
+      (log 1 "Not time to export profile yet."))
     (let [exit-condition (process-send-channel)]
       (protocol/close-all-relays)
       (Thread/sleep 100)
-      (prn 'done)
+      (log-pr 1 'done)
       exit-condition)))

@@ -1,5 +1,6 @@
 (ns more-speech.nostr.events
   (:require [clojure.data.json :as json]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.config :refer [get-db]]
             [more-speech.mem :refer :all]
             [more-speech.nostr.util :refer :all]
@@ -77,7 +78,7 @@
         (get-marked-references e-tags)
         (get-unmarked-references e-tags)))
     (catch Exception e
-      (prn 'get-references 'bad-tags-in-event (.getMessage e) event)
+      (log-pr 1 'get-references 'bad-tags-in-event (.getMessage e) event)
       [nil nil nil])))
 
 ;--------called externally by article-tree

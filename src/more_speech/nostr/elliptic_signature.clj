@@ -1,4 +1,5 @@
 (ns more-speech.nostr.elliptic-signature
+  (:require [more-speech.logger.default :refer [log-pr]])
   (:import (schnorr Schnorr)))
 
 (defn do-sign [message private-key aux-rand]
@@ -8,7 +9,7 @@
   (try
     (Schnorr/verify message public-key signature)
     (catch Exception e
-      (prn 'do-verify 'exception e)
+      (log-pr 1 'do-verify 'exception e)
       false)))
 
 (defn get-pub-key

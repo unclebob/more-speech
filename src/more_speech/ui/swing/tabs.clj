@@ -1,6 +1,7 @@
 (ns more-speech.ui.swing.tabs
   (:require
     [clojure.set :as set]
+    [more-speech.logger.default :refer [log-pr]]
     [more-speech.config :as config]
     [more-speech.config :refer [get-db]]
     [more-speech.db.gateway :as gateway]
@@ -145,7 +146,7 @@
             (some #(= % (:pubkey event)) blocked)
             (some #(= % (:id event)) blocked)))))
     (catch Exception _e
-      (prn 'should-add-event? 'bad-tag event)
+      (log-pr 1 'should-add-event? 'bad-tag event)
       false)))
 
 (defn add-event-to-tab-tree [tree event-id]
@@ -172,7 +173,7 @@
           tab (swing-util/get-tab-by-name tab-name)
           ids (gateway/get-ids-by-author-since (get-db) public-key since)]
       (swing-util/select-tab tab-name)
-      (prn 'adding (count ids) 'events)
+      (log-pr 1 'adding (count ids) 'events)
       (doseq [id ids]
         (add-event-to-tab tab (gateway/get-event (get-db) id))))))
 
@@ -190,7 +191,7 @@
             ids (gateway/get-ids-that-cite-since (get-db) root-of-thread since)
             ids (set (concat [root-of-thread event-id] ids))]
         (swing-util/select-tab tab-name)
-        (prn 'adding (count ids) 'events)
+        (log-pr 1 'adding (count ids) 'events)
         (doseq [id ids]
           (add-event-to-tab tab (gateway/get-event (get-db) id)))))))
 
@@ -316,10 +317,10 @@
 (defn delete-last-event-if-too-many [model max-nodes]
   (let [root (.getRoot model)]
     (when (> (.getChildCount root) max-nodes)
-      (prn 'nodes (.getChildCount root))
+      (log-pr 1 'nodes (.getChildCount root))
       (while (> (.getChildCount root) max-nodes)
         (delete-last-event-from-tree-model model))
-      (prn 'nodes-remaining (.getChildCount root)))))
+      (log-pr 1 'nodes-remaining (.getChildCount root)))))
 
 (defn prune-tabs []
   (loop [tabs-list (get-mem :tabs-list)]
@@ -328,7 +329,7 @@
       (let [tab-name (:name (first tabs-list))
             tree (get-mem [:tab-tree-map tab-name])
             model (config tree :model)]
-        (prn 'pruning tab-name)
+        (log-pr 1 'pruning tab-name)
         (delete-last-event-if-too-many model config/max-nodes-per-tab)
         (recur (rest tabs-list))))))
 

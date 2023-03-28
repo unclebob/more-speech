@@ -1,5 +1,6 @@
 (ns more-speech.nostr.event-composers
-  (:require [more-speech.nostr.events :as events]
+  (:require [more-speech.logger.default :refer [log-pr]]
+            [more-speech.nostr.events :as events]
             [more-speech.mem :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.nostr.elliptic-signature :as ecc]
@@ -215,7 +216,7 @@
   (send-event (compose-metadata-event))
   (let [server-urls (filter #(:write (get @relays %)) (keys @relays))
         server-urls (map remove-arguments server-urls)]
-    (prn 'server-urls server-urls)
+    (log-pr 1 'server-urls server-urls)
     (doseq [url server-urls]
       (send-event (compose-recommended-server-event url)))))
 

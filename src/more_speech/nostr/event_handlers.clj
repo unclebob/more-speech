@@ -1,5 +1,6 @@
 (ns more-speech.nostr.event-handlers
   (:require [clojure.data.json :as json]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.db.gateway :as gateway]
             [more-speech.nostr.events :as events]
             [more-speech.mem :refer :all]
@@ -9,7 +10,6 @@
             [more-speech.nostr.relays :as relays]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.config :as config :refer [get-db]]
-            [clojure.stacktrace :as st]
             [more-speech.nostr.util :as util])
   (:import (ecdhJava SECP256K1)))
 
@@ -51,8 +51,8 @@
                    :created-at created-at}]
       (gateway/add-profile db pubkey profile))
     (catch Exception e
-      (prn 'json-exception-process-name-event-ignored (.getMessage e))
-      (prn event))))
+      (log-pr 1 'json-exception-process-name-event-ignored (.getMessage e))
+      (log-pr 1 event))))
 
 (defn add-cross-reference [db event]
   (let [[_ _ referent] (events/get-references event)]
@@ -106,7 +106,7 @@
                               (util/num->bytes 32 pubkey)
                               (util/num->bytes 64 sig))]
     (if (not valid?)
-      (prn 'signature-verification-failed url event)
+      (log-pr 1 'signature-verification-failed url event)
       (condp = kind
         0 (process-name-event db event)
         1 (process-text-event db event url)
@@ -193,7 +193,7 @@
 
 (defn handle-notification [envelope url]
   (set-mem [:relay-notice url] (with-out-str (clojure.pprint/pprint envelope)))
-  (prn 'NOTICE url envelope))
+  (log-pr 1 'NOTICE url envelope))
 
 (defn inc-if-nil [n]
   (if (nil? n) 1 (inc n)))
@@ -228,15 +228,14 @@
               (process-event event url)
               (when (is-text-event? event)
                 (handle-text-event ui-handler event))))
-          (prn 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope))))))
+          (log-pr 1 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope))))))
 
 (defn try-validate-and-process-event [url envelope]
   (try
     (validate-and-process-event url envelope)
     (catch Exception e
-      (do (prn 'handle-event url (.getMessage e))
-          (prn "--on event: " envelope)
-          (st/print-stack-trace e)))))
+      (do (log-pr 1 'handle-event url (.getMessage e))
+          (log-pr 1 "--on event: " envelope)))))
 
 (defn handle-event [_agent envelope url]
   (count-event url)

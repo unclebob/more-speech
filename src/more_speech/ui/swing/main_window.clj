@@ -1,5 +1,6 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.db.gateway :as gateway]
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.ui.swing.article-tree :as article-tree]
@@ -101,33 +102,33 @@
     menu-bar))
 
 (defn make-main-window []
-  (prn 'make-main-window)
+  (log-pr 1 'make-main-window)
   (let [title (str "More-Speech:" (:name (get-mem :keys)) " - " config/version)
         title (if (config/is-test-run?) (str title " - TEST") title)
         main-frame (frame :title title :size [1000 :by 1000] :menubar (make-menubar))
         _ (set-mem :frame main-frame)
-        _ (prn 'make-main-window 'making-article-area)
+        _ (log-pr 1 'make-main-window 'making-article-area)
         article-area (article-panel/make-article-area)
         _ (listen article-area :hyperlink article-panel/open-link)
         header-tab-panel (tabbed-panel :tabs (tabs/make-tabs) :id :header-tab-panel)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)
                                     :south (article-panel/make-control-panel))
-        _ (prn 'make-main-window 'article-panel-complete)
+        _ (log-pr 1 'make-main-window 'article-panel-complete)
         messages-panel (top-bottom-split
                          header-tab-panel
                          article-panel
                          :divider-location 1/2)
-        _ (prn 'make-main-window 'messages-panel-complete)]
+        _ (log-pr 1 'make-main-window 'messages-panel-complete)]
     (config! main-frame :content messages-panel)
     (listen main-frame :window-closing
             (fn [_]
               (let [send-chan (get-mem :send-chan)]
                 (future (async/>!! send-chan [:closed])))
               (.dispose main-frame)))
-    (prn 'make-main-window 'showing-main-frame)
+    (log-pr 2 'make-main-window 'showing-main-frame)
     (show! main-frame)
-    (prn 'make-main-window 'shown)))
+    (log-pr 2 'make-main-window 'shown)))
 
 (defn setup-main-timer []
   (let [main-timer (Timer. "main timer")
@@ -142,7 +143,7 @@
 (defn setup-main-window []
   (setup-main-timer)
   (invoke-now (make-main-window))
-  (prn 'setup-main-window 'creating-seesaw-handler)
+  (log-pr 2 'setup-main-window 'creating-seesaw-handler)
   (->seesawHandler))
 
 

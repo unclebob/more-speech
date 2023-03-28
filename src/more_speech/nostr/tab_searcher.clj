@@ -1,6 +1,7 @@
 (ns more-speech.nostr.tab-searcher
   (:use [seesaw core font tree])
-  (:require [more-speech.nostr.util :as util]
+  (:require [more-speech.logger.default :refer [log-pr]]
+            [more-speech.nostr.util :as util]
             [more-speech.mem :refer :all]
             [more-speech.config :refer [get-db]]
             [more-speech.ui.formatters :as formatters]
@@ -146,7 +147,7 @@
               :else
               (recur (rest children) n)))))
       (catch Exception e
-        (prn 'load-tab-search e)))))
+        (log-pr 1 'load-tab-search e)))))
 
 (defn search-event [tab-name e]
   (let [c (.getKeyChar e)]

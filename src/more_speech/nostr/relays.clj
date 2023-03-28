@@ -1,5 +1,6 @@
 (ns more-speech.nostr.relays
   (:require [clojure.spec.alpha :as s]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech
              [config :as config]
              [relay :as relay]
@@ -67,10 +68,10 @@
   (let [checked-url (validate-relay-url url)]
     (when (and (not (empty? url))
                (empty? checked-url))
-      (prn 'invalid-relay url))
+      (log-pr 1 'invalid-relay url))
     (when (and (not (empty? checked-url))
                (not (contains? @relays checked-url)))
-      (prn 'adding-relay checked-url)
+      (log-pr 1 'adding-relay checked-url)
       (swap! relays assoc checked-url {:read :read-none :write false}))))
 
 (defn add-recommended-relays-in-tags [event]
