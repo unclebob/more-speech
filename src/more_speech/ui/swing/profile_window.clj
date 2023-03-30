@@ -1,7 +1,9 @@
 (ns more-speech.ui.swing.profile-window
   (:require
     [more-speech.bech32 :as bech32]
+    [more-speech.config :as config]
     [more-speech.mem :refer :all]
+    [more-speech.nostr.elliptic-signature :as es]
     [more-speech.nostr.util :as util])
   (:use (seesaw [core])))
 
@@ -11,6 +13,49 @@
 (defn get-text-from-frame [frame id]
   (config (select frame [id]) :text))
 
+(defn validate-private-key [private-key]
+  (if (re-matches config/hex-key-pattern private-key)
+    (util/unhexify private-key)
+    (if-not (.startsWith private-key "nsec")
+      "Bad format."
+      (try
+        (bech32/address->number private-key)
+        (catch Exception e
+          (.getMessage e))))))
+
+(defn private-key-valid? [private-key]
+  (if (empty? private-key)
+    true
+    (let [validation (validate-private-key private-key)]
+      (if (number? validation)
+        (let [question (dialog :content (str "Change private key to: "
+                                             private-key "?")
+                               :option-type :ok-cancel)
+              answer (show! (pack! question))
+              pubkey (util/bytes->num (es/get-pub-key (util/num->bytes 32 validation)))]
+          (if (= answer :success)
+            (do
+              (alert ["changing private key to: " (text :text private-key) "\n"
+                      "public-key: " (text :text (util/hexify pubkey)) "\n"
+                      "npub: " (text :text (bech32/encode "npub" pubkey))])
+              true)
+            false))
+        (do (alert (str "Private key invalid: " validation))
+            false)))))
+
+(defn name-valid? [name]
+  (cond
+    (empty? name)
+    (do (alert "Enter a name.") false)
+
+    (not (re-matches config/user-name-chars name))
+    (do (alert "Name can only contain letters, numbers, and -.") false)
+
+    (> (count name) 20)
+    (do (alert "Name cannot be more than 20 characters.") false)
+
+    :else true))
+
 (defn validate-and-save-profile [profile-frame]
   (let [get-text (partial get-text-from-frame profile-frame)
         name (get-text :#name-field)
@@ -19,15 +64,14 @@
         nip05 (get-text :#nip05-field)
         lud16 (get-text :#lud16-field)
         private-key (get-text :#private-key-field)
+        valid? (and true
+                    (private-key-valid? private-key)
+                    (name-valid? name))
         ]
-    (when-not (empty? private-key)
-      (let [question (dialog :content "Change private key?"
-                          :option-type :ok-cancel)
-            answer (show! (pack! question))]
-        ))
+    (when valid?
+      (close-profile-frame (select (get-mem :frame) [:#profile-menu]) nil)
+      (dispose! profile-frame))
     )
-  (close-profile-frame (select (get-mem :frame) [:#profile-menu]) nil)
-  (dispose! profile-frame)
   )
 
 (defn make-data-panel [field-name content id editable?]
