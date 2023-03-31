@@ -23,23 +23,33 @@
         (catch Exception e
           (.getMessage e))))))
 
+(defn query-and-change-private-key [private-key-number private-key-string]
+  (let [question (dialog :content (str "Change private key to: "
+                                       private-key-string "?")
+                         :option-type :ok-cancel)
+        answer (show! (pack! question))
+        pubkey (util/bytes->num (es/get-pub-key (util/num->bytes 32 private-key-number)))]
+    (if (= answer :success)
+      (do
+        (alert ["changing private key to:"
+                (text :text private-key-string)
+                (text :text (bech32/encode "nsec" private-key-number))
+                "\n"
+                "public-key:"
+                (text :text (util/hexify pubkey))
+                (text :text (bech32/encode "npub" pubkey))])
+        true)
+      false)))
+
 (defn private-key-valid? [private-key]
   (if (empty? private-key)
     true
     (let [validation (validate-private-key private-key)]
       (if (number? validation)
-        (let [question (dialog :content (str "Change private key to: "
-                                             private-key "?")
-                               :option-type :ok-cancel)
-              answer (show! (pack! question))
-              pubkey (util/bytes->num (es/get-pub-key (util/num->bytes 32 validation)))]
-          (if (= answer :success)
-            (do
-              (alert ["changing private key to: " (text :text private-key) "\n"
-                      "public-key: " (text :text (util/hexify pubkey)) "\n"
-                      "npub: " (text :text (bech32/encode "npub" pubkey))])
-              true)
-            false))
+        (do
+          (if (= validation (util/unhexify (get-mem [:keys :private-key])))
+            true
+            (query-and-change-private-key validation private-key)))
         (do (alert (str "Private key invalid: " validation))
             false)))))
 
@@ -56,6 +66,59 @@
 
     :else true))
 
+(defn about-valid? [about]
+  (cond
+    (empty? about)
+    (do (alert "About: Gosh, at least say hi.") false)
+
+    (> (count about) 256)
+    (do (alert "About: Maybe don't say quite so much.  256 chars should be enough.") false)
+
+    :else true))
+
+(defn picture-valid? [picture]
+  (cond
+    (empty? picture)
+    true
+
+    (= picture (get-mem [:keys :picture]))
+    true?
+
+    (re-matches config/url-pattern picture)
+    true
+
+    :else
+    (do (alert "Picture must be a url of some kind.") false))
+  )
+
+(defn nip05-valid? [nip05]
+  (cond
+    (empty? nip05)
+    true
+
+    (= nip05 (get-mem [:keys :nip05]))
+    true
+
+    (re-matches config/email-pattern nip05)
+    true
+
+    :else
+    (do (alert "Nip-05 internet identifier must look like an email address.") false)))
+
+(defn lud16-valid? [lud16]
+  (cond
+    (empty? lud16)
+    true
+
+    (= lud16 (get-mem [:keys :lud16]))
+    true
+
+    (re-matches config/email-pattern lud16)
+    true
+
+    :else
+    (do (alert "LUD-16 Zap address must look like an email address.") false)))
+
 (defn validate-and-save-profile [profile-frame]
   (let [get-text (partial get-text-from-frame profile-frame)
         name (get-text :#name-field)
@@ -64,9 +127,12 @@
         nip05 (get-text :#nip05-field)
         lud16 (get-text :#lud16-field)
         private-key (get-text :#private-key-field)
-        valid? (and true
-                    (private-key-valid? private-key)
-                    (name-valid? name))
+        valid? (and (private-key-valid? private-key)
+                    (name-valid? name)
+                    (about-valid? about)
+                    (picture-valid? picture)
+                    (nip05-valid? nip05)
+                    (lud16-valid? lud16))
         ]
     (when valid?
       (close-profile-frame (select (get-mem :frame) [:#profile-menu]) nil)
@@ -81,6 +147,27 @@
                         :id id
                         :size [800 :by 20])]
     (left-right-split the-label the-field)))
+
+(defn show-private-key [profile-frame _e]
+  (let [private-key-field (select profile-frame [:#private-key-field])
+        show-box (select profile-frame [:#show-box])
+        show? (config show-box :selected?)]
+    (config! private-key-field :text (if show?
+                                       (get-mem [:keys :private-key])
+                                       ""))))
+
+(defn make-private-key-panel [profile-frame]
+  (let [the-label (label :text "Private key:" :size [150 :by 20])
+        the-field (text :text ""
+                        :editable? true
+                        :id :private-key-field
+                        :size [800 :by 20])
+        show-box (checkbox :text "show"
+                           :id :show-box
+                           :listen [:action (partial show-private-key profile-frame)])]
+
+    (left-right-split the-label (horizontal-panel :items [the-field show-box]))))
+
 
 (defn make-profile-frame [_e]
   (let [profile-menu (select (get-mem :frame) [:#profile-menu])
@@ -108,10 +195,7 @@
                                      (get-mem [:keys :lud16])
                                      :lud16-field
                                      true)
-        private-key-panel (make-data-panel "Private Key:"
-                                           ""
-                                           :private-key-field
-                                           true)
+        private-key-panel (make-private-key-panel profile-frame)
         ok-button (button :text "OK"
                           :listen [:action (fn [_e] (validate-and-save-profile profile-frame))])
         cancel-button (button :text "Cancel"
