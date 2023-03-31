@@ -38,7 +38,7 @@
     (if (user-configuration/should-export-profile? now-in-seconds)
       (do
         (user-configuration/set-last-time-profile-exported now-in-seconds)
-        (future (composers/compose-and-send-metadata-event)))
+        (future (composers/compose-and-send-metadata-and-relay-recommendations)))
       (log 1 "Not time to export profile yet."))
     (let [exit-condition (process-send-channel)]
       (protocol/close-all-relays)

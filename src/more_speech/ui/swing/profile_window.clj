@@ -2,8 +2,10 @@
   (:require
     [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
+    [more-speech.data-storage :as data-storage]
     [more-speech.mem :refer :all]
     [more-speech.nostr.elliptic-signature :as es]
+    [more-speech.nostr.event-composers :as event-composers]
     [more-speech.nostr.util :as util])
   (:use (seesaw [core])))
 
@@ -135,10 +137,33 @@
                     (lud16-valid? lud16))
         ]
     (when valid?
+      (let [private-key (validate-private-key private-key)
+            private-key-string (if (number? private-key)
+                                 (util/hexify private-key)
+                                 (get-mem [:keys :private-key]))
+            public-key (if (number? private-key)
+                         (->> private-key
+                              (util/num->bytes 32)
+                              es/get-pub-key
+                              util/bytes->num)
+                         nil)
+            public-key-string (if (some? public-key)
+                                (util/hexify public-key)
+                                (get-mem [:keys :public-key]))]
+        (when (some? public-key)
+          (set-mem [:pubkey] public-key))
+        (set-mem :keys {:private-key private-key-string
+                        :public-key public-key-string
+                        :name name
+                        :about about
+                        :picture picture
+                        :nip05 nip05
+                        :lud16 lud16})
+        (data-storage/write-keys (get-mem :keys))
+        (future (event-composers/compose-and-send-metadata-event)))
+
       (close-profile-frame (select (get-mem :frame) [:#profile-menu]) nil)
-      (dispose! profile-frame))
-    )
-  )
+      (dispose! profile-frame))))
 
 (defn make-data-panel [field-name content id editable?]
   (let [the-label (label :text field-name :size [150 :by 20])

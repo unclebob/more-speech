@@ -1,16 +1,16 @@
 (ns more-speech.nostr.event-composers
-  (:require [more-speech.logger.default :refer [log-pr]]
-            [more-speech.nostr.events :as events]
-            [more-speech.mem :refer :all]
-            [more-speech.nostr.util :refer :all]
-            [more-speech.nostr.elliptic-signature :as ecc]
-            [more-speech.nostr.util :as util]
-            [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.config :as config :refer [get-db]]
+  (:require [clojure.core.async :as async]
             [clojure.string :as string]
-            [clojure.core.async :as async]
+            [more-speech.bech32 :as bech32]
+            [more-speech.config :as config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
-            [more-speech.bech32 :as bech32])
+            [more-speech.logger.default :refer [log-pr]]
+            [more-speech.mem :refer :all]
+            [more-speech.nostr.contact-list :as contact-list]
+            [more-speech.nostr.elliptic-signature :as ecc]
+            [more-speech.nostr.events :as events]
+            [more-speech.nostr.util :refer :all]
+            [more-speech.nostr.util :as util])
   (:import (ecdhJava SECP256K1)))
 
 (defn body->event
@@ -213,12 +213,17 @@
   (re-find config/relay-pattern url))
 
 (defn compose-and-send-metadata-event []
+  (send-event (compose-metadata-event)))
+
+(defn compose-and-send-metadata-and-relay-recommendations []
   (send-event (compose-metadata-event))
   (let [server-urls (filter #(:write (get @relays %)) (keys @relays))
         server-urls (map remove-arguments server-urls)]
     (log-pr 1 'server-urls server-urls)
-    (doseq [url server-urls]
-      (send-event (compose-recommended-server-event url)))))
+    (future
+      (doseq [url server-urls]
+        (Thread/sleep 5000)
+        (send-event (compose-recommended-server-event url))))))
 
 (defn compose-and-send-contact-list [contact-list]
   (send-event (compose-contact-list contact-list)))

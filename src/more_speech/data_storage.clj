@@ -21,6 +21,12 @@
           (with-out-str
             (clojure.pprint/pprint (relays/relays-for-writing))))))
 
+(defn write-keys [keys]
+  (let [keys-string (with-out-str (clojure.pprint/pprint keys))]
+    (if (config/is-test-run?)
+      (log-pr 1 `write-keys (dissoc keys :private-key))
+      (spit @config/keys-filename keys-string))))
+
 (defn write-configuration []
   (log-pr 1'writing-relays)
   (write-relays)
