@@ -9,6 +9,7 @@
             [more-speech.ui.swing.relay-manager :as relay-manager]
             [more-speech.ui.swing.stats-window :as stats-window]
             [more-speech.ui.swing.profile-window :as profile-window]
+            [more-speech.ui.swing.users-window :as users-window]
             [more-speech.mem :refer :all]
             [more-speech.config :as config :refer [get-db]]
             [more-speech.ui.formatter-util :as formatter-util]
@@ -36,7 +37,9 @@
         stats-item (menu-item :action (action :name "Stats..."
                                               :handler stats-window/make-stats-frame)
                               :id :stats-menu)
-        users-item (menu-item :text "Users...")
+        users-item (menu-item :action (action :name "Users..."
+                                              :handler users-window/make-users-frame)
+                              :id :users-menu)
         profile-item (menu-item :action (action :name "Profile..."
                                                 :handler profile-window/make-profile-frame)
                                 :id :profile-menu)

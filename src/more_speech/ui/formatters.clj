@@ -14,12 +14,15 @@
    (format-user-id user-id 20))
 
   ([user-id length]
+   (format-user-id user-id length 10))
+
+  ([user-id length id-length]
    (if (nil? user-id)
      ""
      (let [trusted? (contact-list/is-trusted? user-id)
            trusted-by (contact-list/which-contact-trusts user-id)
            petname (contact-list/get-petname user-id)
-           id-string (abbreviate (util/num32->hex-string user-id) 10)
+           id-string (abbreviate (util/num32->hex-string user-id) id-length)
            profile (gateway/get-profile (get-db) user-id)
            profile-name (get profile :name id-string)
            ]
@@ -31,7 +34,7 @@
          (abbreviate profile-name length)
 
          (some? trusted-by)
-         (let [trusted-id-string (abbreviate (util/num32->hex-string trusted-by) 10)
+         (let [trusted-id-string (abbreviate (util/num32->hex-string trusted-by) id-length)
                trusted-profile (gateway/get-profile (get-db) trusted-by)
                trusted-profile-name (get trusted-profile :name trusted-id-string)
                trusted-pet-name (contact-list/get-petname trusted-by)
