@@ -1,15 +1,15 @@
 (ns more-speech.nostr.event-handlers
   (:require [clojure.data.json :as json]
-            [more-speech.logger.default :refer [log-pr]]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.nostr.events :as events]
-            [more-speech.mem :refer :all]
-            [more-speech.nostr.util :refer :all]
-            [more-speech.nostr.elliptic-signature :as ecc]
-            [more-speech.nostr.util :refer [unhexify]]
-            [more-speech.nostr.relays :as relays]
-            [more-speech.nostr.contact-list :as contact-list]
             [more-speech.config :as config :refer [get-db]]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.logger.default :refer [log-pr]]
+            [more-speech.mem :refer :all]
+            [more-speech.nostr.contact-list :as contact-list]
+            [more-speech.nostr.elliptic-signature :as ecc]
+            [more-speech.nostr.events :as events]
+            [more-speech.nostr.relays :as relays]
+            [more-speech.nostr.util :refer :all]
+            [more-speech.nostr.util :refer [unhexify]]
             [more-speech.nostr.util :as util])
   (:import (ecdhJava SECP256K1)))
 
@@ -44,12 +44,25 @@
           name (get profile "name" "tilt")
           about (get profile "about" "")
           picture (get profile "picture" "")
+          lud16 (get profile "lud16")
+          nip05 (get profile "nip05")
+          lud06 (get profile "lud06")
+          website (get profile "website")
+          banner (get profile "banner")
+          display-name (get profile "display_name")
           name (add-suffix-for-duplicate pubkey (fix-name name))
-          profile {:name name
-                   :about about
-                   :picture picture
-                   :created-at created-at}]
-      (gateway/add-profile db pubkey profile))
+          profile-doc {:name name
+                       :about about
+                       :picture picture
+                       :banner banner
+                       :display-name display-name
+                       :website website
+                       :lud06 lud06
+                       :lud16 lud16
+                       :nip05 nip05
+                       :created-at created-at}]
+      (gateway/add-profile db pubkey profile-doc)
+      (log-pr 1 'process-name-event profile))
     (catch Exception e
       (log-pr 1 'json-exception-process-name-event-ignored (.getMessage e))
       (log-pr 1 event))))

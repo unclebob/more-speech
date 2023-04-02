@@ -21,6 +21,8 @@
   (:use (seesaw [border] [core]))
   (:import (javax.swing.event HyperlinkEvent$EventType)))
 
+(declare open-link)
+
 (defn bold-label [s]
   (label :text s :font (uconfig/get-bold-font)))
 
@@ -47,16 +49,20 @@
   (str "<head>" style "</head>"
        "<body>" body "</body>"))
 
-
 (defn show-profile [profile]
   (let [created-at (:created-at profile)
         html-doc (make-html-document
                    config/editor-pane-stylesheet
                    (str "<h2> Name:</h2>" (:name profile)
                         "<h2> About: </h2>" (:about profile)
+                        "<h2> Display name: </h2>" (:display-name profile)
+                        "<h2> Banner: </h2>" (:banner profile)
+                        "<h2> Website: </h2>" (:website profile)
+                        "<h2> Zap Addr: </h2>" (:lud16 profile) " " (:lud06 profile)
+                        "<h2> Identifier: </h2>" (:nip05 profile)
                         "<h2> As of: </h2>" (if (nil? created-at) "?" (formatter-util/format-time created-at))
                         "<p><img src=\"" (:picture profile) "\" width=\"350\">"
-                        "<p>" (:picture profile)
+                        "<p>" (formatters/linkify (:picture profile))
                         "<p>" (apply str (keys profile)))
                    )
         profile-pane (editor-pane
@@ -67,6 +73,8 @@
         profile-frame (frame :title (str "User Profile for " (:name profile))
                              :content (scrollable profile-pane)
                              :size [500 :by 600])]
+    (listen profile-pane :hyperlink open-link)
+
     (show! profile-frame)))
 
 
@@ -277,6 +285,7 @@
                                 (count relay-names)
                                 (f-util/abbreviate (first relay-names) 40)))))
 
+
 (defn get-user-id-from-subject [subject]
   (cond
     (.startsWith subject "@")
@@ -298,6 +307,7 @@
         [x y] (mouse/location ev)]
     (.show p (to-widget e) x y)))
 
+;---Declared
 (defn open-link [e]
   (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
     (when-let [url (str (.getURL e))]

@@ -244,8 +244,26 @@
       @db
       {:pubkey 1
        :created-at 1000
-       :content "{\"name\": \"bob\", \"about\": \"about\", \"picture\": \"picture\"}"})
-    (should= {:name "bob" :about "about" :picture "picture" :created-at 1000}
+       :content (str "{\"name\": \"bob\""
+                     ",\"about\": \"about\""
+                     ",\"picture\": \"picture\""
+                     ",\"lud06\": \"lud06\""
+                     ",\"lud16\": \"lud16\""
+                     ",\"nip05\": \"nip05\""
+                     ",\"banner\": \"banner\""
+                     ",\"website\": \"website\""
+                     ",\"display_name\": \"display-name\""
+                     "}")})
+    (should= {:name "bob"
+              :about "about"
+              :picture "picture"
+              :lud06 "lud06"
+              :lud16 "lud16"
+              :nip05 "nip05"
+              :banner "banner"
+              :website "website"
+              :display-name "display-name"
+              :created-at 1000}
              (gateway/get-profile @db 1)))
 
   (it "adds suffixes to duplicate names."
