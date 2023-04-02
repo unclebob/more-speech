@@ -30,6 +30,19 @@
 (defmethod gateway/get-event ::type [db id]
   (get-in @(:data db) [:text-event-map id]))
 
+(defmethod gateway/get-recent-event-authors ::type [db after]
+  (loop [ids (keys (:text-event-map @(:data db)))
+         result #{}]
+    (if (empty? ids)
+      result
+      (let [id (first ids)
+            event (gateway/get-event db id)
+            author (:pubkey event)
+            time (:created-at event)]
+        (if (> time after)
+          (recur (rest ids) (conj result author))
+          (recur (rest ids) result))))))
+
 (defmethod gateway/get-ids-by-author-since ::type [db author start-time]
   (let [event-map (:text-event-map @(:data db))
         ids (keys event-map)
@@ -91,6 +104,18 @@
 (defmethod gateway/add-reaction ::type [db id pubkey content]
   (swap! (:data db)
          update-in [:text-event-map id :reactions] conj-set [pubkey content]))
+
+(defmethod gateway/get-profiles-after ::type [db after]
+  (loop [ids (keys (:profiles @(:data db)))
+         result []]
+    (if (empty? ids)
+      result
+      (let [id (first ids)
+            profile (gateway/get-profile db id)
+            time (:created-at profile)]
+        (if (> time after)
+          (recur (rest ids) (conj result [id (:name profile)]))
+          (recur (rest ids) result))))))
 
 ;----------methods for tests
 (def db (atom nil))

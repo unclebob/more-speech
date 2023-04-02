@@ -1,8 +1,8 @@
 (ns more-speech.db.xtdb
-  (:require [more-speech.db.gateway :as gateway]
-            [clojure.java.io :as io]
-            [xtdb.api :as xt]
-            [more-speech.nostr.util :as util]))
+  (:require [clojure.java.io :as io]
+            [more-speech.db.gateway :as gateway]
+            [more-speech.nostr.util :as util]
+            [xtdb.api :as xt]))
 
 (defn sync-db [db]
   (xt/sync (:node db)))
@@ -126,6 +126,20 @@
                      start-time)]
     (map first result)))
 
+(defmethod gateway/get-recent-event-authors ::type [db after]
+  (let [node (:node db)
+        result (xt/q (xt/db node)
+                     '{:find [author]
+                       :in [after]
+                       :where [[e :xt/id txid]
+                               [(get txid :type) type]
+                               [e :pubkey author]
+                               [e :created-at t]
+                               [(= :event type)]
+                               [(> t after)]]}
+                     after)]
+    (set (map first result))))
+
 (defmethod gateway/get-ids-by-author-since ::type [db author start-time]
   (let [node (:node db)
         author (bigint author)
@@ -201,6 +215,21 @@
                      user-name)
         [{:keys [id]}] (first result)]
     id))
+
+(defmethod gateway/get-profiles-after ::type [db after]
+  (let [node (:node db)
+        result (xt/q (xt/db node)
+                     '{:find [id name]
+                       :in [after]
+                       :where [[e :xt/id txid]
+                               [(get txid :id) id]
+                               [(get txid :type) type]
+                               [e :name name]
+                               [e :created-at t]
+                               [(= :profile type)]
+                               [(> t after)]]}
+                     after)]
+    result))
 
 ;--------- XTDB utilities
 

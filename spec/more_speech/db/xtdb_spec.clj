@@ -1,11 +1,11 @@
 (ns more-speech.db.xtdb-spec
-  (:require [speclj.core :refer :all]
+  (:require [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.xtdb :as db]
-            [more-speech.config :as config]
-            [more-speech.util.files :refer :all]
             [more-speech.db.xtdb :as xtdb]
-            [more-speech.nostr.util :as util]))
+            [more-speech.nostr.util :as util]
+            [more-speech.util.files :refer :all]
+            [speclj.core :refer :all]))
 
 (declare db)
 (describe "xtdb gateway implementations"
@@ -26,13 +26,21 @@
     (it "gets an id from a user name"
       (gateway/add-profile @db 1N {:name "name"})
       (xtdb/sync-db @db)
-      (should= 1N (gateway/get-id-from-username @db "name"))))
+      (should= 1N (gateway/get-id-from-username @db "name")))
 
-  (it "adds a map of profiles"
-    (gateway/add-profiles-map @db {1N {:name "n1"}
-                                   2N {:name "n2"}})
-    (should= {:name "n1"} (gateway/get-profile @db 1N))
-    (should= {:name "n2"} (gateway/get-profile @db 2N)))
+    (it "adds a map of profiles"
+      (gateway/add-profiles-map @db {1N {:name "n1"}
+                                     2N {:name "n2"}})
+      (should= {:name "n1"} (gateway/get-profile @db 1N))
+      (should= {:name "n2"} (gateway/get-profile @db 2N)))
+
+    (it "gets profiles after a date"
+      (gateway/add-profiles-map @db {1 {:name "one" :created-at 100}
+                                     2 {:name "two" :created-at 200}
+                                     3 {:name "three" :created-at 300}})
+      (should= #{[2 "two"]
+                 [3 "three"]} (set (gateway/get-profiles-after @db 150))))
+    )
 
   (context "events"
     (it "adds and fetches events"
@@ -106,6 +114,16 @@
                                {:id 4N :created-at 20 :tags [[:b (util/hexify 2)] [:e (util/hexify 1)]]}
                                {:id 5N :created-at 30 :tags []}])
       (should= #{3N 4N} (set (gateway/get-ids-that-cite-since @db 1 11))))
+
+    (it "gets events after a date"
+        (gateway/add-event @db {:id 1 :pubkey 1001 :created-at 100})
+        (gateway/add-event @db {:id 2 :pubkey 1002 :created-at 200})
+        (gateway/add-event @db {:id 3 :pubkey 1003 :created-at 300})
+        (gateway/add-event @db {:id 4 :pubkey 1004 :created-at 400})
+        (xtdb/sync-db @db)
+        (should= #{1003 1004} (gateway/get-recent-event-authors @db 200))
+
+        )
     )
 
   (context "contacts"
