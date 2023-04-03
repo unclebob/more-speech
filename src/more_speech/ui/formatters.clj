@@ -11,7 +11,7 @@
 
 (defn format-user-id
   ([user-id]
-   (format-user-id user-id 20))
+   (format-user-id user-id 20 10))
 
   ([user-id length]
    (format-user-id user-id length 10))

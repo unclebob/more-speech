@@ -114,7 +114,7 @@
       (swap! relays assoc-in [url :subscribed] true))))
 
 (defn subscribe-to-relays [subscription-time now]
-  (let [date (- subscription-time 100)]
+  (let [date (- subscription-time 3600)]
     (log-pr 1 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
       (subscribe-to-relay url date now))))

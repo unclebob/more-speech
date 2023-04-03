@@ -126,7 +126,7 @@
                      start-time)]
     (map first result)))
 
-(defmethod gateway/get-recent-event-authors ::type [db after]
+(defmethod gateway/get-some-recent-event-authors ::type [db after]
   (let [node (:node db)
         result (xt/q (xt/db node)
                      '{:find [author]
@@ -136,7 +136,8 @@
                                [e :pubkey author]
                                [e :created-at t]
                                [(= :event type)]
-                               [(> t after)]]}
+                               [(> t after)]]
+                       :limit 2000}
                      after)]
     (set (map first result))))
 

@@ -2,6 +2,7 @@
   (:require [more-speech.logger.default :refer [log log-pr]]
             [more-speech.nostr.protocol :as protocol]
             [more-speech.mem :refer :all]
+            [more-speech.nostr.util :as util]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.nostr.event-composers :as composers]
             [more-speech.relay :as relay]
@@ -27,7 +28,7 @@
 
 (defn start-nostr [subscription-time]
   (protocol/initialize)
-  (let [now-in-seconds (quot (System/currentTimeMillis) 1000)]
+  (let [now-in-seconds (util/get-now)]
     (protocol/connect-to-relays)
     (when (user-configuration/should-import-metadata? now-in-seconds)
       (protocol/request-metadata-from-relays (- now-in-seconds 86400))

@@ -41,7 +41,7 @@
     (gateway/add-event @db {:id 3 :pubkey 1003 :created-at 300})
     (gateway/add-event @db {:id 4 :pubkey 1004 :created-at 400})
 
-    (should= #{1003 1004} (gateway/get-recent-event-authors @db 200))
+    (should= #{1003 1004} (gateway/get-some-recent-event-authors @db 200))
 
     )
 

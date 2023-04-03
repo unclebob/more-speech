@@ -20,7 +20,7 @@
 (defmulti get-id-from-username (fn [db _user-name] (::type db)))
 (defmulti add-reaction (fn [db _id _pubkey _content] (::type db)))
 (defmulti get-profiles-after (fn [db _after] (::type db)))
-(defmulti get-recent-event-authors (fn [db _after] (::type db)))
+(defmulti get-some-recent-event-authors (fn [db _after] (::type db)))
 
 
 

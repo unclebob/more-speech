@@ -30,7 +30,7 @@
 (defmethod gateway/get-event ::type [db id]
   (get-in @(:data db) [:text-event-map id]))
 
-(defmethod gateway/get-recent-event-authors ::type [db after]
+(defmethod gateway/get-some-recent-event-authors ::type [db after]
   (loop [ids (keys (:text-event-map @(:data db)))
          result #{}]
     (if (empty? ids)
@@ -39,7 +39,7 @@
             event (gateway/get-event db id)
             author (:pubkey event)
             time (:created-at event)]
-        (if (> time after)
+        (if (and (some? time) (> time after))
           (recur (rest ids) (conj result author))
           (recur (rest ids) result))))))
 
