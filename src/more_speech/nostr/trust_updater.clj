@@ -1,8 +1,14 @@
 (ns more-speech.nostr.trust-updater
-  (:require [more-speech.mem :refer :all]
-            [more-speech.nostr.event-composers :as composers]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.config :refer [get-db]]))
+  (:require
+    [more-speech.config :as config]
+    [more-speech.config :refer [get-db]]
+    [more-speech.db.gateway :as gateway]
+    [more-speech.mem :refer :all]
+    [more-speech.nostr.event-composers :as composers]
+    [more-speech.nostr.util :as util]
+    [more-speech.ui.formatter-util :as f-util]
+    )
+  (:use [seesaw.core]))
 
 (defn entrust [his-pubkey his-petname]
   (let [my-pubkey (get-mem :pubkey)
@@ -18,4 +24,26 @@
 
 (defn entrust-and-send [his-pubkey his-petname]
   (let [my-contact-list (entrust his-pubkey his-petname)]
-  (composers/compose-and-send-contact-list my-contact-list)))
+    (composers/compose-and-send-contact-list my-contact-list)))
+
+(defn ask-for-petname [pubkey]
+  (loop [profile (gateway/get-profile (get-db) pubkey)]
+    (let [petname (input "Name this author"
+                         :value (:name profile)
+                         :title (str "Entrust " (f-util/abbreviate (util/hexify pubkey) 10)))]
+      (cond
+        (nil? petname)
+        nil
+
+        (re-matches config/user-name-chars petname)
+        petname
+
+        :else
+        (do (alert (str "Invalid pet-name: " petname))
+            (recur profile))))))
+
+(defn trust-this-author [event _e]
+  (let [his-pubkey (:pubkey event)
+        petname (ask-for-petname his-pubkey)]
+    (when (some? petname)
+      (entrust-and-send his-pubkey petname))))

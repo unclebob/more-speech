@@ -18,9 +18,8 @@
   which must include kind, tags, and content.  The body is put into an
   EVENT wrapper that is ready to send."
   [body]
-  (let [keys (get-mem :keys)
-        private-key (util/hex-string->bytes (:private-key keys))
-        pubkey (util/hex-string->bytes (:public-key keys))
+  (let [private-key (util/hex-string->bytes (get-mem [:keys :private-key]))
+        pubkey (get-mem :pubkey)
         now (quot (System/currentTimeMillis) 1000)
         body (assoc body :pubkey (util/bytes->hex-string pubkey)
                          :created_at now)
@@ -32,15 +31,15 @@
     ["EVENT" event]))
 
 (defn compose-metadata-event []
-  (let [keys (get-mem :keys)
-        profile {:name (:name keys)
-                 :about (:about keys)
-                 :picture (:picture keys)}
-        profile (if (some? (:nip05 keys))
-                  (assoc profile :nip05 (:nip05 keys))
+  (let [key-map (get-mem :keys)
+        profile {:name (:name key-map)
+                 :about (:about key-map)
+                 :picture (:picture key-map)}
+        profile (if (some? (:nip05 key-map))
+                  (assoc profile :nip05 (:nip05 key-map))
                   profile)
-        profile (if (some? (:lud16 keys))
-                  (assoc profile :lud16 (:lud16 keys))
+        profile (if (some? (:lud16 key-map))
+                  (assoc profile :lud16 (:lud16 key-map))
                   profile)
         content (events/to-json profile)
         body {:kind 0

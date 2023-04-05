@@ -10,15 +10,13 @@
     [more-speech.nostr.tab-searcher :as tab-searcher]
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.nostr.util :as util]
-    [more-speech.ui.formatter-util :as f-util]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.article-panel :as article-panel]
     [more-speech.ui.swing.article-tree-util :as at-util]
     [more-speech.ui.swing.edit-window :as edit-window]
     [more-speech.ui.swing.util :as swing-util]
     [more-speech.user-configuration :as uconfig])
-  (:use (seesaw [core] [font] [tree])
-        (seesaw [color] [core] [font] [tree]))
+  (:use (seesaw [color] [core] [font] [tree]))
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
 (declare mouse-pressed tab-menu)
@@ -243,15 +241,6 @@
     (with-out-str
       (clojure.pprint/pprint (formatters/hexify-event event)))))
 
-(defn trust-this-author [event _e]
-  (let [his-pubkey (:pubkey event)
-        profile (gateway/get-profile (get-db) his-pubkey)
-        petname (input "Name this author"
-                       :value (:name profile)
-                       :title (str "Entrust " (f-util/abbreviate (util/num32->hex-string his-pubkey) 10)))]
-    (when (some? petname)
-      (trust-updater/entrust-and-send his-pubkey petname))))
-
 (defn dm-author [event _e]
   (let [pubkey (:pubkey event)
         content (str "D @" (formatters/get-best-name pubkey) " ")]
@@ -278,7 +267,7 @@
           p (popup :items [(action :name "Get info..."
                                    :handler (partial get-info event))
                            (action :name "Trust this author..."
-                                   :handler (partial trust-this-author event))
+                                   :handler (partial trust-updater/trust-this-author event))
                            (menu :text "Add author to tab" :items add-author-actions)
                            (menu :text "Block author from tab" :items block-author-actions)
                            (menu :text "Add article to tab" :items add-article-actions)
