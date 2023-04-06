@@ -1,17 +1,17 @@
 (ns more-speech.nostr.event-composers-spec
-  (:require [speclj.core :refer :all]
+  (:require [more-speech.bech32 :as bech32]
+            [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
+            [more-speech.mem :refer :all]
+            [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.event-composers :refer :all]
-            [more-speech.nostr.util :as util]
-            [more-speech.nostr.events :refer :all]
             [more-speech.nostr.event-composers :refer :all]
             [more-speech.nostr.event-handlers :refer :all]
-            [more-speech.nostr.elliptic-signature :refer :all]
+            [more-speech.nostr.events :refer :all]
+            [more-speech.nostr.util :as util]
             [more-speech.nostr.util :refer :all]
-            [more-speech.mem :refer :all]
-            [more-speech.config :as config]
-            [more-speech.bech32 :as bech32])
+            [speclj.core :refer :all])
   (:import (ecdhJava SECP256K1)))
 
 (defn have-client-tag? [tags]
@@ -26,18 +26,21 @@
   (with db (in-memory/get-db))
   (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db))
+  (before (clear-mem))
 
   (context "composing metadata (kind:0) messages"
     (it "composes using the keys data structure"
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 314159)
               public-key (get-pub-key private-key)
+              pubkey (bytes->num public-key)
               keys {:private-key (bytes->hex-string private-key)
                     :public-key (bytes->hex-string public-key)
                     :name "name"
                     :about "about"
                     :picture "picture"}
-              _ (reset! (get-mem) {:keys keys})
+              _ (set-mem :keys keys)
+              _ (set-mem :pubkey pubkey)
               now (quot (System/currentTimeMillis) 1000)
               event (compose-metadata-event)
               {:keys [pubkey created_at kind content id sig]} (second event)
@@ -56,8 +59,10 @@
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 314159)
               public-key (get-pub-key private-key)
-              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
-                                          :public-key (bytes->hex-string public-key)}})
+              pubkey (bytes->num public-key)
+              _ (set-mem :keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)})
+              _ (set-mem :pubkey pubkey)
               text "message text"
               subject ""
               event (compose-text-event subject text)
@@ -77,8 +82,10 @@
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 314159)
               public-key (get-pub-key private-key)
-              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
-                                          :public-key (bytes->hex-string public-key)}})
+              pubkey (bytes->num public-key)
+              _ (set-mem :keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)})
+              _ (set-mem :pubkey pubkey)
               text "message text"
               subject "subject"
               event (compose-text-event subject text)
@@ -185,8 +192,10 @@
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
-              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
-                                          :public-key (bytes->hex-string public-key)}})
+              pubkey (bytes->num public-key)
+              _ (set-mem :keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)})
+              _ (set-mem :pubkey pubkey)
               text "message/text"
               event (compose-text-event "" text)
               {:keys [pubkey created_at kind tags content id sig]} (second event)
@@ -256,8 +265,10 @@
       (with-redefs [config/proof-of-work-default 0]
         (let [private-key (num->bytes 64 42)
               public-key (get-pub-key private-key)
-              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string private-key)
-                                          :public-key (bytes->hex-string public-key)}})
+              pubkey (bytes->num public-key)
+              _ (set-mem :keys {:private-key (bytes->hex-string private-key)
+                                :public-key (bytes->hex-string public-key)})
+              _ (set-mem :pubkey pubkey)
               contact-list [{:pubkey 1}
                             {:pubkey 2 :petname "petname"}]
               event (compose-contact-list contact-list)

@@ -21,7 +21,7 @@
   (let [private-key (util/hex-string->bytes (get-mem [:keys :private-key]))
         pubkey (get-mem :pubkey)
         now (quot (System/currentTimeMillis) 1000)
-        body (assoc body :pubkey (util/bytes->hex-string pubkey)
+        body (assoc body :pubkey (util/hexify pubkey)
                          :created_at now)
         [id body] (events/make-id-with-pow config/proof-of-work-default body)
         aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
