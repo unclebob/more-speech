@@ -1,20 +1,20 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
-            [more-speech.logger.default :refer [log-pr]]
+            [more-speech.config :as config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
+            [more-speech.logger.default :refer [log-pr]]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.event-handlers :as handlers]
-            [more-speech.ui.swing.article-tree :as article-tree]
+            [more-speech.nostr.util :as util]
+            [more-speech.ui.formatter-util :as formatter-util]
             [more-speech.ui.swing.article-panel :as article-panel]
-            [more-speech.ui.swing.tabs :as tabs]
+            [more-speech.ui.swing.article-tree :as article-tree]
+            [more-speech.ui.swing.profile-window :as profile-window]
             [more-speech.ui.swing.relay-manager :as relay-manager]
             [more-speech.ui.swing.stats-window :as stats-window]
-            [more-speech.ui.swing.profile-window :as profile-window]
-            [more-speech.ui.swing.users-window :as users-window]
-            [more-speech.mem :refer :all]
-            [more-speech.config :as config :refer [get-db]]
-            [more-speech.ui.formatter-util :as formatter-util]
-            [more-speech.nostr.util :as util])
-  (:use [seesaw core])
+            [more-speech.ui.swing.tabs :as tabs]
+            [more-speech.ui.swing.users-window :as users-window])
+  (:use (seesaw [core]))
   (:import (java.util Timer TimerTask)))
 
 (defrecord seesawHandler []
@@ -31,6 +31,8 @@
         name (formatter-util/abbreviate (:name profile) 20)]
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
+(defn manage-tabs [_e])
+
 (defn make-menubar []
   (let [relays-item (menu-item :action (action :name "Relays..." :handler relay-manager/show-relay-manager)
                                :id :relays-menu)
@@ -43,7 +45,10 @@
         profile-item (menu-item :action (action :name "Profile..."
                                                 :handler profile-window/make-profile-frame)
                                 :id :profile-menu)
-        manage-menu (menu :text "Manage" :items [relays-item stats-item users-item profile-item])
+        tabs-item (menu-item :action (action :name "Tabs..."
+                                                :handler manage-tabs)
+                                :id :tabs-menu)
+        manage-menu (menu :text "Manage" :items [relays-item stats-item users-item profile-item tabs-item])
         menu-bar (menubar :items [manage-menu])]
     menu-bar))
 
@@ -78,8 +83,8 @@
 
 (defn setup-main-timer []
   (let [main-timer (Timer. "main timer")
-        prune-tabs-task (proxy [TimerTask][]
-                         (run [] (tabs/prune-tabs)))
+        prune-tabs-task (proxy [TimerTask] []
+                          (run [] (tabs/prune-tabs)))
         prune-tabs-frequency (* config/prune-tabs-frequency-in-minutes 60 1000)]
     (.schedule main-timer
                prune-tabs-task

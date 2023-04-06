@@ -19,7 +19,7 @@
   (:use (seesaw [color] [core] [font] [tree]))
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
-(declare mouse-pressed tab-menu)
+(declare article-click tab-menu)
 
 (defn render-event [widget info]
   (if (seqable? (:value info))
@@ -56,7 +56,7 @@
         renderer (.getCellRenderer header-tree)
         _ (.setBackgroundSelectionColor renderer (color :azure))]
     (listen header-tree :selection (partial node-selected tab-index))
-    (listen header-tree :mouse-pressed mouse-pressed)
+    (listen header-tree :mouse-pressed article-click)
     (set-mem [:tab-tree-map tab-name] header-tree)
     header-tree))
 
@@ -250,7 +250,7 @@
 
 ;------DECLARED
 
-(defn mouse-pressed [e]
+(defn article-click [e]
   (when (.isPopupTrigger e)
     (let [tree (.getComponent e)
           path (.getPathForLocation tree (.getX e) (.getY e))

@@ -11,8 +11,11 @@
     [more-speech.nostr.event-composers :as event-composers]
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.nostr.util :as util]
-    [more-speech.ui.formatters :as formatters])
-  (:use (seesaw [core])))
+    [more-speech.ui.formatters :as formatters]
+    [more-speech.ui.swing.article-panel :as article-panel]
+    [more-speech.ui.swing.tabs :as tabs])
+  (:use (seesaw [core]))
+  (:import (java.awt Point)))
 
 (defn close-users-frame [users-menu _e]
   (config! users-menu :enabled? true)
@@ -144,6 +147,22 @@
                   contacts (gateway/get-contacts (get-db) my-pubkey)]
               (event-composers/compose-and-send-contact-list contacts))))))))
 
+(defn listbox-click [listbox e]
+  (when (.isPopupTrigger e)
+    (let [index (.locationToIndex listbox (Point. (.getX e) (.getY e)))
+          model (.getModel listbox)
+          item (.getElementAt model index)
+          user-id (second item)
+          tab-names (vec (remove #(= "all" %) (map :name (get-mem :tabs-list))))
+          tab-names (conj tab-names "<new-tab>")
+          add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab user-id %)) tab-names)
+
+          p (popup :items [(action :name "Get Info..." :handler (fn [_e] (article-panel/show-user-profile user-id)))
+                           (menu :text "Add author to tab" :items add-author-actions)])]
+      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))
+    )
+  )
+
 (defn make-users-frame [_e]
   (let [users-menu (select (get-mem :frame) [:#users-menu])
         users-frame (frame :title "Users")
@@ -188,6 +207,8 @@
     (config! selected-listbox :model (get-mem [:user-window :recent-user-items]))
     (config! users-frame :content users-panel)
     (listen users-frame :window-closing (partial close-users-frame users-menu))
+    (listen trusted-users-listbox :mouse-pressed (partial listbox-click trusted-users-listbox))
+    (listen selected-listbox :mouse-pressed (partial listbox-click selected-listbox))
     (config! users-menu :enabled? false)
     (pack! users-frame)
     (show! users-frame)))
