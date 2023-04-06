@@ -14,7 +14,8 @@
   (let [my-pubkey (get-mem :pubkey)
         my-contacts (gateway/get-contacts (get-db) my-pubkey)
         reduced-contacts (remove #(= his-pubkey (:pubkey %)) my-contacts)]
-    (gateway/add-contacts (get-db) my-pubkey reduced-contacts))
+    (gateway/add-contacts (get-db) my-pubkey reduced-contacts)
+    (gateway/sync-db (get-db)))
   )
 
 (defn entrust [his-pubkey his-petname]
@@ -27,6 +28,7 @@
                     {:pubkey his-pubkey :petname his-petname})
         my-updated-contacts (conj everyone-elses-entries new-entry)]
     (gateway/add-contacts (get-db) my-pubkey my-updated-contacts)
+    (gateway/sync-db (get-db))
     my-updated-contacts))
 
 (defn entrust-and-send [his-pubkey his-petname]

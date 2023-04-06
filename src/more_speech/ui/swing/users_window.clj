@@ -96,7 +96,7 @@
             trusted-listbox (select frame [:#trusted-users-listbox])]
         (when (some? petname)
           (let [contact-list (trust-updater/entrust pubkey petname)]
-            (when-not config/is-test-run?
+            (when-not (config/is-test-run?)
               (event-composers/compose-and-send-contact-list contact-list))
             (load-trusted-users)
             (let [trusted-items (get-mem [:user-window :trusted-user-items])
@@ -139,7 +139,7 @@
           (.setSelectedValue selected-listbox
                              (find-item untrusted-user (get-mem [:user-window :recent-user-items]))
                              true)
-          (when-not config/is-test-run?
+          (when-not (config/is-test-run?)
             (let [my-pubkey (get-mem :pubkey)
                   contacts (gateway/get-contacts (get-db) my-pubkey)]
               (event-composers/compose-and-send-contact-list contacts))))))))

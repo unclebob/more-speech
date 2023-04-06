@@ -117,6 +117,9 @@
           (recur (rest ids) (conj result [id (:name profile)]))
           (recur (rest ids) result))))))
 
+(defmethod gateway/sync-db ::type [_db]
+  )
+
 ;----------methods for tests
 (def db (atom nil))
 

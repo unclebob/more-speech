@@ -232,6 +232,9 @@
                      after)]
     result))
 
+(defmethod gateway/sync-db ::type [db]
+  (xt/sync (:node db)))
+
 ;--------- XTDB utilities
 
 (defn add-assoc-entity [node]

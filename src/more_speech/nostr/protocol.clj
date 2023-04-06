@@ -26,7 +26,7 @@
     (relay/send relay ["REQ" "ms-contacts" {"kinds" [3] "since" since}])))
 
 (defn request-metadata [relay since]
-  (relay/send relay ["REQ" "ms-profiles" {"kinds" [0] "since" since}]))
+  (relay/send relay ["REQ" "ms-profiles" {"kinds" [0 3] "since" since}]))
 
 (defn add-trustees [type filters who]
   (if (some? who)
