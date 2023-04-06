@@ -1,10 +1,10 @@
 (ns more-speech.nostr.trust-updater-spec
-  (:require [speclj.core :refer :all]
-            [more-speech.nostr.trust-updater :refer :all]
-            [more-speech.mem :refer :all]
-            [more-speech.db.in-memory :as in-memory]
+  (:require [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
-            [more-speech.config :as config]))
+            [more-speech.db.in-memory :as in-memory]
+            [more-speech.mem :refer :all]
+            [more-speech.nostr.trust-updater :refer :all]
+            [speclj.core :refer :all]))
 
 (declare db)
 (describe "Setting Trust"
@@ -28,16 +28,27 @@
     (let [my-pubkey 1
           contacts [{:pubkey 1}
                     {:pubkey 3 :petname "the-old-petname"}
-                    {:pubkey 2}]
-          ]
+                    {:pubkey 2}]]
       (set-mem :pubkey my-pubkey)
       (gateway/add-contacts @db my-pubkey contacts)
       (entrust 3 "the-new-petname")
-      (let [my-contacts
-            (gateway/get-contacts @db my-pubkey)
-            ]
+      (let [my-contacts (gateway/get-contacts @db my-pubkey)]
         (should= (set [{:pubkey 1}
                        {:pubkey 2}
                        {:pubkey 3 :petname "the-new-petname"}])
+                 (set my-contacts)))))
+
+  (it "untrusts a user"
+    (let [my-pubkey 1
+          contacts [{:pubkey 1}
+                    {:pubkey 2}
+                    {:pubkey 3 :petname "petname"}]]
+      (set-mem :pubkey my-pubkey)
+      (gateway/add-contacts @db my-pubkey contacts)
+      (untrust 2)
+      (let [my-contacts
+            (gateway/get-contacts @db my-pubkey)]
+        (should= (set [{:pubkey 1}
+                       {:pubkey 3 :petname "petname"}])
                  (set my-contacts)))))
   )

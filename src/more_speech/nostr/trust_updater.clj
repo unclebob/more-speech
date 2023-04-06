@@ -10,6 +10,13 @@
     )
   (:use [seesaw.core]))
 
+(defn untrust [his-pubkey]
+  (let [my-pubkey (get-mem :pubkey)
+        my-contacts (gateway/get-contacts (get-db) my-pubkey)
+        reduced-contacts (remove #(= his-pubkey (:pubkey %)) my-contacts)]
+    (gateway/add-contacts (get-db) my-pubkey reduced-contacts))
+  )
+
 (defn entrust [his-pubkey his-petname]
   (let [my-pubkey (get-mem :pubkey)
         my-contacts (gateway/get-contacts (get-db) my-pubkey)

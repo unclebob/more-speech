@@ -61,8 +61,7 @@
                        :lud16 lud16
                        :nip05 nip05
                        :created-at created-at}]
-      (gateway/add-profile db pubkey profile-doc)
-      (log-pr 1 'process-name-event profile))
+      (gateway/add-profile db pubkey profile-doc))
     (catch Exception e
       (log-pr 1 'json-exception-process-name-event-ignored (.getMessage e))
       (log-pr 1 event))))

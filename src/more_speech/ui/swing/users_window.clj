@@ -1,6 +1,7 @@
 (ns more-speech.ui.swing.users-window
   (:require
     [clojure.set :as set]
+    [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
     [more-speech.config :refer [get-db]]
     [more-speech.db.gateway :as gateway]
@@ -45,12 +46,13 @@
              (make-sorted-listbox-items trusted-users))))
 
 (defn load-web-of-trust-users []
-  (let [web-of-trust-users (set/difference
-                             (set (contact-list/get-web-of-trust))
-                             (set (get-mem [:user-window :trusted-users])))]
-    (set-mem [:user-window :web-of-trust-users] web-of-trust-users)
+  (let [web-of-trust-ids (contact-list/get-web-of-trust)
+        reduced-web-of-trust-users (set/difference
+                                     (set web-of-trust-ids)
+                                     (set (get-mem [:user-window :trusted-users])))]
+    (set-mem [:user-window :web-of-trust-users] reduced-web-of-trust-users)
     (set-mem [:user-window :web-of-trust-items]
-             (make-sorted-listbox-items web-of-trust-users))))
+             (make-sorted-listbox-items reduced-web-of-trust-users))))
 
 (defn load-user-window-data []
   (load-trusted-users)
@@ -64,7 +66,7 @@
 
 (defn select-web-of-trust [frame _e]
   (set-mem [:user-window :selection-group] :web-of-trust-items)
-  (when (nil? (get-mem [:user-window :web-of-trust-items]))
+  (when (empty? (get-mem [:user-window :web-of-trust-items]))
     (load-web-of-trust-users))
   (config! (select frame [:#selected-users])
            :model (get-mem [:user-window :web-of-trust-items])))
@@ -107,6 +109,41 @@
               (.setSelectedValue trusted-listbox
                                  new-trusted-item true))))))))
 
+(defn untrust-selection [frame _e]
+  (let [trusted-listbox (select frame [:#trusted-users-listbox])
+        selected-item (selection trusted-listbox)]
+    (when (some? selected-item)
+      (let [untrusted-user (second selected-item)
+            recent-button (select frame [:#recent-button])
+            selected-listbox (select frame [:#selected-users])
+            untrusted-name (formatters/format-user-id untrusted-user)
+            question (dialog :content
+                             (str "Are you sure you want to untrust " untrusted-name
+                                  "\nID: " (util/hexify untrusted-user)
+                                  "\n" (bech32/encode "npub" untrusted-user))
+                             :option-type :ok-cancel)
+            answer (show! (pack! question))]
+        (when (= answer :success)
+          (trust-updater/untrust untrusted-user)
+          (load-trusted-users)
+          (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))
+          (config! recent-button :selected? true)
+          (load-recent-users)
+          (prn 'adding untrusted-user)
+          (update-mem [:user-window :recent-users] conj untrusted-user)
+          (prn 'recent-users (get-mem [:user-window :recent-users]))
+          (set-mem [:user-window :recent-user-items]
+                   (make-sorted-listbox-items
+                     (get-mem [:user-window :recent-users])))
+          (config! selected-listbox :model (get-mem [:user-window :recent-user-items]))
+          (.setSelectedValue selected-listbox
+                             (find-item untrusted-user (get-mem [:user-window :recent-user-items]))
+                             true)
+          (when-not config/is-test-run?
+            (let [my-pubkey (get-mem :pubkey)
+                  contacts (gateway/get-contacts (get-db) my-pubkey)]
+              (event-composers/compose-and-send-contact-list contacts))))))))
+
 (defn make-users-frame [_e]
   (let [users-menu (select (get-mem :frame) [:#users-menu])
         users-frame (frame :title "Users")
@@ -116,14 +153,17 @@
         trusted-users-panel (vertical-panel
                               :items [(label "Trusted")
                                       (scrollable trusted-users-listbox :size [500 :by 800])])
-        trust-button (button :text "<-"
+        trust-button (button :text "<-Trust"
                              :listen [:action (partial trust-selection users-frame)])
+        untrust-button (button :text "Untrust->"
+                               :listen [:action (partial untrust-selection users-frame)])
         selection-group (button-group)
         web-of-trust-button (radio :text "Web of trust"
                                    :group selection-group
                                    :selected? false
                                    :listen [:action (partial select-web-of-trust users-frame)])
         recent-button (radio :text "Recent users"
+                             :id :recent-button
                              :group selection-group
                              :selected? true
                              :listen [:action (partial select-recent-users users-frame)])
@@ -138,7 +178,10 @@
                                                 scrollable-selected-listbox])
 
 
-        users-panel (horizontal-panel :items [trusted-users-panel trust-button selection-panel])]
+        users-panel (horizontal-panel :items [trusted-users-panel
+                                              (vertical-panel :items [trust-button
+                                                                      untrust-button])
+                                              selection-panel])]
     (set-mem [:user-window :selection-group] :recent-user-items)
     (load-user-window-data)
     (config! trusted-users-listbox :model (get-mem [:user-window :trusted-user-items]))
