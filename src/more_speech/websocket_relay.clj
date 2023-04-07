@@ -61,9 +61,10 @@
   (let [{::keys [url socket timer]} relay]
     (when (some? socket)
       (try
-        (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done"))
+        (when-not (and (.isOutputClosed socket) (.isInputClosed socket))
+          (.get (.sendClose socket WebSocket/NORMAL_CLOSURE "done")))
         (catch Exception e
-          (log-pr 1 'close-error url (:reason e)))))
+          (log-pr 1 'close-error url (:message e)))))
     (when timer (.cancel timer))
     (set-mem [:deadman url] (util/get-now))
     (assoc relay ::socket nil ::timer nil)))

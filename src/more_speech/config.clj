@@ -30,7 +30,7 @@
                   "wss://relay.thes.ai" {:read :read-all :write true}
                   "wss://nostr-dev.wellorder.net" {:read :read-trusted, :write true}
                   "wss://nostr-pub.wellorder.net" {:read :read-trusted, :write true}
-                  "wss://relay.damus.io" {:read :read-trusted :write true}
+                  "wss://relay.damus.io" {:read :read-web-of-trust :write true}
                   "wss://relay.nostr.info" {:read :read-all :write true}
                   "wss://relay.snort.social" {:read :read-trusted :write true}
                   "wss://nostr.mikedilger.com" {:read :read-all :write true}
@@ -61,7 +61,7 @@
 (def user-name-chars #"[\w\-]+")
 (def reference-pattern #"\#\[\d+\]")
 
-(def proof-of-work-default 16)
+(def proof-of-work-default 12)
 (def max-nodes-per-tab 1000)
 (def prune-tabs-frequency-in-minutes 60)
 

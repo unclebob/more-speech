@@ -1,14 +1,14 @@
 (ns more-speech.nostr.protocol
-  (:require [more-speech.logger.default :refer [log-pr]]
-            [more-speech.relay :as relay]
-            [more-speech.websocket-relay :as ws-relay]
+  (:require [more-speech.config :as config]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
-            [more-speech.nostr.events :as events]
-            [more-speech.nostr.event-handlers :as handlers]
             [more-speech.mem :refer :all]
-            [more-speech.config :as config]
             [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.event-handlers :as handlers]
+            [more-speech.nostr.events :as events]
+            [more-speech.nostr.util :as util]
+            [more-speech.relay :as relay]
+            [more-speech.websocket-relay :as ws-relay])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.util Timer TimerTask)))
@@ -151,6 +151,7 @@
 
 (defn handle-close [relay]
   (let [url (::ws-relay/url relay)]
+    (swap! relays assoc-in [url :connection] nil)
     (log-pr 1 url 'is-closed)))
 
 (defn make-relay [url]
@@ -237,6 +238,14 @@
     (let [relay (get-in @relays [url :connection])]
       (when (some? relay)
         (relay/close relay)))))
+
+(defn reconnect-all-relays []
+  (let [now (- (util/get-now) 120)]
+    (close-all-relays)
+    (Thread/sleep 1000)
+    (doseq [url (keys @relays)]
+      (reconnect-to-relay url now now))))
+
 
 (defn initialize []
   (let [timer (Timer. "Dead socket timer")

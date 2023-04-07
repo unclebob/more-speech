@@ -9,6 +9,7 @@
     [more-speech.mem :refer :all]
     [more-speech.nostr.contact-list :as contact-list]
     [more-speech.nostr.event-composers :as event-composers]
+    [more-speech.nostr.protocol :as protocol]
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatters :as formatters]
@@ -19,6 +20,12 @@
 
 (defn close-users-frame [users-menu _e]
   (config! users-menu :enabled? true)
+  (when (get-mem [:user-window :contact-list-changed])
+    (when-not (config/is-test-run?)
+      (let [my-pubkey (get-mem :pubkey)
+            contacts (gateway/get-contacts (get-db) my-pubkey)]
+        (event-composers/compose-and-send-contact-list contacts)))
+    (future (protocol/reconnect-all-relays)))
   (set-mem :user-window nil))
 
 (defn make-sorted-listbox-items [ids]
@@ -98,19 +105,18 @@
             petname (trust-updater/ask-for-petname pubkey)
             trusted-listbox (select frame [:#trusted-users-listbox])]
         (when (some? petname)
-          (let [contact-list (trust-updater/entrust pubkey petname)]
-            (when-not (config/is-test-run?)
-              (event-composers/compose-and-send-contact-list contact-list))
-            (load-trusted-users)
-            (let [trusted-items (get-mem [:user-window :trusted-user-items])
-                  new-trusted-item (find-item pubkey trusted-items)]
-              (config! trusted-listbox :model trusted-items)
-              (remove-item pubkey :web-of-trust-items :web-of-trust-users)
-              (remove-item pubkey :recent-user-items :recent-users)
-              (config! (select frame [:#selected-users])
-                       :model (get-mem [:user-window group]))
-              (.setSelectedValue trusted-listbox
-                                 new-trusted-item true))))))))
+          (trust-updater/entrust pubkey petname)
+          (set-mem [:user-window :contact-list-changed] true)
+          (load-trusted-users)
+          (let [trusted-items (get-mem [:user-window :trusted-user-items])
+                new-trusted-item (find-item pubkey trusted-items)]
+            (config! trusted-listbox :model trusted-items)
+            (remove-item pubkey :web-of-trust-items :web-of-trust-users)
+            (remove-item pubkey :recent-user-items :recent-users)
+            (config! (select frame [:#selected-users])
+                     :model (get-mem [:user-window group]))
+            (.setSelectedValue trusted-listbox
+                               new-trusted-item true)))))))
 
 (defn untrust-selection [frame _e]
   (let [trusted-listbox (select frame [:#trusted-users-listbox])
@@ -132,9 +138,7 @@
           (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))
           (config! recent-button :selected? true)
           (load-recent-users)
-          (prn 'adding untrusted-user)
           (update-mem [:user-window :recent-users] conj untrusted-user)
-          (prn 'recent-users (get-mem [:user-window :recent-users]))
           (set-mem [:user-window :recent-user-items]
                    (make-sorted-listbox-items
                      (get-mem [:user-window :recent-users])))
@@ -142,10 +146,7 @@
           (.setSelectedValue selected-listbox
                              (find-item untrusted-user (get-mem [:user-window :recent-user-items]))
                              true)
-          (when-not (config/is-test-run?)
-            (let [my-pubkey (get-mem :pubkey)
-                  contacts (gateway/get-contacts (get-db) my-pubkey)]
-              (event-composers/compose-and-send-contact-list contacts))))))))
+          (set-mem [:user-window :contact-list-changed] true))))))
 
 (defn listbox-click [listbox e]
   (when (.isPopupTrigger e)
