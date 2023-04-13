@@ -35,8 +35,11 @@
     (xt/await-tx node tx)))
 
 (defn make-one-contacts-transaction [id contacts]
-  (let [id (bigint id)]
-    [::xt/put {:contacts contacts :xt/id {:type :contacts :id id}}]))
+  (let [id (bigint id)
+        now (util/get-now)]
+    [::xt/put {:contacts contacts
+               :created-at now
+               :xt/id {:type :contacts :id id}}]))
 
 (defn fix-contacts [contacts]
   (for [contact contacts]
@@ -198,7 +201,8 @@
   )
 
 (defmethod gateway/add-contacts ::type [db user-id contacts]
-  (add-entity db :contacts user-id {:contacts contacts}))
+  (add-entity db :contacts user-id {:contacts contacts
+                                    :created-at (util/get-now)}))
 
 (defmethod gateway/get-contacts ::type [db user-id]
   (:contacts (get-entity db :contacts user-id)))

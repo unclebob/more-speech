@@ -84,12 +84,15 @@
 
 (defn set-db! [type] (reset! db-type type))
 
+(def prod-db "prod-db")
+(def temp-db "temp-db")
+
 (defn get-db []
   (condp = @db-type
     :in-memory
     (in-memory/get-db)
     :xtdb
-    (xtdb/get-db "prod-db")
+    (xtdb/get-db prod-db)
 
     (throw (Exception. "No Database Specified"))))
 

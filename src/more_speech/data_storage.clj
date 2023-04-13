@@ -1,9 +1,10 @@
 (ns more-speech.data-storage
   (:require [clojure.string :as string]
-            [more-speech.logger.default :refer [log-pr]]
             [more-speech.config :as config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
+            [more-speech.db.xtdb :as xtdb]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
             [more-speech.nostr.event-handlers :as handlers]
             [more-speech.nostr.relays :as relays]
@@ -11,7 +12,8 @@
             [more-speech.ui.formatter-util :as fu]
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.user-configuration :as user-configuration]
-            [more-speech.util.files :refer :all])
+            [more-speech.util.files :refer :all]
+            [xtdb.api :as xt])
   (:import (java.text SimpleDateFormat)
            (java.util Date Locale TimeZone)))
 
@@ -28,7 +30,7 @@
       (spit @config/keys-filename keys-string))))
 
 (defn write-configuration []
-  (log-pr 1'writing-relays)
+  (log-pr 1 'writing-relays)
   (write-relays)
   (log-pr 1 'writing-tabs)
   (spit @config/tabs-list-filename
@@ -185,4 +187,101 @@
     (future (load-events events handler))
     (log-pr 1 'reading-files-complete)
     last-time))
+
+(defn get-events-since [db since]
+  (with-open
+    [stream (xt/open-q (xt/db db)
+                       '{:find [(pull e [*])]
+                         :timeout 86400000
+                         :in [when]
+                         :where [[e :xt/id id]
+                                 [(get id :type) type]
+                                 [(= type :event)]
+                                 [e :created-at t]
+                                 [(> t when)]]}
+                       since)]
+    (loop [events-in (iterator-seq stream)
+           events-out []
+           n 1]
+      (if (empty? events-in)
+        events-out
+        (let [event (first events-in)]
+          (when (zero? (mod n 10000))
+            (log-pr 1 'ingested n 'events))
+          (recur (rest events-in) (conj events-out (first event)) (inc n)))))))
+
+(defn get-profiles-since [db since]
+  (with-open
+    [stream (xt/open-q (xt/db db)
+                       '{:find [(pull e [*])]
+                         :timeout 86400000
+                         :in [when]
+                         :where [[e :xt/id id]
+                                 [(get id :type) type]
+                                 [(= type :profile)]
+                                 [e :created-at t]
+                                 [(> t when)]]}
+                       since)]
+    (loop [profiles-in (iterator-seq stream)
+           profiles-out []
+           n 1]
+      (if (empty? profiles-in)
+        profiles-out
+        (let [profile (first profiles-in)]
+          (when (zero? (mod n 1000))
+            (log-pr 1 'ingested n 'profiles))
+          (recur (rest profiles-in) (conj profiles-out (first profile)) (inc n)))))))
+
+(defn get-contacts-since [db since]
+  (with-open
+    [stream (xt/open-q (xt/db db)
+                       '{:find [(pull e [*])]
+                         :timeout 86400000
+                         :in [when]
+                         :where [[e :xt/id id]
+                                 [(get id :type) type]
+                                 [(= type :contacts)]
+                                 ;[e :created-at t]
+                                 ;[(> t when)]
+                                 ]}
+                       since)]
+    (loop [contacts-in (iterator-seq stream)
+           contacts-out []
+           n 1]
+      (if (empty? contacts-in)
+        contacts-out
+        (let [contact-list (first contacts-in)]
+          (when (zero? (mod n 5000))
+            (log-pr 1 'ingested n 'contact-lists))
+          (recur (rest contacts-in) (conj contacts-out (first contact-list)) (inc n)))))))
+
+  (defn put-events [db events]
+    (log-pr 1 'putting (count events) 'events)
+    (xt/submit-tx db (map #(vector ::xt/put %) events)))
+
+(defn put-profiles [db profiles]
+  (log-pr 1 'putting (count profiles) 'profiles)
+  (xt/submit-tx db (map #(vector ::xt/put %) profiles)))
+
+(defn fix-contact-list [contact-list]
+  (if (contains? contact-list :created-at)
+    contact-list
+    (assoc contact-list :created-at (util/get-now))))
+
+(defn put-contacts [db contacts]
+  (log-pr 1 'putting (count contacts) 'contacts)
+  (xt/submit-tx db (map #(vector ::xt/put (fix-contact-list %)) contacts)))
+
+  (defn compress []
+    (log-pr 1 'Compressing)
+    (let [now (util/get-now)
+          event-since (- now (* 14 86400))
+          profiles-since (- now (* 90 86400))
+          contacts-since (- now (* 90 86400))
+          prod-db (xtdb/start-xtdb! config/prod-db)
+          temp-db (xtdb/start-xtdb! config/temp-db)]
+      (put-events temp-db (get-events-since prod-db event-since))
+      (put-profiles temp-db (get-profiles-since prod-db profiles-since))
+      (put-contacts temp-db (get-contacts-since prod-db contacts-since))
+      ))
 

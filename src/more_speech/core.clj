@@ -3,49 +3,54 @@
 
 (ns more-speech.core
   (:gen-class)
-  (:require [more-speech.logger.default :refer [log-pr]]
+  (:require [clojure.core.async :as async]
             [more-speech.config :as config]
-            [more-speech.nostr.main :as main]
-            [more-speech.ui.swing.main-window :as swing]
+            [more-speech.data-storage :as data-storage]
+            [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
             [more-speech.migrator :as migrator]
-            [more-speech.data-storage :as data-storage]
-            [clojure.core.async :as async])
-  (:use [seesaw core]))
+            [more-speech.nostr.main :as main]
+            [more-speech.ui.swing.main-window :as swing])
+  (:use (seesaw [core])))
 
 (def send-chan (async/chan))
 
 (defn ^:export -main [& args]
-  (log-pr 1 'main (first args) 'start)
-  (when (= "test" (first args))
-    (config/test-run!))
-  (if (config/is-test-run?)
-    (config/set-db! :in-memory)
-    (config/set-db! config/production-db))
-  (migrator/migrate-to config/migration-level)
-  (log-pr 2 'main 'loading-configuration)
-  (data-storage/load-configuration)
-  (log-pr 2 'main 'setting-up-gui)
-  (let [handler (swing/setup-main-window)]
-    (log-pr 2 'main 'main-window-setup-complete)
-    (set-mem :send-chan send-chan)
-    (set-mem :event-handler handler)
-    (log-pr 1 'main 'reading-in-last-n-days)
-    (let [latest-old-message-time
-          (if (not (config/is-test-run?))
-            (data-storage/load-event-history handler)
-            (-> (System/currentTimeMillis) (quot 1000) (- 3600)))
-          _ (log-pr 1 'main 'getting-events)
-          exit-condition (main/start-nostr latest-old-message-time)]
-      (log-pr 1 'starting-exit-process)
-      (when (not (config/is-test-run?))
-        (data-storage/write-configuration))
-      (if (= exit-condition :relaunch)
-        (do
-          (invoke-now (.dispose (get-mem :frame)))
-          (recur args)
-          )
-        (System/exit 1)))))
+  (let [arg (first args)]
+    (when (= "compress" arg)
+      (data-storage/compress)
+      (Thread/sleep 1000)
+      (System/exit 1))
+    (log-pr 1 'main arg 'start)
+    (when (= "test" arg)
+      (config/test-run!))
+    (if (config/is-test-run?)
+      (config/set-db! :in-memory)
+      (config/set-db! config/production-db))
+    (migrator/migrate-to config/migration-level)
+    (log-pr 2 'main 'loading-configuration)
+    (data-storage/load-configuration)
+    (log-pr 2 'main 'setting-up-gui)
+    (let [handler (swing/setup-main-window)]
+      (log-pr 2 'main 'main-window-setup-complete)
+      (set-mem :send-chan send-chan)
+      (set-mem :event-handler handler)
+      (log-pr 1 'main 'reading-in-last-n-days)
+      (let [latest-old-message-time
+            (if (not (config/is-test-run?))
+              (data-storage/load-event-history handler)
+              (-> (System/currentTimeMillis) (quot 1000) (- 3600)))
+            _ (log-pr 1 'main 'getting-events)
+            exit-condition (main/start-nostr latest-old-message-time)]
+        (log-pr 1 'starting-exit-process)
+        (when (not (config/is-test-run?))
+          (data-storage/write-configuration))
+        (if (= exit-condition :relaunch)
+          (do
+            (invoke-now (.dispose (get-mem :frame)))
+            (recur args)
+            )
+          (System/exit 1))))))
 
 
 
