@@ -241,8 +241,8 @@
                          :where [[e :xt/id id]
                                  [(get id :type) type]
                                  [(= type :contacts)]
-                                 ;[e :created-at t]
-                                 ;[(> t when)]
+                                 [e :created-at t]
+                                 [(> t when)]
                                  ]}
                        since)]
     (loop [contacts-in (iterator-seq stream)
@@ -283,5 +283,8 @@
       (put-events temp-db (get-events-since prod-db event-since))
       (put-profiles temp-db (get-profiles-since prod-db profiles-since))
       (put-contacts temp-db (get-contacts-since prod-db contacts-since))
-      ))
+      (xt/sync temp-db)
+      (log-pr 1 'renaming config/prod-db (str config/prod-db "-old"))
+      (rename-file config/prod-db (str config/prod-db "-old"))
+      (rename-file config/temp-db config/prod-db)))
 
