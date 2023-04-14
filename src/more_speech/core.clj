@@ -10,6 +10,7 @@
             [more-speech.mem :refer :all]
             [more-speech.migrator :as migrator]
             [more-speech.nostr.main :as main]
+            [more-speech.nostr.util :as util]
             [more-speech.ui.swing.main-window :as swing])
   (:use (seesaw [core])))
 
@@ -24,6 +25,10 @@
     (log-pr 1 'main arg 'start)
     (when (= "test" arg)
       (config/test-run!))
+    (when (re-matches #"hours:\d+" arg)
+      (let [hours (Integer/parseInt (subs arg 6))]
+        (set-mem :request-hours-ago hours))
+      )
     (if (config/is-test-run?)
       (config/set-db! :in-memory)
       (config/set-db! config/production-db))
@@ -40,6 +45,10 @@
             (if (not (config/is-test-run?))
               (data-storage/load-event-history handler)
               (-> (System/currentTimeMillis) (quot 1000) (- 3600)))
+            latest-old-message-time
+            (if (some? (get-mem :request-hours-ago))
+              (- (util/get-now) (* 3600 (get-mem :request-hours-ago)))
+              latest-old-message-time)
             _ (log-pr 1 'main 'getting-events)
             exit-condition (main/start-nostr latest-old-message-time)]
         (log-pr 1 'starting-exit-process)
