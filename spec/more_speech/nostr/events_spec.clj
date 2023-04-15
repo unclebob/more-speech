@@ -353,3 +353,24 @@
           (process-reaction @db {:content "!" :tags [[:p (hexify 2)]]})
           (should-not-have-invoked :add-reaction)))
     )
+
+(describe "tag processing"
+  (context "tag extraction"
+    (it "extracts empty list when target tag is not found"
+      (should= [] (get-tag {} :tag))
+      (should= [] (get-tag {:tags []} :tag))
+      (should= [] (get-tag {:tags [[:e 1]]} :tag)))
+
+    (it "extracts tag arguments when found"
+      (should= [["arg1"]] (get-tag {:tags [[:target "arg1"]]} :target))
+      (should= [["arg1" "arg2"]]
+               (get-tag {:tags [[:target "arg1" "arg2"]]} :target))
+      (should= [["arg1" "arg2"] ["arg3" "arg4"]]
+                     (get-tag {:tags [[:e 1]
+                                      [:target "arg1" "arg2"]
+                                      [:p 2]
+                                      [:target "arg3" "arg4"]
+                                      [:q 3]]} :target))
+      )
+
+    ))

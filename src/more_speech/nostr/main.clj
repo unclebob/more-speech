@@ -30,9 +30,11 @@
   (protocol/initialize)
   (let [now-in-seconds (util/get-now)]
     (protocol/connect-to-relays)
-    (when (user-configuration/should-import-metadata? now-in-seconds)
+    (if (config/is-test-run?)
       (protocol/request-metadata-from-relays (- now-in-seconds 86400))
-      (user-configuration/set-last-time-metadata-imported now-in-seconds))
+      (when (user-configuration/should-import-metadata? now-in-seconds)
+        (protocol/request-metadata-from-relays (- now-in-seconds 86400))
+        (user-configuration/set-last-time-metadata-imported now-in-seconds)))
     (protocol/subscribe-to-relays subscription-time now-in-seconds)
     (when (and config/read-contacts (not (config/is-test-run?)))
       (protocol/request-contact-lists-from-relays))

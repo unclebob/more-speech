@@ -9,6 +9,7 @@
     [more-speech.nostr.events :as events]
     [more-speech.nostr.tab-searcher :as tab-searcher]
     [more-speech.nostr.trust-updater :as trust-updater]
+    [more-speech.nostr.zaps :as zaps]
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.article-panel :as article-panel]
@@ -244,9 +245,7 @@
 (defn dm-author [event _e]
   (let [pubkey (:pubkey event)
         content (str "D @" (formatters/get-best-name pubkey) " ")]
-    (edit-window/make-edit-window :send content)
-    )
-  )
+    (edit-window/make-edit-window :send content)))
 
 ;------DECLARED
 
@@ -273,6 +272,7 @@
                            (menu :text "Add article to tab" :items add-article-actions)
                            (menu :text "Block article from tab" :items block-article-actions)
                            (action :name "DM author..." :handler (partial dm-author event))
+                           (action :name "Zap author..." :handler (partial zaps/zap-author event))
                            ])]
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))))
 

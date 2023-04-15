@@ -13,6 +13,11 @@
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
+(defn get-tag [event target]
+  (let [tags (get event :tags [])
+        targets (filter #(= target (first %)) tags)]
+    (map rest targets)))
+
 (defn make-id
   "returns byte array of id given the clojure form of the body"
   [{:keys [pubkey created_at kind tags content]}]
