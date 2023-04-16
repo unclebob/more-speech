@@ -11,7 +11,8 @@
     [more-speech.nostr.events :as events]
     [more-speech.nostr.relays :as relays]
     [more-speech.nostr.util :as util])
-  (:use (seesaw [core])))
+  (:use (seesaw [core]))
+  (:import (java.net URLEncoder)))
 
 (defn get-zap-address-from-tag [event]
   (let [zap-tags (events/get-tag event :zap)
@@ -81,9 +82,9 @@
                      ["amount" (str amount)]
                      ["lnurl" (bech32/encode "lnurl" (util/bytes->num (.getBytes lnurl)))]
                      ["p" (util/hexify recipient)]
-                     ["e" (util/hexify (:id event))]]}]
-    (composers/body->event body)
-    ))
+                     ["e" (util/hexify (:id event))]]}
+        [_ request] (composers/body->event body)]
+    request))
 
 (defn zap-author [event _e]
   (try
@@ -91,15 +92,30 @@
           lnurl (lud16->lnurl zap-address)
           ln-response (client/get lnurl)
           wallet-response (json/read-str (:body ln-response))
-          {:strs [callback maxSendable minSendable metadata tag
-                  commentAllowed allowsNostr nostrPubkey
+          {:strs [callback metadata tag nostrPubkey
                   status reason]} wallet-response]
       (when (and (some? status) (not= status "OK"))
         (throw (Exception. (str "Wallet error: " status reason))))
       (let [amount 1000
             comment "hi"
-            zap-request (make-zap-request wallet-response event amount comment lnurl)]
-        (prn 'zap-author zap-request))
+            zap-request (make-zap-request wallet-response event amount comment lnurl)
+            json-request (events/to-json zap-request)
+            encoded-request (URLEncoder/encode ^String json-request "UTF-8")
+            invoice-request (str callback
+                                 "?amount=" amount
+                                 "&nostr=" encoded-request
+                                 "&lnurl=" lnurl)
+            invoice-response (client/get invoice-request)
+            invoice-response-status (:status invoice-response)
+            _ (when (not= 200 invoice-response-status)
+                (throw (Exception. (str "Invoice request failed:" invoice-response-status))))
+            invoice-json (json/read-str (:body invoice-response))
+            json-status (get invoice-json "status")
+            _ (when (and (some? json-status) (= "ERROR" json-status))
+                (throw (Exception. (str "Invoice request error: " (get invoice-json "reason")))))
+            invoice (get invoice-json "pr")]
+        (prn 'zap-author invoice)
+        (prn 'zap-author 'metadata metadata))
       )
     (catch Exception e
       (log-pr 1 'zap-author (.getMessage e))

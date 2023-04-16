@@ -109,12 +109,11 @@
                 _ (reset! relays {"relay-r1" {:read :read-all}
                                   "relay-nr" {:read :read-none}
                                   "relay-r2" {:read :read-all}})
-                [type body] (zaps/make-zap-request
-                              wallet-response event amount comment lnurl)
+                body (zaps/make-zap-request
+                       wallet-response event amount comment lnurl)
                 {:keys [kind content tags pubkey created_at]} body
                 tags (set tags)]
 
-            (should= "EVENT" type)
             (should= 9734 kind)
             (should= "comment" content)
             (should= my-pubkey (util/unhexify pubkey))
