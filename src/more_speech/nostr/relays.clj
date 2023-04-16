@@ -39,6 +39,18 @@
 (defn load-relays-from-file [file-name]
   (load-relays (slurp file-name)))
 
+(defn relays-for-reading []
+  (loop [urls (keys @relays)
+         relays-to-read []]
+    (if (empty? urls)
+      relays-to-read
+      (let [url (first urls)
+            relay (get @relays url)
+            read (:read relay)
+            read (condp = read false :read-none true :read-all read)]
+        (if (not= :read-none read)
+          (recur (rest urls) (conj relays-to-read url))
+          (recur (rest urls) relays-to-read))))))
 
 (defn relays-for-writing []
   (loop [urls (keys @relays)

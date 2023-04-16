@@ -20,7 +20,7 @@
   [body]
   (let [private-key (util/hex-string->bytes (get-mem [:keys :private-key]))
         pubkey (get-mem :pubkey)
-        now (quot (System/currentTimeMillis) 1000)
+        now (util/get-now)
         body (assoc body :pubkey (util/hexify pubkey)
                          :created_at now)
         [id body] (events/make-id-with-pow config/proof-of-work-default body)

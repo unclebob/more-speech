@@ -4,6 +4,8 @@
     [more-speech.db.gateway :as gateway]
     [more-speech.db.in-memory :as in-memory]
     [more-speech.mem :refer :all]
+    [more-speech.nostr.elliptic-signature :as es]
+    [more-speech.nostr.util :as util]
     [more-speech.nostr.zaps :as zaps]
     [speclj.core :refer :all]))
 
@@ -66,21 +68,61 @@
         (should-throw Exception "bad lud16 format xxxx"
                       (zaps/parse-lud16 "xxxx"))
         (should-throw Exception "bad lud16 format no-colons:j@z.com"
-                              (zaps/parse-lud16 "no-colons:j@z.com"))
+                      (zaps/parse-lud16 "no-colons:j@z.com"))
         (should-throw Exception "bad lud16 format name@need-a-dot"
-                              (zaps/parse-lud16 "name@need-a-dot")))
+                      (zaps/parse-lud16 "name@need-a-dot")))
 
       (it "parses a good lud16 format"
         (should= ["name" "domain.xxx"]
                  (zaps/parse-lud16 "name@domain.xxx"))
         (should= ["name.of-me_32" "domain.32-x_t.c-t"]
-                         (zaps/parse-lud16 "name.of-me_32@domain.32-x_t.c-t")))
+                 (zaps/parse-lud16 "name.of-me_32@domain.32-x_t.c-t")))
       )
 
     (context "lnurl"
       (it "makes lnurl from lud16"
         (should= "https://domain.xxx/.well-known/lnurlp/name"
-                 (zaps/lud16->lnurl "name@domain.xxx"))
-        ))
+                 (zaps/lud16->lnurl "name@domain.xxx")))
+      )
+
+    (context "zap request"
+      (it "makes a zap request"
+        (with-redefs [util/get-now (stub :get-now {:return 11111})]
+          (let [wallet-response {"callback" "callback"
+                                 "maxSendable" 100
+                                 "minSendable" 1
+                                 "metadata" "metadata"
+                                 "tag" "payRequest"
+                                 "commentAllowed" 20
+                                 "nostrPubkey" "deadbeef"}
+                recipient-id 99
+                event-id 1
+                event {:pubkey recipient-id :id event-id}
+                amount 100
+                comment "comment"
+                lnurl "lnurl"
+                my-privkey 0xb0b
+                my-pubkey (util/bytes->num (es/get-pub-key (util/num->bytes 32 my-privkey)))
+                _ (set-mem :pubkey my-pubkey)
+                _ (set-mem [:keys :private-key] (util/hexify my-privkey))
+                _ (reset! relays {"relay-r1" {:read :read-all}
+                                "relay-nr" {:read :read-none}
+                                "relay-r2" {:read :read-all}})
+                [type body] (zaps/make-zap-request
+                              wallet-response event amount comment lnurl)
+                {:keys [kind content tags pubkey created_at]} body
+                tags (set tags)]
+
+            (should= "EVENT" type)
+            (should= 9734 kind)
+            (should= "comment" content)
+            (should= my-pubkey (util/unhexify pubkey))
+            (should= (util/get-now) created_at)
+            (should (contains? tags ["relays" "relay-r1" "relay-r2"]))
+            (should (contains? tags ["amount" "100"]))
+            (should (contains? tags ["lnurl" "lnurl1qqqxcmn4wfkqzejtan"]))
+            (should (contains? tags ["p" (util/hexify recipient-id)]))
+            (should (contains? tags ["e" (util/hexify event-id)])))))
+      )
     )
   )
