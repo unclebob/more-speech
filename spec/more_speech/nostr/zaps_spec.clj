@@ -86,7 +86,7 @@
       )
 
     (context "zap request"
-      (it "makes a zap request"
+      (it "makes a zap request if all is valid"
         (with-redefs [util/get-now (stub :get-now {:return 11111})]
           (let [wallet-response {"callback" "callback"
                                  "maxSendable" 100
@@ -94,6 +94,7 @@
                                  "metadata" "metadata"
                                  "tag" "payRequest"
                                  "commentAllowed" 20
+                                 "allowsNostr" true
                                  "nostrPubkey" "deadbeef"}
                 recipient-id 99
                 event-id 1
@@ -106,8 +107,8 @@
                 _ (set-mem :pubkey my-pubkey)
                 _ (set-mem [:keys :private-key] (util/hexify my-privkey))
                 _ (reset! relays {"relay-r1" {:read :read-all}
-                                "relay-nr" {:read :read-none}
-                                "relay-r2" {:read :read-all}})
+                                  "relay-nr" {:read :read-none}
+                                  "relay-r2" {:read :read-all}})
                 [type body] (zaps/make-zap-request
                               wallet-response event amount comment lnurl)
                 {:keys [kind content tags pubkey created_at]} body
@@ -123,6 +124,74 @@
             (should (contains? tags ["lnurl" "lnurl1qqqxcmn4wfkqzejtan"]))
             (should (contains? tags ["p" (util/hexify recipient-id)]))
             (should (contains? tags ["e" (util/hexify event-id)])))))
+
+      (it "rejects if nostr is not allowed"
+        (let [wallet-response {"callback" "callback"
+                               "maxSendable" 100
+                               "minSendable" 1
+                               "metadata" "metadata"
+                               "tag" "payRequest"
+                               "commentAllowed" 20
+                               "allowsNostr" false
+                               "nostrPubkey" "deadbeef"}
+              amount 100
+              event {}
+              comment "12345678901234567890"
+              lnurl "lnurl"]
+          (should-throw Exception "Recipient does not accept Nostr zaps."
+                        (zaps/make-zap-request wallet-response
+                                               event amount comment lnurl))))
+
+      (it "rejects if amount too small"
+        (let [wallet-response {"callback" "callback"
+                               "maxSendable" 1000000
+                               "minSendable" 1000
+                               "metadata" "metadata"
+                               "tag" "payRequest"
+                               "commentAllowed" 20
+                               "allowsNostr" true
+                               "nostrPubkey" "deadbeef"}
+              amount 100
+              event {}
+              comment "12345678901234567890"
+              lnurl "lnurl"]
+          (should-throw Exception "Amount 100 is below minimum of 1000"
+                        (zaps/make-zap-request wallet-response
+                                               event amount comment lnurl))))
+
+      (it "rejects if amount too large"
+        (let [wallet-response {"callback" "callback"
+                               "maxSendable" 1000000
+                               "minSendable" 1000
+                               "metadata" "metadata"
+                               "tag" "payRequest"
+                               "commentAllowed" 20
+                               "allowsNostr" true
+                               "nostrPubkey" "deadbeef"}
+              event {}
+              comment "12345678901234567890"
+              lnurl "lnurl"
+              amount 2000000]
+          (should-throw Exception "Amount 2000000 is larger than maximum of 1000000"
+                        (zaps/make-zap-request wallet-response
+                                               event amount comment lnurl))))
+
+      (it "rejects if comment too long"
+        (let [wallet-response {"callback" "callback"
+                               "maxSendable" 1000000
+                               "minSendable" 1000
+                               "metadata" "metadata"
+                               "tag" "payRequest"
+                               "commentAllowed" 20
+                               "allowsNostr" true
+                               "nostrPubkey" "deadbeef"}
+              comment "123456789012345678901"
+              amount 1000
+              event {}
+              lnurl "lnurl"]
+          (should-throw Exception "This wallet restricts comments to 20 characters"
+                        (zaps/make-zap-request wallet-response
+                                               event amount comment lnurl))))
       )
     )
   )

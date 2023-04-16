@@ -64,6 +64,16 @@
 (defn make-zap-request [wallet-response event amount comment lnurl]
   (let [{:strs [maxSendable minSendable metadata tag
                 commentAllowed allowsNostr nostrPubkey]} wallet-response
+        _ (when-not allowsNostr
+            (throw (Exception. (str "Recipient does not accept Nostr zaps."))))
+        _ (when (< amount minSendable)
+            (throw (Exception. (str "Amount " amount " is below minimum of " minSendable))))
+        _ (when (> amount maxSendable)
+            (throw (Exception. (str "Amount " amount " is larger than maximum of " maxSendable))))
+        _ (when (and (some? comment)
+                     (some? commentAllowed)
+                     (> (count comment) commentAllowed))
+            (throw (Exception. (str "This wallet restricts comments to " commentAllowed " characters"))))
         recipient (:pubkey event)
         body {:kind 9734
               :content comment
@@ -86,8 +96,6 @@
                   status reason]} wallet-response]
       (when (and (some? status) (not= status "OK"))
         (throw (Exception. (str "Wallet error: " status reason))))
-      (when-not allowsNostr
-        (throw (Exception. (str "Recipient does not accept Nostr zaps."))))
       (let [amount 1000
             comment "hi"
             zap-request (make-zap-request wallet-response event amount comment lnurl)]
