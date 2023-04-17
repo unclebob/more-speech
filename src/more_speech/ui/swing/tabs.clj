@@ -1,15 +1,16 @@
 (ns more-speech.ui.swing.tabs
   (:require
     [clojure.set :as set]
-    [more-speech.logger.default :refer [log-pr]]
     [more-speech.config :as config]
     [more-speech.config :refer [get-db]]
     [more-speech.db.gateway :as gateway]
+    [more-speech.logger.default :refer [log-pr]]
     [more-speech.mem :refer :all]
     [more-speech.nostr.events :as events]
     [more-speech.nostr.tab-searcher :as tab-searcher]
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.nostr.util :as util]
+    [more-speech.nostr.zaps :as zaps]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.article-panel :as article-panel]
     [more-speech.ui.swing.article-tree-util :as at-util]
@@ -271,6 +272,7 @@
                            (menu :text "Add article to tab" :items add-article-actions)
                            (menu :text "Block article from tab" :items block-article-actions)
                            (action :name "DM author..." :handler (partial dm-author event))
+                           (action :name "Zap author..." :handler (partial zaps/zap-author event))
                            ])]
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))))
 

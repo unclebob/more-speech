@@ -9,6 +9,7 @@
             [more-speech.mem :refer :all]
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.events :as events]
+            [more-speech.nostr.protocol :as protocol]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.zaps :as zaps]
             [more-speech.ui.formatter-util :as formatter-util]
@@ -243,6 +244,7 @@
         relay-names (map #(re-find config/relay-pattern %) (:relays event))
         event-id (select main-frame [:#id-label])
         author-name-label (select main-frame [:#author-name-label])]
+    (protocol/request-metadata-and-contacts-for-user (:pubkey event))
     (text! reactions-label (str reactions))
     (if reacted?
       (do

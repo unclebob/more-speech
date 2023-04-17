@@ -18,6 +18,14 @@
         date (Date. (long time))]
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date)))
 
+(defn request-metadata-and-contacts-for-user [author]
+  (doseq [url (keys @relays)]
+    (when (not= :read-none (get-in @relays [url :read]))
+      (let [relay (:connection (get @relays url))]
+        (when (some? relay)
+          (relay/send relay
+                      ["REQ" "ms-author" {"kinds" [0 3] "authors" [(util/hexify author)]}]))))))
+
 (defn request-contact-lists [relay]
   (let [now (quot (System/currentTimeMillis) 1000)
         days-ago config/read-contact-lists-days-ago
