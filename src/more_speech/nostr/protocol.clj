@@ -4,7 +4,7 @@
             [more-speech.mem :refer :all]
             [more-speech.mem :refer :all]
             [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.nostr.event-handlers :as handlers]
+            [more-speech.nostr.event-dispatcher :as handlers]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.util :as util]
             [more-speech.relay :as relay]

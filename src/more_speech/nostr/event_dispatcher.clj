@@ -1,4 +1,4 @@
-(ns more-speech.nostr.event-handlers
+(ns more-speech.nostr.event-dispatcher
   (:require [clojure.data.json :as json]
             [more-speech.config :as config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
@@ -8,9 +8,8 @@
             [more-speech.nostr.elliptic-signature :as ecc]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :as relays]
-            [more-speech.nostr.util :refer :all]
-            [more-speech.nostr.util :refer [unhexify]]
-            [more-speech.nostr.util :as util])
+            [more-speech.nostr.zaps :as zaps]
+            [more-speech.nostr.util :refer :all :as util])
   (:import (ecdhJava SECP256K1)))
 
 (defprotocol event-handler
@@ -126,6 +125,7 @@
         3 (contact-list/process-contact-list db event)
         4 (process-text-event db event url)
         7 (process-reaction db event)
+        9735 (zaps/process-zap-receipt event)
         nil))))
 
 (defn decrypt-his-dm [event]

@@ -1,7 +1,7 @@
 (ns more-speech.bech32-spec
-  (:require [speclj.core :refer :all]
-            [more-speech.bech32 :refer :all]
-            [more-speech.nostr.util :as util]))
+  (:require [more-speech.bech32 :refer :all]
+            [more-speech.nostr.util :as util]
+            [speclj.core :refer :all]))
 
 (describe "bech32"
   (context "charset translations"
@@ -86,5 +86,34 @@
                  (encode "npub" pubkey))
         (should= pubkey (address->number "npub19mun7qwdyjf7qs3456u8kyxncjn5u2n7klpu4utgy68k4aenzj6synjnft")))
       )
+    )
+
+  (context "decoding into strings"
+    (it "decodes into a string"
+      (let [lnurl (encode-str "lnurl" "this is the string")]
+        (should= "this is the string" (address->str lnurl))))
+
+    (it "decodes a long string"
+      (let [long-string "https://service.com/api?q=3fc3645b439ce8e7f2553a69e5267081d96dcd340693afabe04be7b0ccd178df"
+            lnurl (encode-str "lnurl" long-string)]
+        (should= long-string (address->str lnurl))))
+
+    (it "encodes and decodes a one byte string"
+           (let [known-string "t"
+                 known-lnurl "lnurl1ws4pqzkn"]
+             (should= known-lnurl (encode-str "lnurl" known-string))
+             (should= known-string (address->str known-lnurl))))
+
+    (it "encodes and decodes a known short string"
+          (let [known-string "this is the string"
+                known-lnurl "lnurl1w35xjueqd9ejqargv5s8xarjd9hxw9sar9p"]
+            (should= known-lnurl (encode-str "lnurl" known-string))
+            (should= known-string (address->str known-lnurl))))
+
+    (it "encodes and decodes a known long string"
+      (let [known-string "https://service.com/api?q=3fc3645b439ce8e7f2553a69e5267081d96dcd340693afabe04be7b0ccd178df"
+            known-lnurl "lnurl1dp68gurn8ghj7um9wfmxjcm99e3k7mf0v9cxj0m385ekvcenxc6r2c35xvukxefcv5mkvv34x5ekzd3ev56nyd3hxqurzepexejxxepnxscrvwfnv9nxzcn9xq6xyefhvgcxxcmyxymnserxfq5fns"]
+        (should= known-string (address->str known-lnurl))
+        (should= known-lnurl (encode-str "lnurl" known-string))))
     )
   )

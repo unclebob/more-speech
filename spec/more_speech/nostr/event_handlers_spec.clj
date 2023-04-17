@@ -1,6 +1,6 @@
 (ns more-speech.nostr.event-handlers-spec
   (:require [speclj.core :refer :all]
-            [more-speech.nostr.event-handlers :as handlers]
+            [more-speech.nostr.event-dispatcher :as handlers]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
             [more-speech.config :as config]

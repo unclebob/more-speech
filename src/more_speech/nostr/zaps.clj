@@ -7,10 +7,12 @@
     [more-speech.config :refer [get-db]]
     [more-speech.db.gateway :as gateway]
     [more-speech.logger.default :refer [log-pr]]
+    [more-speech.mem :refer :all]
     [more-speech.nostr.event-composers :as composers]
     [more-speech.nostr.events :as events]
     [more-speech.nostr.relays :as relays]
-    [more-speech.nostr.util :as util])
+    [more-speech.nostr.util :as util]
+    [more-speech.ui.formatter-util :as formatter-util])
   (:use (seesaw [core]))
   (:import (java.net URLEncoder)))
 
@@ -52,7 +54,8 @@
       (get-zap-address-from-profile event))))
 
 (defn parse-lud16 [lud16]
-  (let [match (re-matches config/lud16-pattern lud16)]
+  (let [lud16 (.toLowerCase lud16)
+        match (re-matches config/lud16-pattern lud16)]
     (if (some? match)
       [(nth match 1) (nth match 2)]
       (throw (Exception. (str "bad lud16 format " lud16)))))
@@ -80,7 +83,7 @@
               :content comment
               :tags [(concat ["relays"] (relays/relays-for-reading))
                      ["amount" (str amount)]
-                     ["lnurl" (bech32/encode "lnurl" (util/bytes->num (.getBytes lnurl)))]
+                     ["lnurl" (bech32/encode-str "lnurl" lnurl)]
                      ["p" (util/hexify recipient)]
                      ["e" (util/hexify (:id event))]]}
         [_ request] (composers/body->event body)]
@@ -114,10 +117,23 @@
             _ (when (and (some? json-status) (= "ERROR" json-status))
                 (throw (Exception. (str "Invoice request error: " (get invoice-json "reason")))))
             invoice (get invoice-json "pr")]
-        (prn 'zap-author invoice)
-        (prn 'zap-author 'metadata metadata))
+        (update-mem :pending-zaps assoc invoice {:id (:id event)
+                                                 :amount amount})
+        (util/copy-to-clipboard invoice)
+        (alert (str "Invoice is copied to clipboard.\n"
+                    "Paste it into your wallet and Zap!\n\n"
+                    (formatter-util/abbreviate invoice 20)
+                    (subs invoice (- (count invoice) 5)))))
       )
     (catch Exception e
       (log-pr 1 'zap-author (.getMessage e))
-      (alert (str "Cannot zap. " (.getMessage e)))))
-  )
+      (alert (str "Cannot zap. " (.getMessage e))))))
+
+(defn process-zap-receipt [event]
+  (prn 'zap-receipt event)
+  (let [[[receipt-invoice]] (events/get-tag event :bolt11)
+        transaction (get-mem [:pending-zaps receipt-invoice])]
+    (when (some? transaction)
+      (let [{:keys [id amount]} transaction]
+        (prn 'got-zap-receipt (util/hexify id) (/ amount 1000) 'sats)
+        (update-mem :pending-zaps dissoc receipt-invoice)))))

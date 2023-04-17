@@ -4,7 +4,7 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
-            [more-speech.nostr.event-handlers :as handlers]
+            [more-speech.nostr.event-dispatcher :as handlers]
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatter-util :as formatter-util]
             [more-speech.ui.swing.article-panel :as article-panel]

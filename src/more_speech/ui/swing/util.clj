@@ -3,7 +3,8 @@
             [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
             [more-speech.mem :refer :all]
-            [more-speech.nostr.event-handlers :as event-handlers]
+            [more-speech.nostr.event-dispatcher :as event-handlers]
+            [more-speech.nostr.util :as util]
             [more-speech.ui.swing.article-tree-util :as at-util])
   (:use (seesaw [core]))
   (:import (java.awt.datatransfer StringSelection)))
@@ -96,12 +97,8 @@
   (let [send-chan (get-mem :send-chan)]
     (future (async/>!! send-chan [:relaunch]))))
 
-(defn- get-clipboard []
-  (.getSystemClipboard (java.awt.Toolkit/getDefaultToolkit)))
-
 (defn copy-to-clipboard [text _e]
-  (let [selection (StringSelection. text)]
-    (.setContents (get-clipboard) selection selection)))
+  (util/copy-to-clipboard text))
 
 (defn load-event [id]
   (let [event (gateway/get-event (config/get-db) id)

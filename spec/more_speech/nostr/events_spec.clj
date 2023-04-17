@@ -3,7 +3,7 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
             [more-speech.nostr.events :refer :all]
-            [more-speech.nostr.event-handlers :refer :all]
+            [more-speech.nostr.event-dispatcher :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.util :refer :all]
             [more-speech.mem :refer :all]

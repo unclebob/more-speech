@@ -25,7 +25,7 @@
     (log-pr 1 'main arg 'start)
     (when (= "test" arg)
       (config/test-run!))
-    (when (re-matches #"hours:\d+" arg)
+    (when (and (some? arg) (re-matches #"hours:\d+" arg))
       (let [hours (Integer/parseInt (subs arg 6))]
         (set-mem :request-hours-ago hours))
       )

@@ -46,16 +46,22 @@
     :else
     cksum))
 
-(defn parse-address [address]
-  (let [address (validate-address-length (.toLowerCase address))
-        hrp-end (find-separator-char address)
-        hrp (validate-hrp (subs address 0 hrp-end))
-        data-and-cksum (subs address (inc hrp-end))
-        cksum (apply str (take-last 6 data-and-cksum))
-        cksum (validate-cksum cksum)
-        data (apply str (drop-last 6 data-and-cksum))
-        data (validate-data data)]
-    [hrp data cksum]))
+(defn parse-address
+  ([address]
+   (parse-address address #{}))
+
+  ([address options]
+   (let [address (.toLowerCase address)
+         _ (when-not (contains? options :no-length-restriction)
+             (validate-address-length address))
+         hrp-end (find-separator-char address)
+         hrp (validate-hrp (subs address 0 hrp-end))
+         data-and-cksum (subs address (inc hrp-end))
+         cksum (apply str (take-last 6 data-and-cksum))
+         cksum (validate-cksum cksum)
+         data (apply str (drop-last 6 data-and-cksum))
+         data (validate-data data)]
+     [hrp data cksum])))
 
 (def generator [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3])
 
@@ -120,8 +126,64 @@
                  (recur (quot id 32) (conj data (int (rem id 32))) (dec chars))))
         cksum-data (create-checksum hrp data)
         ]
-    (str hrp "1" (apply str (map to-char (concat data cksum-data))))
-    ))
+    (str hrp "1" (apply str (map to-char (concat data cksum-data))))))
+
+; The bech32 coding converts streams of bytes into streams of 5-bit integers.
+; The numbers 5 and 8 are mutually prime so there will usually be a remainder.
+; That remainder is the number of zero bits on the end of the encoded stream.
+; Thus, a single byte abcdefgh gets encoded as two five bit integer
+; as abcde fgh00.
+
+(defn- align-num [n the-string]
+  (let [n-bits (* 8 (count the-string))
+        r (rem n-bits 5)]
+    (if (zero? r)
+      n
+      (let [shift-n (- 5 r)
+            shift-factor (reduce * (repeat shift-n 2))]
+        (* n shift-factor)))))
+
+(defn- str->num [the-string]
+  (loop [s the-string
+         n 0N]
+    (if (empty? s)
+      (align-num n the-string)
+      (recur (rest s) (+ (* 256 n) (int (first s)))))))
+
+(defn- num->32bit-data [n]
+  (loop [n n
+         data (list)]
+    (if (zero? n)
+      data
+      (recur (quot n 32) (conj data (int (rem n 32)))))))
+
+(defn encode-str
+  "create a bech32 representation of a string"
+  [hrp s]
+  (let [big-number (str->num s)
+        data (num->32bit-data big-number)
+        cksum-data (create-checksum hrp data)]
+    (str hrp "1" (apply str (map to-char (concat data cksum-data))))))
+
+(defn address->str [address]
+  (let [[hrp data cksum] (parse-address address #{:no-length-restriction})
+        valid? (verify-checksum? [hrp data cksum])]
+    (if valid?
+      (let [values (map to-n data)
+            accumulator (reduce (fn [n value]
+                          (+ value (* n 32)))
+                        0N values)
+            n-bits (* 5 (count data))
+            shift-n (rem n-bits 8)
+            aligned-accumulator (quot accumulator (reduce * (repeat shift-n 2)))]
+        (loop [n aligned-accumulator
+               chars (list)]
+          (if (zero? n)
+            (apply str chars)
+            (recur (quot n 256) (conj chars (char (rem n 256)))))))
+      (throw (Exception. "bech32/address->str: invalid checksum")))
+    )
+  )
 
 (defn address->number [address]
   (let [[hrp data cksum] (parse-address address)

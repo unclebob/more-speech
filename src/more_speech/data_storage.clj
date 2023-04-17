@@ -6,7 +6,7 @@
             [more-speech.db.xtdb :as xtdb]
             [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
-            [more-speech.nostr.event-handlers :as handlers]
+            [more-speech.nostr.event-dispatcher :as handlers]
             [more-speech.nostr.relays :as relays]
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatter-util :as fu]

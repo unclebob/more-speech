@@ -1,5 +1,6 @@
 (ns more-speech.nostr.zaps-spec
   (:require
+    [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
     [more-speech.db.gateway :as gateway]
     [more-speech.db.in-memory :as in-memory]
@@ -102,6 +103,7 @@
                 amount 100
                 comment "comment"
                 lnurl "lnurl"
+                b32-lnurl (bech32/encode-str "lnurl" lnurl)
                 my-privkey 0xb0b
                 my-pubkey (util/bytes->num (es/get-pub-key (util/num->bytes 32 my-privkey)))
                 _ (set-mem :pubkey my-pubkey)
@@ -120,7 +122,7 @@
             (should= (util/get-now) created_at)
             (should (contains? tags ["relays" "relay-r1" "relay-r2"]))
             (should (contains? tags ["amount" "100"]))
-            (should (contains? tags ["lnurl" "lnurl1qqqxcmn4wfkqzejtan"]))
+            (should (contains? tags ["lnurl" b32-lnurl]))
             (should (contains? tags ["p" (util/hexify recipient-id)]))
             (should (contains? tags ["e" (util/hexify event-id)])))))
 

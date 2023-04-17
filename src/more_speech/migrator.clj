@@ -7,7 +7,7 @@
             [more-speech.nostr
              [util :as util]
              [elliptic-signature :as ecc]
-             [event-handlers :as handlers]]
+             [event-dispatcher :as handlers]]
             [more-speech.data-storage :as data-storage]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.db.gateway :as gateway]

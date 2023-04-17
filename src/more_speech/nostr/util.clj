@@ -1,5 +1,7 @@
 (ns more-speech.nostr.util
-  (:import (java.security MessageDigest SecureRandom)))
+  (:import (java.awt Toolkit)
+           (java.awt.datatransfer StringSelection)
+           (java.security MessageDigest SecureRandom)))
 
 (defn num->bytes
   "Returns the byte-array representation of n.
@@ -87,3 +89,10 @@
 
 (defn get-now []
   (quot (get-now-ms) 1000))
+
+(defn get-clipboard []
+  (.getSystemClipboard (Toolkit/getDefaultToolkit)))
+
+(defn copy-to-clipboard [text]
+  (let [selection (StringSelection. text)]
+    (.setContents (get-clipboard) selection selection)))
