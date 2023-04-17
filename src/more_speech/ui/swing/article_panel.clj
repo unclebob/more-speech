@@ -10,6 +10,7 @@
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.util :as util]
+            [more-speech.nostr.zaps :as zaps]
             [more-speech.ui.formatter-util :as formatter-util]
             [more-speech.ui.formatter-util :as f-util]
             [more-speech.ui.formatters :as formatters]
@@ -82,19 +83,26 @@
   (when-let [profile (gateway/get-profile (get-db) id)]
     (show-profile profile)))
 
-(defn user-name-click [e]
+(defn user-name-click [type frame e]
   (let [x (.x (.getPoint e))
         y (.y (.getPoint e))
         node (.getComponent e)
         pubkey (config node :user-data)
         hex-id (util/hexify pubkey)
         npub (bech32/encode "npub" pubkey)
-        p (popup :items [(action :name (str "Copy " (subs hex-id 0 10) "...")
-                                 :handler (partial copy-to-clipboard hex-id))
-                         (action :name (str "Copy " (subs npub 0 10) "...")
-                                 :handler (partial copy-to-clipboard npub))
-                         (action :name "Get info..."
-                                 :handler (fn [_e] (show-user-profile pubkey)))])]
+        event-id (config (select frame [:#id-label]) :user-data)
+        event (gateway/get-event (get-db) event-id)
+        popup-items [(action :name (str "Copy " (subs hex-id 0 10) "...")
+                             :handler (partial copy-to-clipboard hex-id))
+                     (action :name (str "Copy " (subs npub 0 10) "...")
+                             :handler (partial copy-to-clipboard npub))
+                     (action :name "Get info..."
+                             :handler (fn [_e] (show-user-profile pubkey)))]
+        popup-items (if (= type :author)
+                      (conj popup-items (action :name "Zap author..."
+                                                :handler (partial zaps/zap-author event)))
+                      popup-items)
+        p (popup :items popup-items)]
     (.show p (to-widget e) x y)))
 
 (defn reaction-click [polarity]
@@ -128,7 +136,23 @@
         relays-popup (popup :enabled? false)
         relays-label (label :id :relays-label :user-data relays-popup)
         up-arrow (label :text " " :id :up-arrow)
-        dn-arrow (label :text " " :id :dn-arrow)]
+        dn-arrow (label :text " " :id :dn-arrow)
+        grid
+        (grid-panel
+          :columns 3
+          :preferred-size [-1 :by 70]                       ;icky.
+          :items [
+                  (flow-panel :align :left :items [(bold-label "Author:") author-name-label])
+                  (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
+                  (flow-panel :align :left :items [(bold-label "Reactions:") reactions-label up-arrow dn-arrow])
+
+                  (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
+                  (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
+                  (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
+
+                  (flow-panel :align :left :items [(bold-label "id:") id-label])
+                  (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
+                  (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
     (listen relays-label
             :mouse-entered (fn [e]
                              (-> relays-popup
@@ -146,25 +170,9 @@
     (listen id-label :mouse-pressed copy-click)
     (listen up-arrow :mouse-pressed up-click)
     (listen dn-arrow :mouse-pressed dn-click)
-    (listen author-name-label :mouse-pressed user-name-click)
-    (listen reply-to-label :mouse-pressed user-name-click)
-    (let [grid
-          (grid-panel
-            :columns 3
-            :preferred-size [-1 :by 70]                     ;icky.
-            :items [
-                    (flow-panel :align :left :items [(bold-label "Author:") author-name-label])
-                    (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
-                    (flow-panel :align :left :items [(bold-label "Reactions:") reactions-label up-arrow dn-arrow])
-
-                    (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
-                    (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
-                    (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
-
-                    (flow-panel :align :left :items [(bold-label "id:") id-label])
-                    (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
-                    (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
-      grid)))
+    (listen author-name-label :mouse-pressed (partial user-name-click :author grid))
+    (listen reply-to-label :mouse-pressed (partial user-name-click :reply-to grid))
+    grid))
 
 (defn make-article-area []
   (editor-pane
