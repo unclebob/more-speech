@@ -157,6 +157,17 @@
       (gateway/add-reaction @db 1 2 "!")
       (should= {:id 1 :reactions #{[2 "!"]}}
                (gateway/get-event @db 1))))
+
+  (context "zaps"
+    (it "adds zaps to event"
+        (gateway/add-event @db {:id 1})
+        (gateway/add-zap-to-event @db 1 {:lnurl "lnurl1" :comment "zap1"})
+        (gateway/add-zap-to-event @db 1 {:lnurl "lnurl2" :comment "zap2"})
+        (gateway/sync-db @db)
+        (should= {:id 1N, :zaps {"lnurl1" {:comment "zap1"},
+                                "lnurl2" {:comment "zap2"}}}
+                 (gateway/get-event @db 1))
+        ))
   )
 
 

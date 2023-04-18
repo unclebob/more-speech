@@ -40,9 +40,15 @@
     (gateway/add-event @db {:id 2 :pubkey 1002 :created-at 200})
     (gateway/add-event @db {:id 3 :pubkey 1003 :created-at 300})
     (gateway/add-event @db {:id 4 :pubkey 1004 :created-at 400})
+    (should= #{1003 1004} (gateway/get-some-recent-event-authors @db 200)))
 
-    (should= #{1003 1004} (gateway/get-some-recent-event-authors @db 200))
-
+  (it "adds zaps to event"
+    (gateway/add-event @db {:id 1})
+    (gateway/add-zap-to-event @db 1 {:lnurl "lnurl1" :comment "zap1"})
+    (gateway/add-zap-to-event @db 1 {:lnurl "lnurl2" :comment "zap2"})
+    (should= {:id 1, :zaps {"lnurl1" {:comment "zap1"},
+                            "lnurl2" {:comment "zap2"}}}
+             (gateway/get-event @db 1))
     )
 
   )

@@ -13,6 +13,7 @@
 (defmulti get-ids-that-cite-since (fn [db _id _start-time] (::type db)))
 (defmulti update-event-as-read (fn [db _id] (::type db)))
 (defmulti add-relays-to-event (fn [db _id _relays] (::type db)))
+(defmulti add-zap-to-event (fn [db _id _zap] (::type db)))
 (defmulti add-reference-to-event (fn [db _id _reference] (::type db)))
 (defmulti add-contacts (fn [db _user-id _contacts] (::type db)))
 (defmulti add-contacts-map (fn [db _contacts-map] (::type db)))

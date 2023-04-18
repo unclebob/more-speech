@@ -70,6 +70,12 @@
         updated-relays (set (concat (:relays event) relays))]
     (swap! (:data db) assoc-in [:text-event-map id :relays] updated-relays)))
 
+(defmethod gateway/add-zap-to-event ::type [db id zap]
+  (let [{:keys [lnurl]} zap]
+    (swap! (:data db)
+           update-in [:text-event-map id :zaps]
+           assoc lnurl (dissoc zap :lnurl))))
+
 (defmethod gateway/add-reference-to-event ::type [db id reference]
   (swap! (:data db)
          update-in [:text-event-map id :references] conj reference))

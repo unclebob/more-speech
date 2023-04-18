@@ -153,6 +153,12 @@
   (let [[[receipt-invoice]] (events/get-tag event :bolt11)
         transaction (get-mem [:pending-zaps receipt-invoice])]
     (when (some? transaction)
-      (let [{:keys [id amount comment]} transaction]
-        (prn 'got-zap-receipt (util/hexify id) (/ amount 1000) 'sats comment)
+      (let [{:keys [id amount comment]} transaction
+            sats (/ amount 1000)]
+        (log-pr 1 'got-zap-receipt (util/hexify id) sats 'sats comment)
+        (gateway/add-zap-to-event (get-db)
+                                  id {:lnurl receipt-invoice
+                                      :created-at (util/get-now)
+                                      :amount sats
+                                      :comment comment})
         (update-mem :pending-zaps dissoc receipt-invoice)))))

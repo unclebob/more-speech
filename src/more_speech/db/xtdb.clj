@@ -184,6 +184,13 @@
                                 relays]])]
     (xt/await-tx node tx)))
 
+(defmethod gateway/add-zap-to-event ::type [db id zap]
+  (let [node (:node db)
+        tx (xt/submit-tx node [[::xt/fn :update-zaps
+                                {:type :event :id (bigint id)}
+                                zap]])]
+    (xt/await-tx node tx)))
+
 (defmethod gateway/add-reference-to-event ::type [db id reference]
   (let [node (:node db)
         tx (xt/submit-tx node [[::xt/fn :add-reference
@@ -273,6 +280,21 @@
                        new-relays (set (concat old-relays relays))]
                    [[::xt/put (assoc entity :relays new-relays)]]))}]]))
 
+(defn add-update-zaps [node]
+  (xt/submit-tx
+    node
+    [[::xt/put
+      {:xt/id :update-zaps
+       :xt/fn '(fn [ctx eid zap]
+                 (let [db (xtdb.api/db ctx)
+                       entity (xtdb.api/entity db eid)
+                       lnurl (:lnurl zap)
+                       zap (dissoc zap :lnurl)
+                       zaps (get entity :zaps {})
+                       zaps (assoc zaps lnurl zap)
+                       zapped-entity (assoc entity :zaps zaps)]
+                   [[::xt/put zapped-entity]]))}]]))
+
 (defn add-add-reference [node]
   (xt/submit-tx
     node
@@ -302,6 +324,7 @@
   (add-update-relays node)
   (add-add-reference node)
   (add-add-reaction node)
+  (add-update-zaps node)
   )
 
 (defn start-xtdb! [directory]
