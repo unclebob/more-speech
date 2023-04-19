@@ -50,18 +50,18 @@
         (send-subscription :relay 0 100 ["author1xxxxx" "author2xxxxxxxx"])
         (should-have-invoked
           :send {:with [:relay ["REQ" "ms-past"
-                                {"since" 0
+                                {"kinds" [0 1 2 3 4 7 9735], "since" 0
                                  "until" 100
                                  "authors" #{"author1xxx" "author2xxx"}}
-                                {"since" 0
+                                {"kinds" [0 1 2 3 4 7 9735], "since" 0
                                  "until" 100
                                  "#p" #{"0000000000000000000000000000000000000000000000000000000000000001"
                                         "0000000000000000000000000000000000000000000000000000000000000002"}}]]})
         (should-have-invoked
           :send {:with [:relay ["REQ" "ms-future"
-                                {"since" 100
+                                {"kinds" [0 1 2 3 4 7 9735], "since" 100
                                  "authors" #{"author1xxx" "author2xxx"}}
-                                {"since" 100
+                                {"kinds" [0 1 2 3 4 7 9735], "since" 100
                                  "#p" #{"0000000000000000000000000000000000000000000000000000000000000001"
                                         "0000000000000000000000000000000000000000000000000000000000000002"}}]]})))
 
@@ -71,9 +71,9 @@
         (send-subscription :relay 0 100)
         (should-have-invoked :send {:with [:relay
                                            ["REQ" "ms-past"
-                                            {"since" 0
+                                            {"kinds" [0 1 2 3 4 7 9735], "since" 0
                                              "until" 100}]]})
         (should-have-invoked :send {:with [:relay ["REQ" "ms-future"
-                                                   {"since" 100}]]})))
+                                                   {"kinds" [0 1 2 3 4 7 9735], "since" 100}]]})))
     )
   )

@@ -24,7 +24,7 @@
 
 (defn render-event [widget info]
   (if (seqable? (:value info))
-    (text! widget "Articles")
+    (text! widget "Notes")
     (let [node (:value info)
           event-id (.getUserObject node)
           event-id (if (number? event-id) event-id 0)       ;dummy event-idi
@@ -269,8 +269,8 @@
                                    :handler (partial trust-updater/trust-this-author event))
                            (menu :text "Add author to tab" :items add-author-actions)
                            (menu :text "Block author from tab" :items block-author-actions)
-                           (menu :text "Add article to tab" :items add-article-actions)
-                           (menu :text "Block article from tab" :items block-article-actions)
+                           (menu :text "Add note to tab" :items add-article-actions)
+                           (menu :text "Block note from tab" :items block-article-actions)
                            (action :name "DM author..." :handler (partial dm-author event))
                            (action :name "Zap author..." :handler (partial zaps/zap-author event))
                            ])]
