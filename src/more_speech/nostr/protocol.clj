@@ -47,8 +47,9 @@
    (send-subscription relay since now nil))
 
   ([relay since now who]
-   (let [past-filter {"since" since "until" now}
-         future-filter {"since" now}
+   (let [kind-filter {"kinds" [0 1 2 3 4 7 9735]}
+         past-filter (merge kind-filter {"since" since "until" now})
+         future-filter (merge kind-filter {"since" now})
          short-who (map #(subs % 0 10) who)
          trustees (contact-list/get-trustees)
          trustees (if (empty? trustees) [] (map util/hexify trustees))
