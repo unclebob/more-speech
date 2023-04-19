@@ -138,12 +138,14 @@
         relays-label (label :id :relays-label :user-data relays-popup)
         up-arrow (label :text " " :id :up-arrow)
         dn-arrow (label :text " " :id :dn-arrow)
+        zaps-popup (popup :enabled? false)
+        zap-icon (label :text " " :id :zap-icon :user-data zaps-popup)
         grid
         (grid-panel
           :columns 3
           :preferred-size [-1 :by 70]                       ;icky.
           :items [
-                  (flow-panel :align :left :items [(bold-label "Author:") author-name-label])
+                  (flow-panel :align :left :items [(bold-label "Author:") author-name-label zap-icon])
                   (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
                   (flow-panel :align :left :items [(bold-label "Reactions:") reactions-label up-arrow dn-arrow])
 
@@ -166,6 +168,13 @@
                                  (move! :to (.getLocationOnScreen e))
                                  show!))
             :mouse-exited (fn [_e] (hide! reactions-popup)))
+
+    (listen zap-icon
+            :mouse-entered (fn [e]
+                             (-> zaps-popup
+                                 (move! :to (.getLocationOnScreen e))
+                                 show!))
+            :mouse-exited (fn [_e] (hide! zaps-popup)))
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
     (listen id-label :mouse-pressed copy-click)
@@ -224,6 +233,12 @@
     (formatters/reformat-article-into-html
       (formatters/replace-references event))))
 
+(defn format-zap [[_lnurl zap]]
+  (format "%s sats %d - %s"
+          (formatter-util/format-time (:created-at zap))
+          (:amount zap)
+          (:comment zap)))
+
 (defn load-article-info [selected-id]
   (let [main-frame (get-mem :frame)
         event (gateway/get-event (get-db) selected-id)
@@ -237,11 +252,15 @@
         subject-label (select main-frame [:#subject-label])
         up-arrow (select main-frame [:#up-arrow])
         dn-arrow (select main-frame [:#dn-arrow])
+        zap-icon (select main-frame [:#zap-icon])
+        zaps-popup (config zap-icon :user-data)
+        zapped? (some? (:zaps event))
         reacted? (has-my-reaction? event)
         reactions (count (:reactions event))
         reactions-label (select main-frame [:#reactions-count])
         reactions-popup (config reactions-label :user-data)
         relay-names (map #(re-find config/relay-pattern %) (:relays event))
+        zap-items (map format-zap (:zaps event))
         event-id (select main-frame [:#id-label])
         author-name-label (select main-frame [:#author-name-label])]
     (protocol/request-metadata-and-contacts-for-user (:pubkey event))
@@ -253,10 +272,15 @@
       (do
         (text! up-arrow "👍🏻")
         (text! dn-arrow "👎🏻")))
+    (if zapped?
+      (text! zap-icon "❗ ")
+      (text! zap-icon ""))
     (swing-util/clear-popup relays-popup)
     (swing-util/clear-popup reactions-popup)
+    (swing-util/clear-popup zaps-popup)
     (config! relays-popup :items relay-names)
     (config! reactions-popup :items (reaction-items (:reactions event)))
+    (config! zaps-popup :items zap-items)
     (text! article-area (make-article-html event))
     (text! author-name-label
            (formatters/format-user-id (:pubkey event) 50))

@@ -166,8 +166,8 @@
         (gateway/sync-db @db)
         (should= {:id 1N, :zaps {"lnurl1" {:comment "zap1"},
                                 "lnurl2" {:comment "zap2"}}}
-                 (gateway/get-event @db 1))
-        ))
+                 (gateway/get-event @db 1)))
+    )
   )
 
 

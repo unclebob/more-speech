@@ -1,14 +1,14 @@
 (ns more-speech.nostr.main
-  (:require [more-speech.logger.default :refer [log log-pr]]
-            [more-speech.nostr.protocol :as protocol]
+  (:require [clojure.core.async :as async]
+            [more-speech.config :as config]
+            [more-speech.logger.default :refer [log log-pr]]
             [more-speech.mem :refer :all]
-            [more-speech.nostr.util :as util]
-            [more-speech.user-configuration :as user-configuration]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.event-composers :as composers]
+            [more-speech.nostr.protocol :as protocol]
+            [more-speech.nostr.util :as util]
             [more-speech.relay :as relay]
-            [more-speech.mem :refer :all]
-            [clojure.core.async :as async]
-            [more-speech.config :as config]))
+            [more-speech.user-configuration :as user-configuration]))
 
 (defn send-event-to-relays [msg]
   (let [urls (keys @relays)
@@ -30,11 +30,11 @@
   (protocol/initialize)
   (let [now-in-seconds (util/get-now)]
     (protocol/connect-to-relays)
-    (if (config/is-test-run?)
+    (when (and
+            (not (config/is-test-run?))
+            (user-configuration/should-import-metadata? now-in-seconds))
       (protocol/request-metadata-from-relays (- now-in-seconds 86400))
-      (when (user-configuration/should-import-metadata? now-in-seconds)
-        (protocol/request-metadata-from-relays (- now-in-seconds 86400))
-        (user-configuration/set-last-time-metadata-imported now-in-seconds)))
+      (user-configuration/set-last-time-metadata-imported now-in-seconds))
     (protocol/subscribe-to-relays subscription-time now-in-seconds)
     (when (and config/read-contacts (not (config/is-test-run?)))
       (protocol/request-contact-lists-from-relays))

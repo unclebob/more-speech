@@ -103,7 +103,7 @@
                   (str "-> " (format-user-id to)))]
     (str "🚫" to-name " ")))
 
-(defn format-header [{:keys [pubkey created-at tags] :as event}]
+(defn format-header [{:keys [pubkey created-at tags zaps] :as event}]
   (if (nil? event)
     "nil"
     (let [content (replace-references event)
@@ -113,12 +113,13 @@
           [reply-id _ _] (events/get-references event)
           reply-mark (if (some? reply-id) "^" " ")
           dm-mark (if (= 4 (:kind event)) (make-dm-mark event) "")
+          zap-mark (if (some? zaps) "❗ " "")
           reaction-mark (make-reaction-mark event)
           header-text (-> content (string/replace \newline \~) (abbreviate 130))
           content (if (empty? subject)
                     header-text
                     (abbreviate (str subject "|" header-text) 130))]
-      (format "%s%s %20s %s %s%s\n" reply-mark reaction-mark name time dm-mark content))))
+      (format "%s%s %20s %s %s%s%s\n" reply-mark reaction-mark name time zap-mark dm-mark content))))
 
 (defn format-reply [event]
   (let [content (replace-references event)
