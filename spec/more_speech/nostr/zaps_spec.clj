@@ -156,7 +156,7 @@
               event {}
               comment "12345678901234567890"
               lnurl "lnurl"]
-          (should-throw Exception "Amount 100 is below minimum of 1000"
+          (should-throw Exception "Amount 0 is below minimum of 1"
                         (zaps/make-zap-request wallet-response
                                                event amount comment lnurl))))
 
@@ -173,7 +173,7 @@
               comment "12345678901234567890"
               lnurl "lnurl"
               amount 2000000]
-          (should-throw Exception "Amount 2000000 is larger than maximum of 1000000"
+          (should-throw Exception "Amount 2000 is larger than maximum of 1000"
                         (zaps/make-zap-request wallet-response
                                                event amount comment lnurl))))
 

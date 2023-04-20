@@ -71,9 +71,15 @@
         _ (when-not allowsNostr
             (throw (Exception. (str "Recipient does not accept Nostr zaps."))))
         _ (when (< amount minSendable)
-            (throw (Exception. (str "Amount " amount " is below minimum of " minSendable))))
+            (throw (Exception. (str "Amount "
+                                    (quot amount 1000)
+                                    " is below minimum of "
+                                    (quot minSendable 1000)))))
         _ (when (> amount maxSendable)
-            (throw (Exception. (str "Amount " amount " is larger than maximum of " maxSendable))))
+            (throw (Exception. (str "Amount "
+                                    (quot amount 1000)
+                                    " is larger than maximum of "
+                                    (quot maxSendable 1000)))))
         _ (when (and (some? comment)
                      (some? commentAllowed)
                      (> (count comment) commentAllowed))

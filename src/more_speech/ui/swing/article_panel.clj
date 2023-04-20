@@ -273,7 +273,7 @@
         (text! up-arrow "👍🏻")
         (text! dn-arrow "👎🏻")))
     (if zapped?
-      (text! zap-icon "❗⚡ ")
+      (text! zap-icon "❗⚡ ") ;₿ use the bitcoin char?
       (text! zap-icon ""))
     (swing-util/clear-popup relays-popup)
     (swing-util/clear-popup reactions-popup)
