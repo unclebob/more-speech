@@ -56,13 +56,6 @@
 (def user-configuration-filename (atom "private/user-configuration"))
 (def contact-lists-filename (atom "private/ub-contacts"))
 
-(def npub-reference #"npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
-(def user-reference-pattern #"(?:\@[\w\-]+)|(?:npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)")
-(def id-reference-pattern #"\@[0-9a-f]{64}")
-(def hex-key-pattern #"[0-9a-f]{64}")
-(def user-name-chars #"[\w\-]+")
-(def reference-pattern #"\#\[\d+\]")
-
 (def proof-of-work-default 12)
 (def max-nodes-per-tab 1000)
 (def prune-tabs-frequency-in-minutes 60)
@@ -77,9 +70,20 @@
 
 ;; https://daringfireball.net/2010/07/improved_regex_for_matching_urls
 (def url-pattern #"(?i)\b(?:(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\))+(?:\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))")
+(def nostr-note-reference-pattern #"(?:\@)?nostr:note1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
+(def note-reference-pattern #"(?:\@)?note1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
+(def nostr-user-reference-pattern #"(?:\@)?nostr:npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
+(def user-reference-pattern #"(?:\@[\w\-]+)|(?:\@)?(?:npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)")
+(def id-reference-pattern #"\@[0-9a-f]{64}")
+
 (def email-pattern #"[\w.-]+@[\w.-]+")
 (def relay-pattern #"ws+://[\w.-]+/?")
 (def lud16-pattern #"([a-z0-9-_.]+)@([a-z0-9-_.]+\.[a-z0-9-_]+)")
+
+(def npub-reference #"npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
+(def hex-key-pattern #"[0-9a-f]{64}")
+(def user-name-chars #"[\w\-]+")
+(def reference-pattern #"\#\[\d+\]")
 
 (def production-db :xtdb)
 (def db-type (atom nil))

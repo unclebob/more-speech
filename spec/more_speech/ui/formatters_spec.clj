@@ -1,12 +1,12 @@
 (ns more-speech.ui.formatters-spec
-  (:require [speclj.core :refer :all]
+  (:require [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
-            [more-speech.nostr.util :refer [hexify]]
-            [more-speech.ui.formatters :refer :all]
-            [more-speech.ui.formatter-util :refer :all]
             [more-speech.mem :refer :all]
-            [more-speech.config :as config]))
+            [more-speech.nostr.util :refer [hexify]]
+            [more-speech.ui.formatter-util :refer :all]
+            [more-speech.ui.formatters :refer :all]
+            [speclj.core :refer :all]))
 
 (describe "Abbreviations."
   (it "abbreviates pubkeys"
@@ -241,12 +241,30 @@
              (segment-article "@name text")))
 
   (it "returns an :idreference segment"
-      (should= [[:idreference   "@0000000000000000000000000000000000000000000000000000000000000000"] [:text " text"]]
-               (segment-article "@0000000000000000000000000000000000000000000000000000000000000000 text")))
+    (should= [[:idreference "@0000000000000000000000000000000000000000000000000000000000000000"] [:text " text"]]
+             (segment-article "@0000000000000000000000000000000000000000000000000000000000000000 text")))
 
   (it "returns a list of :text and :url and :namereference segments"
     (should= [[:text "Hey "] [:namereference "@bob"] [:text " Check this "] [:url "http://nostr.com"] [:text " It's cool"]]
-             (segment-article "Hey @bob Check this http://nostr.com It's cool")))
+             (segment-article "Hey @bob Check this http://nostr.com It's cool"))
+    (should= [[:namereference "npub1qq"] [:text " "]
+              [:namereference "@npub1qq"] [:text " "]
+              [:nostrnamereference "nostr:npub1qq"] [:text " "]
+              [:nostrnamereference "@nostr:npub1qq"]]
+             (segment-article "npub1qq @npub1qq nostr:npub1qq @nostr:npub1qq"))
+    (should= [[:notereference "note1qq"] [:text " "]
+              [:notereference "@note1qq"] [:text " "]
+              [:nostrnotereference "nostr:note1qq"] [:text " "]
+              [:nostrnotereference "@nostr:note1qq"]]
+             (segment-article "note1qq @note1qq nostr:note1qq @nostr:note1qq")))
+  (it "extracts text from segments"
+    (should= "name" (extract-reference "@name"))
+    (should= "npub1qq" (extract-reference "npub1qq"))
+    (should= "x" (extract-reference "nostr:x"))
+    (should= "x" (extract-reference "@nostr:x"))
+    )
+
+
   )
 
 (describe "Format article"
@@ -257,11 +275,11 @@
     (should= "<a href=\"https://nostr.com\">nostr.com</a>" (reformat-article-into-html "https://nostr.com")))
 
   (it "should ms-link a namereference"
-    (should= "<a href=\"ms-namereference://@name\">@name</a>"
+    (should= "<a href=\"ms-namereference://name\">@name</a>"
              (reformat-article-into-html "@name")))
 
   (it "should ms-link an idreference"
-    (should= "<a href=\"ms-idreference://@0000000000000000000000000000000000000000000000000000000000000000\">@0000000000000000000000000000000000000000000000000000000000000000</a>"
+    (should= "<a href=\"ms-idreference://0000000000000000000000000000000000000000000000000000000000000000\">@0000000000000000000000000000000000000000000000000000000000000000</a>"
              (reformat-article-into-html "@0000000000000000000000000000000000000000000000000000000000000000")))
 
   (it "should escape HTML entities and linkify url"
@@ -273,7 +291,6 @@
 
   (it "should replace multiple spaces with &nbsp"
     (should= "one two&nbsp three&nbsp&nbsp ." (reformat-article-into-html "one two  three   .")))
-
 
   )
 
@@ -337,9 +354,9 @@
       (should= "(?<name1>pattern1)" (str pattern))))
 
   (it "combines multiple patterns and names"
-      (let [pattern (combine-patterns [:name1 #"pattern1"]
-                                      [:name2 #"pattern2"])]
-        (should= java.util.regex.Pattern (type pattern))
-        (should= "(?<name1>pattern1)|(?<name2>pattern2)" (str pattern))))
+    (let [pattern (combine-patterns [:name1 #"pattern1"]
+                                    [:name2 #"pattern2"])]
+      (should= java.util.regex.Pattern (type pattern))
+      (should= "(?<name1>pattern1)|(?<name2>pattern2)" (str pattern))))
 
   )

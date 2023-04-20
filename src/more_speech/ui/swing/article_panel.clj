@@ -273,7 +273,7 @@
         (text! up-arrow "👍🏻")
         (text! dn-arrow "👎🏻")))
     (if zapped?
-      (text! zap-icon "❗ ")
+      (text! zap-icon "❗⚡ ")
       (text! zap-icon ""))
     (swing-util/clear-popup relays-popup)
     (swing-util/clear-popup reactions-popup)
@@ -328,7 +328,8 @@
     (.startsWith subject "npub")
     (bech32/address->number subject)
 
-    :else nil))
+    :else
+    (gateway/get-id-from-username (get-db) subject)))
 
 (defn get-user-info [subject _e]
   (when-let [id (get-user-id-from-subject subject)]
@@ -345,7 +346,7 @@
 (defn open-link [e]
   (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
     (when-let [url (str (.getURL e))]
-      (let [[type subject] (string/split (.getDescription e) #"://")]
+      (let [[type subject] (string/split (.getDescription e) #"\:\/\/")]
         (cond
           (or (= type "http") (= type "https"))
           (try
@@ -355,7 +356,13 @@
               (log-pr 1 ex)))
 
           (= type "ms-idreference")
-          (let [id (util/unhexify (subs subject 1))]
+          (let [id (util/unhexify subject)]
+            (protocol/request-note id)
+            (swing-util/select-event id))
+
+          (= type "ms-notereference")
+          (let [id (bech32/address->number subject)]
+            (protocol/request-note id)
             (swing-util/select-event id))
 
           (= type "ms-namereference")

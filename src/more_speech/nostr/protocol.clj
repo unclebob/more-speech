@@ -18,23 +18,38 @@
         date (Date. (long time))]
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date)))
 
+(defn send-request [request close]
+  (doseq [url (keys @relays)]
+    (when (not= :read-none (get-in @relays [url :read]))
+      (let [relay (:connection (get @relays url))]
+        (when (some? relay)
+          (relay/send relay request)
+          (future (do (Thread/sleep 2000)
+                      (relay/send relay close))))))))
+
+(defn- make-request-id []
+  (let [r (rand-int 1000000)]
+    (str "ms-request-" r)))
+
+(defn request-note [id]
+  (let [req-id (make-request-id)
+        request ["REQ" req-id {"kinds" [1] "ids" [(util/hexify id)]} ]
+        close ["CLOSE" req-id]]
+    (send-request request close))
+  )
+
 (defn request-profiles-and-contacts-for [authors]
   (let [authors (if (coll? authors) authors [authors])
         hexified-authors (map util/hexify authors)
         trimmed-authors (if (<= (count hexified-authors) 100)
                           hexified-authors
                           (map #(subs % 0 10) (take 1000 (shuffle hexified-authors))))
-        r (rand-int 1000000)]
-    (doseq [url (keys @relays)]
-      (when (not= :read-none (get-in @relays [url :read]))
-        (let [relay (:connection (get @relays url))]
-          (when (some? relay)
-            (relay/send relay
-                        ["REQ" (str "ms-authors-" r) {"kinds" [0 3]
-                                                      "authors" trimmed-authors}])
-            (future (do (Thread/sleep 2000)
-                        (relay/send relay
-                                    ["CLOSE" (str "ms-authors-" r)])))))))))
+        r (rand-int 1000000)
+        request ["REQ" (str "ms-request-" r) {"kinds" [0 3]
+                                              "authors" trimmed-authors}]
+        close ["CLOSE" (str "ms-request-" r)]]
+    (send-request request close)
+    ))
 
 (defn request-contact-lists [relay]
   (let [now (quot (System/currentTimeMillis) 1000)

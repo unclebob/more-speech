@@ -113,7 +113,7 @@
           [reply-id _ _] (events/get-references event)
           reply-mark (if (some? reply-id) "^" " ")
           dm-mark (if (= 4 (:kind event)) (make-dm-mark event) "")
-          zap-mark (if (some? zaps) "❗ " "")
+          zap-mark (if (some? zaps) "❗⚡ " "")
           reaction-mark (make-reaction-mark event)
           header-text (-> content (string/replace \newline \~) (abbreviate 130))
           content (if (empty? subject)
@@ -162,7 +162,7 @@
     (str "<a href=\"" url "\">" uri "</a>")))
 
 (defn ms-linkify [type subject]
-  (str "<a href=\"" (str type "://" subject) "\">" subject "</a>"))
+  (str "<a href=\"" (str type "://" subject) "\">@" subject "</a>"))
 
 (defn img-ify [seg]
   (str "<a href=\"" seg "\"><img src=\"" seg "\"></a><br>" (linkify seg)))
@@ -189,9 +189,13 @@
    (segment-article content []))
 
   ([content segments]
-   (let [patterns [[:url config/url-pattern]
+   (let [patterns [[:nostrnotereference config/nostr-note-reference-pattern]
+                   [:nostrnamereference config/nostr-user-reference-pattern]
+                   [:notereference config/note-reference-pattern]
                    [:idreference config/id-reference-pattern]
-                   [:namereference config/user-reference-pattern]]
+                   [:namereference config/user-reference-pattern]
+
+                   [:url config/url-pattern]]
          pattern (apply combine-patterns patterns)
          group-names (map first patterns)]
      (loop [content content
@@ -220,12 +224,19 @@
            :else
            (concat segments (list [:text content]))))))))
 
+(defn extract-reference [s]
+  (cond
+    (.startsWith s "nostr:") (subs s 6)
+    (.startsWith s "@nostr:") (subs s 7)
+    (.startsWith s "@") (subs s 1)
+    :else s))
+
 (defn reformat-article-into-html [article]
   (let [segments (segment-article article)]
     (reduce
       (fn [formatted-content [seg-type seg]]
-        (condp = seg-type
-          :text
+        (cond
+          (= seg-type :text)
           (str formatted-content
                ((comp
                   non-breaking-spaces
@@ -234,18 +245,23 @@
                   format-replies
                   ) seg)
                )
-          :url
+
+          (= seg-type :url)
           (str formatted-content (linkify seg))
 
-          :namereference
-          (str formatted-content (ms-linkify "ms-namereference" seg))
+          (or (= seg-type :namereference) (= seg-type :nostrnamereference))
+          (str formatted-content (ms-linkify "ms-namereference" (extract-reference seg)))
 
-          :idreference
-          (str formatted-content (ms-linkify "ms-idreference" seg))
+          (= seg-type :idreference)
+          (str formatted-content (ms-linkify "ms-idreference" (subs seg 1)))
 
-          :img
+          (or (= seg-type :notereference) (= seg-type :nostrnotereference))
+          (str formatted-content (ms-linkify "ms-notereference" (extract-reference seg)))
+
+          (= seg-type :img)
           (str formatted-content (img-ify seg))
 
+          :else
           formatted-content
           ))
       ""
