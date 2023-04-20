@@ -21,13 +21,20 @@
 (defn request-profiles-and-contacts-for [authors]
   (let [authors (if (coll? authors) authors [authors])
         hexified-authors (map util/hexify authors)
+        trimmed-authors (if (<= (count hexified-authors) 100)
+                          hexified-authors
+                          (map #(subs % 0 10) (take 1000 (shuffle hexified-authors))))
         r (rand-int 1000000)]
     (doseq [url (keys @relays)]
       (when (not= :read-none (get-in @relays [url :read]))
         (let [relay (:connection (get @relays url))]
           (when (some? relay)
             (relay/send relay
-                        ["REQ" (str "ms-authors-" r) {"kinds" [0 3] "authors" hexified-authors}])))))))
+                        ["REQ" (str "ms-authors-" r) {"kinds" [0 3]
+                                                      "authors" trimmed-authors}])
+            (future (do (Thread/sleep 2000)
+                        (relay/send relay
+                                    ["CLOSE" (str "ms-authors-" r)])))))))))
 
 (defn request-contact-lists [relay]
   (let [now (quot (System/currentTimeMillis) 1000)

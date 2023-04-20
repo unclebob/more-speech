@@ -40,7 +40,7 @@
   (let [value (:value item)]
     (if (string? value)
       (text! widget value)
-      (text! widget (first value)))))
+      (text! widget (formatters/format-user-id (second value) 70 40)))))
 
 (defn load-recent-users []
   (let [after (- (util/get-now) (* 86400 1))
@@ -71,7 +71,17 @@
 
 (defn load-user-window-data []
   (load-trusted-users)
-  (load-recent-users))
+  (if (= (get-mem [:user-window :selection-group]) :web-of-trust-items)
+    (load-web-of-trust-users)
+    (load-recent-users)))
+
+(defn reload-user-window-data [frame]
+  (load-user-window-data)
+  (let [selected-listbox (select frame [:#selected-users])
+        trusted-listbox (select frame [:#trusted-users-listbox])
+        selected-group (get-mem [:user-window :selection-group])]
+      (config! selected-listbox :model (get-mem [:user-window selected-group]))
+      (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))))
 
 (defn select-recent-users [frame _e]
   (set-mem [:user-window :selection-group] :recent-user-items)
@@ -185,6 +195,8 @@
                              :listen [:action (partial trust-selection users-frame)])
         untrust-button (button :text "Untrust->"
                                :listen [:action (partial untrust-selection users-frame)])
+        reload-button (button :text "Reload"
+                              :listen [:action (fn [_e] (reload-user-window-data users-frame))])
         selection-group (button-group)
         web-of-trust-button (radio :text "Web of trust"
                                    :group selection-group
@@ -208,7 +220,8 @@
 
         users-panel (horizontal-panel :items [trusted-users-panel
                                               (vertical-panel :items [trust-button
-                                                                      untrust-button])
+                                                                      untrust-button
+                                                                      reload-button])
                                               selection-panel])
         user-window-timer (Timer. "User window timer")
         user-window-repaint-task (proxy [TimerTask] []
