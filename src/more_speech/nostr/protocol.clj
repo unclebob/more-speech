@@ -18,13 +18,16 @@
         date (Date. (long time))]
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date)))
 
-(defn request-metadata-and-contacts-for-user [author]
-  (doseq [url (keys @relays)]
-    (when (not= :read-none (get-in @relays [url :read]))
-      (let [relay (:connection (get @relays url))]
-        (when (some? relay)
-          (relay/send relay
-                      ["REQ" "ms-author" {"kinds" [0 3] "authors" [(util/hexify author)]}]))))))
+(defn request-profiles-and-contacts-for [authors]
+  (let [authors (if (coll? authors) authors [authors])
+        hexified-authors (map util/hexify authors)
+        r (rand-int 1000000)]
+    (doseq [url (keys @relays)]
+      (when (not= :read-none (get-in @relays [url :read]))
+        (let [relay (:connection (get @relays url))]
+          (when (some? relay)
+            (relay/send relay
+                        ["REQ" (str "ms-authors-" r) {"kinds" [0 3] "authors" hexified-authors}])))))))
 
 (defn request-contact-lists [relay]
   (let [now (quot (System/currentTimeMillis) 1000)
@@ -261,6 +264,8 @@
         check-open-task (proxy [TimerTask] []
                           (run [] (check-all-active-relays)))
         s60 (long 60000)]
+    (doseq [kind [0 1 2 3 4 7 9735]]
+      (set-mem [:event-counter :kinds kind] 0))
     (.schedule timer check-open-task s60 s60)))
 
 

@@ -8,8 +8,8 @@
             [more-speech.nostr.elliptic-signature :as ecc]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :as relays]
-            [more-speech.nostr.zaps :as zaps]
-            [more-speech.nostr.util :refer :all :as util])
+            [more-speech.nostr.util :refer :all :as util]
+            [more-speech.nostr.zaps :as zaps])
   (:import (ecdhJava SECP256K1)))
 
 (defprotocol event-handler
@@ -113,9 +113,11 @@
 (defn process-event [event url]
   (let [db (get-db)
         {:keys [id pubkey _created-at kind _tags _content sig]} event
-        valid? (ecc/do-verify (util/num->bytes 32 id)
-                              (util/num->bytes 32 pubkey)
-                              (util/num->bytes 64 sig))]
+        valid? (if (contains? config/kinds-not-to-validate kind)
+                 true
+                 (ecc/do-verify (util/num->bytes 32 id)
+                                (util/num->bytes 32 pubkey)
+                                (util/num->bytes 64 sig)))]
     (if (not valid?)
       (log-pr 1 'signature-verification-failed url event)
       (condp = kind

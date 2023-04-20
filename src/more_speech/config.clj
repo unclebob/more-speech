@@ -18,6 +18,8 @@
 (def migration-level 10)
 (def version "2023-04-19T14:41")
 
+(def kinds-not-to-validate [7])
+
 (def subscription-id-base "ms")
 
 (def test-run? (atom false))

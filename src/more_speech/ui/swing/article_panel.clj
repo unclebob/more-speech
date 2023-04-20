@@ -263,7 +263,7 @@
         zap-items (map format-zap (:zaps event))
         event-id (select main-frame [:#id-label])
         author-name-label (select main-frame [:#author-name-label])]
-    (protocol/request-metadata-and-contacts-for-user (:pubkey event))
+    (protocol/request-profiles-and-contacts-for (:pubkey event))
     (text! reactions-label (str reactions))
     (if reacted?
       (do

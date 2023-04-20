@@ -81,15 +81,23 @@
     (show! main-frame)
     (log-pr 2 'make-main-window 'shown)))
 
+(defn repaint-main-window []
+  (let [frame (get-mem :frame)]
+    (when (some? frame)
+      (.repaint frame))))
+
 (defn setup-main-timer []
   (let [main-timer (Timer. "main timer")
         prune-tabs-task (proxy [TimerTask] []
                           (run [] (tabs/prune-tabs)))
+        repaint-task (proxy [TimerTask] []
+                       (run [] (repaint-main-window)))
         prune-tabs-frequency (* config/prune-tabs-frequency-in-minutes 60 1000)]
     (.schedule main-timer
                prune-tabs-task
                (long prune-tabs-frequency)
-               (long prune-tabs-frequency))))
+               (long prune-tabs-frequency))
+    (.schedule main-timer repaint-task 1000 1000)))
 
 (defn setup-main-window []
   (setup-main-timer)

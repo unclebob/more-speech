@@ -16,9 +16,11 @@
     [more-speech.ui.swing.article-panel :as article-panel]
     [more-speech.ui.swing.tabs :as tabs])
   (:use (seesaw [core]))
-  (:import (java.awt Point)))
+  (:import (java.awt Point)
+           (java.util Timer TimerTask)))
 
-(defn close-users-frame [users-menu _e]
+(defn close-users-frame [users-menu timer _e]
+  (.cancel timer)
   (config! users-menu :enabled? true)
   (when (get-mem [:user-window :contact-list-changed])
     (when-not (config/is-test-run?)
@@ -47,13 +49,15 @@
                        (set (get-mem [:user-window :trusted-users])))
         recent-user-items (make-sorted-listbox-items recent-users)]
     (set-mem [:user-window :recent-users] recent-users)
-    (set-mem [:user-window :recent-user-items] recent-user-items)))
+    (set-mem [:user-window :recent-user-items] recent-user-items)
+    (protocol/request-profiles-and-contacts-for recent-users)))
 
 (defn load-trusted-users []
   (let [trusted-users (contact-list/get-trustees)]
     (set-mem [:user-window :trusted-users] trusted-users)
     (set-mem [:user-window :trusted-user-items]
-             (make-sorted-listbox-items trusted-users))))
+             (make-sorted-listbox-items trusted-users))
+    (protocol/request-profiles-and-contacts-for trusted-users)))
 
 (defn load-web-of-trust-users []
   (let [web-of-trust-ids (contact-list/get-web-of-trust)
@@ -62,7 +66,8 @@
                                      (set (get-mem [:user-window :trusted-users])))]
     (set-mem [:user-window :web-of-trust-users] reduced-web-of-trust-users)
     (set-mem [:user-window :web-of-trust-items]
-             (make-sorted-listbox-items reduced-web-of-trust-users))))
+             (make-sorted-listbox-items reduced-web-of-trust-users))
+    (protocol/request-profiles-and-contacts-for reduced-web-of-trust-users)))
 
 (defn load-user-window-data []
   (load-trusted-users)
@@ -164,6 +169,9 @@
     )
   )
 
+(defn- repaint-user-window [frame]
+  (.repaint frame))
+
 (defn make-users-frame [_e]
   (let [users-menu (select (get-mem :frame) [:#users-menu])
         users-frame (frame :title "Users")
@@ -201,15 +209,19 @@
         users-panel (horizontal-panel :items [trusted-users-panel
                                               (vertical-panel :items [trust-button
                                                                       untrust-button])
-                                              selection-panel])]
+                                              selection-panel])
+        user-window-timer (Timer. "User window timer")
+        user-window-repaint-task (proxy [TimerTask] []
+                                   (run [] repaint-user-window users-frame))]
     (set-mem [:user-window :selection-group] :recent-user-items)
     (load-user-window-data)
     (config! trusted-users-listbox :model (get-mem [:user-window :trusted-user-items]))
     (config! selected-listbox :model (get-mem [:user-window :recent-user-items]))
     (config! users-frame :content users-panel)
-    (listen users-frame :window-closing (partial close-users-frame users-menu))
+    (listen users-frame :window-closing (partial close-users-frame users-menu user-window-timer))
     (listen trusted-users-listbox :mouse-pressed (partial listbox-click trusted-users-listbox))
     (listen selected-listbox :mouse-pressed (partial listbox-click selected-listbox))
     (config! users-menu :enabled? false)
+    (.schedule user-window-timer user-window-repaint-task 1000 1000)
     (pack! users-frame)
     (show! users-frame)))

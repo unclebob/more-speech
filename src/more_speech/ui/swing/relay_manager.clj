@@ -214,7 +214,9 @@
       (config! relays-menu :enabled? false)
       (set-mem :relay-manager-frame relay-frame)
       (config! relay-frame :content relay-box)
-      (listen relay-frame :window-closing close-relay-manager)
+      (listen relay-frame :window-closing (partial
+                                            close-relay-manager
+                                            relay-manager-timer))
       (scroll-to-top relay-box)
       (show! relay-frame)
       (.schedule relay-manager-timer relay-manager-task 1000 1000)
@@ -240,7 +242,8 @@
                (.startsWith (config field :text) "<"))
       (config! field :text "wss://"))))
 
-(defn close-relay-manager [_e]
+(defn close-relay-manager [timer _e]
+  (.cancel timer)
   (set-mem :relay-manager-frame nil)
   (let [relays-menu (select (get-mem :frame) [:#relays-menu])]
     (config! relays-menu :enabled? true)))
