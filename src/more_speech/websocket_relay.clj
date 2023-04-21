@@ -26,7 +26,7 @@
     (when last
       (try
         (let [envelope (json/read-str (.toString buffer))]
-          ((:recv callbacks) relay envelope))
+          ((:recv callbacks) (::url relay) envelope))
         (catch Exception e
           (log-pr 1 'onText url (.getMessage e))
           (log-pr 1 (.toString buffer))))
