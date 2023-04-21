@@ -45,7 +45,9 @@
 (defn id-click [e]
   (if (.isPopupTrigger e)
     (copy-click e)
-    (swing-util/select-event (config e :user-data))))
+    (let [id (config e :user-data)]
+      (protocol/request-note id)
+      (swing-util/select-event id))))
 
 (defn make-html-document [style body]
   (str "<head>" style "</head>"
