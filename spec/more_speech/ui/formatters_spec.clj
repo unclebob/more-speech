@@ -247,24 +247,14 @@
   (it "returns a list of :text and :url and :namereference segments"
     (should= [[:text "Hey "] [:namereference "@bob"] [:text " Check this "] [:url "http://nostr.com"] [:text " It's cool"]]
              (segment-article "Hey @bob Check this http://nostr.com It's cool"))
-    (should= [[:namereference "npub1qq"] [:text " "]
-              [:namereference "@npub1qq"] [:text " "]
-              [:nostrnamereference "nostr:npub1qq"] [:text " "]
-              [:nostrnamereference "@nostr:npub1qq"]]
-             (segment-article "npub1qq @npub1qq nostr:npub1qq @nostr:npub1qq"))
-    (should= [[:notereference "note1qq"] [:text " "]
-              [:notereference "@note1qq"] [:text " "]
-              [:nostrnotereference "nostr:note1qq"] [:text " "]
-              [:nostrnotereference "@nostr:note1qq"]]
-             (segment-article "note1qq @note1qq nostr:note1qq @nostr:note1qq")))
+    (should= [[:nostrnamereference "nostr:npub1qq"] [:text " "] [:nostrprofilereference "nostr:nprofile1qq"]]
+             (segment-article "nostr:npub1qq nostr:nprofile1qq"))
+    (should= [[:nostrnotereference "nostr:note1qq"] [:text " "] [:nostreventreference "nostr:nevent1qq"]]
+             (segment-article "nostr:note1qq nostr:nevent1qq")))
   (it "extracts text from segments"
     (should= "name" (extract-reference "@name"))
     (should= "npub1qq" (extract-reference "npub1qq"))
-    (should= "x" (extract-reference "nostr:x"))
-    (should= "x" (extract-reference "@nostr:x"))
-    )
-
-
+    (should= "x" (extract-reference "nostr:x")))
   )
 
 (describe "Format article"

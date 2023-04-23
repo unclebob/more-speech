@@ -1,13 +1,14 @@
 (ns more-speech.ui.formatters
   (:require [clojure.string :as string]
-            [more-speech.logger.default :refer [log-pr]]
-            [more-speech.nostr.util :as util :refer [hexify]]
-            [more-speech.mem :refer :all]
-            [more-speech.nostr.events :as events]
-            [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.ui.formatter-util :refer :all]
+            [more-speech.bech32 :as bech32]
             [more-speech.config :as config :refer [get-db]]
-            [more-speech.db.gateway :as gateway]))
+            [more-speech.db.gateway :as gateway]
+            [more-speech.logger.default :refer [log-pr]]
+            [more-speech.mem :refer :all]
+            [more-speech.nostr.contact-list :as contact-list]
+            [more-speech.nostr.events :as events]
+            [more-speech.nostr.util :as util :refer [hexify]]
+            [more-speech.ui.formatter-util :refer :all]))
 
 (defn format-user-id
   ([user-id]
@@ -190,11 +191,11 @@
 
   ([content segments]
    (let [patterns [[:nostrnotereference config/nostr-note-reference-pattern]
+                   [:nostreventreference config/nostr-event-reference-pattern]
                    [:nostrnamereference config/nostr-user-reference-pattern]
-                   [:notereference config/note-reference-pattern]
+                   [:nostrprofilereference config/nostr-profile-reference-pattern]
                    [:idreference config/id-reference-pattern]
                    [:namereference config/user-reference-pattern]
-
                    [:url config/url-pattern]]
          pattern (apply combine-patterns patterns)
          group-names (map first patterns)]
@@ -227,9 +228,15 @@
 (defn extract-reference [s]
   (cond
     (.startsWith s "nostr:") (subs s 6)
-    (.startsWith s "@nostr:") (subs s 7)
     (.startsWith s "@") (subs s 1)
     :else s))
+
+(defn get-author-name [npub]
+  (let [id (bech32/address->number npub)
+        profile (gateway/get-profile (get-db) id)]
+    (if (nil? profile)
+      npub
+      (:name profile))))
 
 (defn reformat-article-into-html [article]
   (let [segments (segment-article article)]
@@ -249,13 +256,18 @@
           (= seg-type :url)
           (str formatted-content (linkify seg))
 
-          (or (= seg-type :namereference) (= seg-type :nostrnamereference))
+          (= seg-type :namereference)
           (str formatted-content (ms-linkify "ms-namereference" (extract-reference seg)))
+
+          (or (= seg-type :nostrnamereference)
+              (= seg-type :nostrprofilereference))
+          (str formatted-content (ms-linkify "ms-namereference" (get-author-name (extract-reference seg))))
 
           (= seg-type :idreference)
           (str formatted-content (ms-linkify "ms-idreference" (subs seg 1)))
 
-          (or (= seg-type :notereference) (= seg-type :nostrnotereference))
+          (or (= seg-type :nostrnotereference)
+              (= seg-type :nostreventreference))
           (str formatted-content (ms-linkify "ms-notereference" (extract-reference seg)))
 
           (= seg-type :img)

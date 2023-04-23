@@ -70,10 +70,11 @@
 
 ;; https://daringfireball.net/2010/07/improved_regex_for_matching_urls
 (def url-pattern #"(?i)\b(?:(?:[a-z][\w-]+:(?:/{1,3}|[a-z0-9%])|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\))+(?:\(?:(?:[^\s()<>]+|(?:\(?:[^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))")
-(def nostr-note-reference-pattern #"(?:\@)?nostr:note1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
-(def note-reference-pattern #"(?:\@)?note1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
-(def nostr-user-reference-pattern #"(?:\@)?nostr:npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
-(def user-reference-pattern #"(?:\@[\w\-]+)|(?:\@)?(?:npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)")
+(def nostr-note-reference-pattern #"nostr:note1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
+(def nostr-event-reference-pattern #"nostr:nevent1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
+(def nostr-user-reference-pattern #"nostr:npub1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
+(def nostr-profile-reference-pattern #"nostr:nprofile1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
+(def user-reference-pattern #"@[\w\-]+")
 (def id-reference-pattern #"\@[0-9a-f]{64}")
 
 (def email-pattern #"[\w.-]+@[\w.-]+")

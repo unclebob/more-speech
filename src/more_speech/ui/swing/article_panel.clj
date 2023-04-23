@@ -327,7 +327,8 @@
     (.startsWith subject "@")
     (composers/find-user-id (subs subject 1))
 
-    (.startsWith subject "npub")
+    (or (.startsWith subject "npub1")
+        (.startsWith subject "nprofile1"))
     (bech32/address->number subject)
 
     :else
