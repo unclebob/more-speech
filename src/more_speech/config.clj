@@ -76,6 +76,7 @@
 (def nostr-profile-reference-pattern #"nostr:nprofile1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+")
 (def user-reference-pattern #"@[\w\-]+")
 (def id-reference-pattern #"\@[0-9a-f]{64}")
+(def nostr-reference-pattern #"nostr:(\w+1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+)")
 
 (def email-pattern #"[\w.-]+@[\w.-]+")
 (def relay-pattern #"ws+://[\w.-]+/?")

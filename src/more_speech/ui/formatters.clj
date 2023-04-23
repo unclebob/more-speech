@@ -73,13 +73,32 @@
           (log-pr 1 (.getMessage e))
           "@-unknown-")))))
 
+(defn b32->user-name [b32]
+  (try
+    (:name (gateway/get-profile (get-db) (bech32/address->number b32)))
+    (catch Exception _e
+      b32)))
+
+(defn replace-nostr-references [s]
+  (let [padded-content (str " " s " ")
+        references (re-seq config/nostr-reference-pattern padded-content)
+        references (map second references)
+        references (map b32->user-name references)
+        references (map #(str "@" %) references)
+        segments (string/split padded-content config/nostr-reference-pattern)
+        referents (conj references " ")
+        replaced-content (string/trim (apply str (interleave segments referents)))]
+    replaced-content)
+  )
+
 (defn replace-references [event]
   (let [padded-content (str " " (:content event) " ")
         references (re-seq config/reference-pattern padded-content)
         segments (string/split padded-content config/reference-pattern)
         referents (mapv (partial lookup-reference event) references)
-        referents (conj referents " ")]
-    (string/trim (apply str (interleave segments referents)))))
+        referents (conj referents " ")
+        replaced-content (string/trim (apply str (interleave segments referents)))]
+    (replace-nostr-references replaced-content)))
 
 (defn get-subject [tags]
   (if (empty? tags)

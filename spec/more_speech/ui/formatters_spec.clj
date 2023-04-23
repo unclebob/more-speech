@@ -1,12 +1,14 @@
 (ns more-speech.ui.formatters-spec
-  (:require [more-speech.config :as config]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
-            [more-speech.mem :refer :all]
-            [more-speech.nostr.util :refer [hexify]]
-            [more-speech.ui.formatter-util :refer :all]
-            [more-speech.ui.formatters :refer :all]
-            [speclj.core :refer :all]))
+  (:require
+    [more-speech.bech32 :as bech32]
+    [more-speech.config :as config]
+    [more-speech.db.gateway :as gateway]
+    [more-speech.db.in-memory :as in-memory]
+    [more-speech.mem :refer :all]
+    [more-speech.nostr.util :refer [hexify]]
+    [more-speech.ui.formatter-util :refer :all]
+    [more-speech.ui.formatters :refer :all]
+    [speclj.core :refer :all]))
 
 (describe "Abbreviations."
   (it "abbreviates pubkeys"
@@ -21,6 +23,7 @@
   (with db (in-memory/get-db))
   (before-all (config/set-db! :in-memory))
   (before (in-memory/clear-db @db)
+          (clear-mem)
           (set-mem :pubkey 99))
 
   (it "formats an empty message"
@@ -98,7 +101,8 @@
 (describe "Replacing References"
   (with db (in-memory/get-db))
   (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
+  (before (in-memory/clear-db @db)
+          (clear-mem))
 
   (context "using #[n] and p tags"
     (before (gateway/add-profile @db 0 {:name "x"}))
@@ -144,7 +148,30 @@
     (it "does not replace reference if there is no p tag"
       (let [content "#[1]"
             event {:content content :tags [[:p "deadbeef"]]}]
-        (should= "#[1]" (replace-references event))))))
+        (should= "#[1]" (replace-references event))))
+
+    (it "replaces nostr:<bech32> references with @<bech32> if no user is referenced "
+      (let [content "nostr:npub1qq"
+            event {:content content}]
+        (should= "@npub1qq" (replace-references event))))
+
+    (it "replaces nostr:<bech32> references with @<username> if user exists"
+      (let [user-id (rand-int 1000000000)
+            b32 (bech32/encode "npub" user-id)
+            content (str "nostr:" b32)
+            event {:content content}]
+        (gateway/add-profile @db user-id {:name "user1"})
+        (should= "@user1" (replace-references event))))
+
+    (it "replaces multiple nostr:<bech32> references"
+      (let [user-id (rand-int 1000000000)
+            b32 (bech32/encode "npub" user-id)
+            content (str "nostr:" b32 " nostr:nprofile1qq")
+            event {:content content}]
+        (gateway/add-profile @db user-id {:name "user1"})
+        (should= "@user1 @nprofile1qq" (replace-references event))))
+    )
+  )
 
 (describe "format-reply"
   (with db (in-memory/get-db))
