@@ -275,7 +275,7 @@
         (text! up-arrow "👍🏻")
         (text! dn-arrow "👎🏻")))
     (if zapped?
-      (text! zap-icon "❗⚡ ") ;₿ use the bitcoin char?
+      (text! zap-icon "❗⚡ ")                                ;₿ use the bitcoin char?
       (text! zap-icon ""))
     (swing-util/clear-popup relays-popup)
     (swing-util/clear-popup reactions-popup)
@@ -323,16 +323,19 @@
 
 
 (defn get-user-id-from-subject [subject]
-  (cond
-    (.startsWith subject "@")
-    (composers/find-user-id (subs subject 1))
+  (try
+    (cond
+      (.startsWith subject "@")
+      (composers/find-user-id (subs subject 1))
 
-    (or (.startsWith subject "npub1")
-        (.startsWith subject "nprofile1"))
-    (bech32/address->number subject)
+      (or (.startsWith subject "npub1")
+          (.startsWith subject "nprofile1"))
+      (bech32/address->number subject)
 
-    :else
-    (gateway/get-id-from-username (get-db) subject)))
+      :else
+      (gateway/get-id-from-username (get-db) subject))
+    (catch Exception _e
+      nil)))
 
 (defn get-user-info [subject _e]
   (when-let [id (get-user-id-from-subject subject)]

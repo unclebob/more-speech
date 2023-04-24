@@ -75,16 +75,17 @@
 
 (defn b32->user-name [b32]
   (try
-    (:name (gateway/get-profile (get-db) (bech32/address->number b32)))
+    (let [name (:name (gateway/get-profile (get-db) (bech32/address->number b32)))]
+      (if (nil? name) b32 name))
     (catch Exception _e
       b32)))
 
 (defn replace-nostr-references [s]
   (let [padded-content (str " " s " ")
         references (re-seq config/nostr-reference-pattern padded-content)
-        references (map second references)
-        references (map b32->user-name references)
-        references (map #(str "@" %) references)
+        references (mapv second references)
+        references (mapv b32->user-name references)
+        references (mapv #(str "nostr:" %) references)
         segments (string/split padded-content config/nostr-reference-pattern)
         referents (conj references " ")
         replaced-content (string/trim (apply str (interleave segments referents)))]
@@ -181,8 +182,8 @@
         uri (if (= 2 (count split-url)) (second split-url) url)]
     (str "<a href=\"" url "\">" uri "</a>")))
 
-(defn ms-linkify [type subject]
-  (str "<a href=\"" (str type "://" subject) "\">@" subject "</a>"))
+(defn ms-linkify [type prefix subject]
+  (str "<a href=\"" (str type "://" subject) "\">" prefix subject "</a>"))
 
 (defn img-ify [seg]
   (str "<a href=\"" seg "\"><img src=\"" seg "\"></a><br>" (linkify seg)))
@@ -211,8 +212,9 @@
   ([content segments]
    (let [patterns [[:nostrnotereference config/nostr-note-reference-pattern]
                    [:nostreventreference config/nostr-event-reference-pattern]
-                   [:nostrnamereference config/nostr-user-reference-pattern]
+                   [:nostrnpubreference config/nostr-npub-reference-pattern]
                    [:nostrprofilereference config/nostr-profile-reference-pattern]
+                   [:nostrnamereference config/nostr-name-reference-pattern]
                    [:idreference config/id-reference-pattern]
                    [:namereference config/user-reference-pattern]
                    [:url config/url-pattern]]
@@ -276,18 +278,21 @@
           (str formatted-content (linkify seg))
 
           (= seg-type :namereference)
-          (str formatted-content (ms-linkify "ms-namereference" (extract-reference seg)))
+          (str formatted-content (ms-linkify "ms-namereference" "@" (extract-reference seg)))
 
-          (or (= seg-type :nostrnamereference)
+          (= seg-type :nostrnamereference)
+          (str formatted-content (ms-linkify "ms-namereference" "nostr:" (extract-reference seg)))
+
+          (or (= seg-type :nostrnpubreference)
               (= seg-type :nostrprofilereference))
-          (str formatted-content (ms-linkify "ms-namereference" (get-author-name (extract-reference seg))))
+          (str formatted-content (ms-linkify "ms-namereference" "nostr:" (get-author-name (extract-reference seg))))
 
           (= seg-type :idreference)
-          (str formatted-content (ms-linkify "ms-idreference" (subs seg 1)))
+          (str formatted-content (ms-linkify "ms-idreference" "@" (subs seg 1)))
 
           (or (= seg-type :nostrnotereference)
               (= seg-type :nostreventreference))
-          (str formatted-content (ms-linkify "ms-notereference" (extract-reference seg)))
+          (str formatted-content (ms-linkify "ms-notereference" "nostr:" (extract-reference seg)))
 
           (= seg-type :img)
           (str formatted-content (img-ify seg))

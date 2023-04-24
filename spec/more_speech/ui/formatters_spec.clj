@@ -150,26 +150,26 @@
             event {:content content :tags [[:p "deadbeef"]]}]
         (should= "#[1]" (replace-references event))))
 
-    (it "replaces nostr:<bech32> references with @<bech32> if no user is referenced "
+    (it "does not replace nostr:<bech32> if no user is referenced "
       (let [content "nostr:npub1qq"
             event {:content content}]
-        (should= "@npub1qq" (replace-references event))))
+        (should= "nostr:npub1qq" (replace-references event))))
 
-    (it "replaces nostr:<bech32> references with @<username> if user exists"
+    (it "replaces nostr:<bech32> references with nostr:<username> if user exists"
       (let [user-id (rand-int 1000000000)
             b32 (bech32/encode "npub" user-id)
             content (str "nostr:" b32)
             event {:content content}]
         (gateway/add-profile @db user-id {:name "user1"})
-        (should= "@user1" (replace-references event))))
+        (should= "nostr:user1" (replace-references event))))
 
     (it "replaces multiple nostr:<bech32> references"
       (let [user-id (rand-int 1000000000)
             b32 (bech32/encode "npub" user-id)
-            content (str "nostr:" b32 " nostr:nprofile1qq")
+            content (str "first nostr:" b32 " second nostr:nprofile1qq done.")
             event {:content content}]
         (gateway/add-profile @db user-id {:name "user1"})
-        (should= "@user1 @nprofile1qq" (replace-references event))))
+        (should= "first nostr:user1 second nostr:nprofile1qq done." (replace-references event))))
     )
   )
 
@@ -274,10 +274,11 @@
   (it "returns a list of :text and :url and :namereference segments"
     (should= [[:text "Hey "] [:namereference "@bob"] [:text " Check this "] [:url "http://nostr.com"] [:text " It's cool"]]
              (segment-article "Hey @bob Check this http://nostr.com It's cool"))
-    (should= [[:nostrnamereference "nostr:npub1qq"] [:text " "] [:nostrprofilereference "nostr:nprofile1qq"]]
+    (should= [[:nostrnpubreference "nostr:npub1qq"] [:text " "] [:nostrprofilereference "nostr:nprofile1qq"]]
              (segment-article "nostr:npub1qq nostr:nprofile1qq"))
     (should= [[:nostrnotereference "nostr:note1qq"] [:text " "] [:nostreventreference "nostr:nevent1qq"]]
              (segment-article "nostr:note1qq nostr:nevent1qq")))
+
   (it "extracts text from segments"
     (should= "name" (extract-reference "@name"))
     (should= "npub1qq" (extract-reference "npub1qq"))
@@ -285,6 +286,11 @@
   )
 
 (describe "Format article"
+  (with db (in-memory/get-db))
+  (before-all (config/set-db! :in-memory))
+  (before (in-memory/clear-db @db)
+          (clear-mem))
+
   (it "should escape HTML entities"
     (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article-into-html "<b>text</b>")))
 
@@ -309,6 +315,50 @@
   (it "should replace multiple spaces with &nbsp"
     (should= "one two&nbsp three&nbsp&nbsp ." (reformat-article-into-html "one two  three   .")))
 
+  (context "mentions"
+    (it "should replace @name with namereference link"
+      (should= "<a href=\"ms-namereference://name\">@name</a>"
+               (reformat-article-into-html "@name")))
+
+    (it "should replace nostr:name with namereference link"
+      (should= "<a href=\"ms-namereference://name\">nostr:name</a>"
+               (reformat-article-into-html "nostr:name")))
+
+    (it "should replace nostr:npub with namereference link using user's name "
+      (let [user-id (rand-int 1000000000)
+            npub (bech32/encode "npub" user-id)]
+        (gateway/add-profile @db user-id {:name "user1"})
+        (should= "<a href=\"ms-namereference://user1\">nostr:user1</a>"
+                 (reformat-article-into-html (str "nostr:" npub)))))
+
+    (it "should replace nostr:nprofile with namereference link using user's name "
+      (let [user-id (rand-int 1000000000)
+            npub (bech32/encode "nprofile" user-id)]
+        (gateway/add-profile @db user-id {:name "user1"})
+        (should= "<a href=\"ms-namereference://user1\">nostr:user1</a>"
+                 (reformat-article-into-html (str "nostr:" npub)))))
+
+    (it "should replace nostr:npub with namereference link using npub if user does not exist "
+          (let [user-id (rand-int 1000000000)
+                npub (bech32/encode "npub" user-id)]
+            (should= (str "<a href=\"ms-namereference://"
+                          npub "\">nostr:" npub "</a>")
+                     (reformat-article-into-html (str "nostr:" npub)))))
+
+    (it "should replace nostr:nevent with notereference link"
+          (let [user-id (rand-int 1000000000)
+                npub (bech32/encode "nevent" user-id)]
+            (should= (str "<a href=\"ms-notereference://"
+                          npub "\">nostr:" npub "</a>")
+                     (reformat-article-into-html (str "nostr:" npub)))))
+
+    (it "should replace nostr:note with notereference link"
+              (let [user-id (rand-int 1000000000)
+                    npub (bech32/encode "note" user-id)]
+                (should= (str "<a href=\"ms-notereference://"
+                              npub "\">nostr:" npub "</a>")
+                         (reformat-article-into-html (str "nostr:" npub)))))
+    )
   )
 
 (declare db)
