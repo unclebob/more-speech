@@ -48,22 +48,6 @@
     (send-request request)
     ))
 
-(defn request-contact-lists [relay]
-  (let [now (quot (System/currentTimeMillis) 1000)
-        days-ago config/read-contact-lists-days-ago
-        seconds-ago (int (* days-ago 86400))
-        since (int (- now seconds-ago))]
-    (relay/send relay ["REQ" "ms-contacts" {"kinds" [3] "since" since}])))
-
-(defn request-metadata [relay since]
-  (relay/send relay ["REQ" "ms-profiles" {"kinds" [0] "since" since}]))
-
-(defn add-trustees [type filters who]
-  (if (some? who)
-    (let [selected-keys (set (take 999 (shuffle who)))]
-      (assoc filters type selected-keys))
-    filters))
-
 (defn request-batch [url id back-to filter]
   (let [relay (get-in @relays [url :connection])
         since (- (util/get-now) config/batch-time)
@@ -73,35 +57,71 @@
                             "limit" config/batch-size)]
     (set-mem [:active-subscriptions url id]
              {:eose :next-batch
-              :min-time (util/get-now) :max-time 0 :event-counter 0
+              :min-time until :max-time 0 :event-counter 0
+              :last-batch-min-time until
               :back-to back-to :since since :until until :filter filter})
     (relay/send relay ["REQ" id query])))
 
-(defn request-next-batch [url id]
-  (let [relay (get-in @relays [url :connection])
-        {:keys [min-time event-counter back-to
-                filter since]} (get-mem [:active-subscriptions url id])
-        new-since (if (or (zero? event-counter)
-                          (< (- min-time since)
-                             (quot config/batch-time 2)))
-                    (- since config/batch-time)
-                    since)
-        until (if (zero? event-counter) since min-time)
-        query (assoc filter "since" new-since
-                            "until" until
-                            "limit" config/batch-size)]
-    (cond
-      (< min-time back-to)
-      (do
-        (prn 'min-time min-time 'back-to back-to)
-        (update-mem [:active-subscriptions "url"] dissoc id)
-        (relay/send relay ["CLOSE" id]))
+(defn request-contact-lists [relay]
+  (let [now (quot (System/currentTimeMillis) 1000)
+        days-ago config/read-contact-lists-days-ago
+        seconds-ago (int (* days-ago 86400))
+        since (int (- now seconds-ago))]
+    (request-batch relay "ms-contacts" since {"kinds" [3] "since" since})))
 
-      :else
-      (do
-        (update-mem [:active-subscriptions url id]
-                    assoc :since new-since :until until :max-time 0 :event-counter 0)
-        (relay/send relay ["REQ" id query])))))
+(defn request-metadata [relay since]
+  (request-batch relay "ms-profiles" since {"kinds" [0] "since" since})
+  )
+
+(defn add-trustees [type filters who]
+  (if (some? who)
+    (let [selected-keys (set (take 999 (shuffle who)))]
+      (assoc filters type selected-keys))
+    filters))
+
+(defn request-next-batch [url id]
+  (try
+    (when (get-mem [:active-subscriptions url id :batch-closed])
+      (throw (Exception. "Duplicate EOSE in batch.")))
+
+    (let [relay (get-in @relays [url :connection])
+          {:keys [min-time event-counter back-to until
+                  last-batch-min-time filter since
+                  ]} (get-mem [:active-subscriptions url id])
+          [new-since new-until] (if (zero? event-counter)
+                                  [(- since config/batch-time) since]
+                                  [since min-time])
+          new-since (if (< (- new-until new-since) (quot config/batch-time 2))
+                      (- new-since config/batch-time)
+                      new-since)
+          new-until (if (and (> event-counter 0)
+                             (= min-time last-batch-min-time))
+                      (dec until)
+                      new-until)
+          query (assoc filter "since" new-since
+                              "until" new-until
+                              "limit" config/batch-size)]
+      (cond
+        (< min-time back-to)
+        (do
+          (update-mem [:active-subscriptions "url"] dissoc id)
+          (relay/send relay ["CLOSE" id]))
+
+        :else
+        (do
+          (update-mem [:active-subscriptions url id]
+                      assoc :since new-since :until new-until
+                      :max-time 0 :event-counter 0
+                      :last-batch-min-time min-time
+                      :batch-closed true)
+          (relay/send relay ["CLOSE" id])
+          (future
+            (while (> (get-mem :websocket-backlog) 50)
+              (Thread/sleep 1000))
+            (relay/send relay ["REQ" id query])
+            (set-mem [:active-subscriptions url id :batch-closed] false)))))
+    (catch Exception e
+      (log-pr 1 'request-batch url id (.getMessage e)))))
 
 (defn send-subscription
   ([relay since now]
@@ -188,9 +208,7 @@
 
       (= type "EOSE")
       (let [active-subscription (get-mem [:active-subscriptions url id])]
-        (prn "EOSE" url id)
         (when (some? active-subscription)
-          (prn 'active-subscription url id active-subscription)
           (condp = (:eose active-subscription)
             :close (close-subscription relay url id)
             :next-batch (request-next-batch url id)
