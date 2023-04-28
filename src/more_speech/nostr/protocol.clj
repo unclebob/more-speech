@@ -60,7 +60,10 @@
               :min-time until :max-time 0 :event-counter 0
               :last-batch-min-time until
               :back-to back-to :since since :until until :filter filter})
-    (relay/send relay ["REQ" id query])))
+    (future
+      (while (> (get-mem :websocket-backlog) 50)
+        (Thread/sleep (+ 1000 (rand-int 200))))
+      (relay/send relay ["REQ" id query]))))
 
 (defn request-contact-lists [relay]
   (let [now (quot (System/currentTimeMillis) 1000)
@@ -102,7 +105,7 @@
                               "until" new-until
                               "limit" config/batch-size)]
       (cond
-        (< min-time back-to)
+        (< new-until back-to)
         (do
           (update-mem [:active-subscriptions "url"] dissoc id)
           (relay/send relay ["CLOSE" id]))
@@ -117,7 +120,7 @@
           (relay/send relay ["CLOSE" id])
           (future
             (while (> (get-mem :websocket-backlog) 50)
-              (Thread/sleep 1000))
+              (Thread/sleep (+ 1000 (rand-int 200))))
             (relay/send relay ["REQ" id query])
             (set-mem [:active-subscriptions url id :batch-closed] false)))))
     (catch Exception e
