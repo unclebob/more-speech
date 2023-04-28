@@ -48,6 +48,7 @@
   (context "sending subscriptions"
     (with relay {::ws-relay/url "url" :connection :relay})
     (before (reset! mem/relays {"url" @relay}))
+    (before (mem/set-mem :websocket-backlog 0))
 
     (it "sends subscriptions for authors"
       (with-redefs [relay/send (fn [_relay msg] (mem/update-mem :stub-send concat [msg]))
@@ -55,11 +56,12 @@
         (mem/set-mem :pubkey 1)
         (gateway/add-contacts @db 1 [{:pubkey 2}])
         (send-subscription @relay 1000 @now ["author1xxxxx" "author2xxxxxxxx"])
+        (Thread/sleep 10)
         (should=
-          [["REQ" "ms-past-author" {"kinds" [0 1 2 3 4 7 9735], "since" (- @now config/batch-time), "until" @now, "authors" #{"author2xxx" "author1xxx"}, "limit" config/batch-size}]
-           ["REQ" "ms-past-mention" {"kinds" [0 1 2 3 4 7 9735], "since" (- @now config/batch-time), "until" @now, "#p" #{"0000000000000000000000000000000000000000000000000000000000000001" "0000000000000000000000000000000000000000000000000000000000000002"}, "limit" config/batch-size}]
-           ["REQ" "ms-future" {"kinds" [0 1 2 3 4 7 9735], "since" @now, "authors" #{"author2xxx" "author1xxx"}} {"kinds" [0 1 2 3 4 7 9735], "since" @now, "#p" #{"0000000000000000000000000000000000000000000000000000000000000001" "0000000000000000000000000000000000000000000000000000000000000002"}}]]
-          (mem/get-mem :stub-send)))
+          #{["REQ" "ms-future" {"kinds" [0 1 2 3 4 7 9735], "since" @now, "authors" #{"author2xxx" "author1xxx"}} {"kinds" [0 1 2 3 4 7 9735], "since" @now, "#p" #{"0000000000000000000000000000000000000000000000000000000000000001" "0000000000000000000000000000000000000000000000000000000000000002"}}]
+           ["REQ" "ms-past-author" {"kinds" [0 1 2 3 4 7 9735], "since" (- @now config/batch-time), "until" @now, "authors" #{"author2xxx" "author1xxx"}, "limit" config/batch-size}]
+           ["REQ" "ms-past-mention" {"kinds" [0 1 2 3 4 7 9735], "since" (- @now config/batch-time), "until" @now, "#p" #{"0000000000000000000000000000000000000000000000000000000000000001" "0000000000000000000000000000000000000000000000000000000000000002"}, "limit" config/batch-size}]}
+          (set (mem/get-mem :stub-send))))
       (should=
         {:eose :next-batch,
          :min-time @now,
@@ -88,15 +90,15 @@
                     util/get-now (stub :get-now {:return @now})]
         (mem/set-mem :pubkey 1)
         (send-subscription @relay 1000 @now)
-
-        (should= [["REQ" "ms-past"
+        (Thread/sleep 10)
+        (should= [["REQ" "ms-future"
+                   {"kinds" [0 1 2 3 4 7 9735],
+                    "since" @now}]
+                  ["REQ" "ms-past"
                    {"kinds" [0 1 2 3 4 7 9735],
                     "since" (- @now config/batch-time),
                     "until" @now,
-                    "limit" config/batch-size}]
-                  ["REQ" "ms-future"
-                   {"kinds" [0 1 2 3 4 7 9735],
-                    "since" @now}]]
+                    "limit" config/batch-size}]]
                  (mem/get-mem :stub-send))
 
         (should= {:eose :next-batch,
@@ -113,6 +115,7 @@
 
   (context "request batching"
     (before (reset! mem/relays {"url" {:connection :relay}}))
+    (before (mem/set-mem :websocket-backlog 0))
 
     (it "counts events"
       (should= {:min-time 10 :max-time 10 :event-counter 1 :junk :junk}
@@ -127,6 +130,7 @@
                     relay/send (stub :relay-send)]
 
         (request-batch "url" "id" 1000 {:filter :filter})
+        (Thread/sleep 10)
         (should-have-invoked
           :relay-send
           {:with [:relay ["REQ" "id" {:filter :filter
@@ -239,39 +243,39 @@
         (with-redefs [util/get-now (stub :get-now {:return 100000})
                       relay/send (fn [_relay msg] (mem/update-mem :stub-send concat [msg]))]
           (let [{:keys [min-time since until]} (mem/get-mem [:active-subscriptions "url" "id"])]
-          (mem/update-mem [:active-subscriptions "url" "id"]
-                          assoc
-                          :last-batch-min-time min-time
-                          :event-counter 1)
-          (request-next-batch "url" "id")
-          (Thread/sleep 100)
-          (should= [["CLOSE" "id"]
-                    ["REQ" "id" {:filter :filter
-                                 "since" since
-                                 "until" (dec until)
-                                 "limit" config/batch-size}]]
-                   (mem/get-mem :stub-send))
-          (should= {:eose :next-batch
-                    :filter {:filter :filter}
-                    :since since
-                    :until (dec until)
-                    :back-to 1000
-                    :min-time min-time
-                    :last-batch-min-time min-time
-                    :max-time 0
-                    :event-counter 0
-                    :batch-closed false}
-                   (mem/get-mem [:active-subscriptions "url" "id"]))))
+            (mem/update-mem [:active-subscriptions "url" "id"]
+                            assoc
+                            :last-batch-min-time min-time
+                            :event-counter 1)
+            (request-next-batch "url" "id")
+            (Thread/sleep 100)
+            (should= [["CLOSE" "id"]
+                      ["REQ" "id" {:filter :filter
+                                   "since" since
+                                   "until" (dec until)
+                                   "limit" config/batch-size}]]
+                     (mem/get-mem :stub-send))
+            (should= {:eose :next-batch
+                      :filter {:filter :filter}
+                      :since since
+                      :until (dec until)
+                      :back-to 1000
+                      :min-time min-time
+                      :last-batch-min-time min-time
+                      :max-time 0
+                      :event-counter 0
+                      :batch-closed false}
+                     (mem/get-mem [:active-subscriptions "url" "id"]))))
 
 
-      (it "End batch when min-time < back-to"
-        (with-redefs [util/get-now (stub :get-now {:return 100000})
-                      relay/send (fn [_relay msg] (mem/update-mem :stub-send concat [msg]))]
-          (mem/update-mem [:active-subscriptions "url" "id"]
-                          assoc :min-time (dec @back-to))
-          (request-next-batch "url" "id")
-          (should= [["CLOSE" "id"]] (mem/get-mem :stub-send))
-          (should= nil (mem/get-mem [:active-subscriptions "url" "id"])))))
+        (it "End batch when min-time < back-to"
+          (with-redefs [util/get-now (stub :get-now {:return 100000})
+                        relay/send (fn [_relay msg] (mem/update-mem :stub-send concat [msg]))]
+            (mem/update-mem [:active-subscriptions "url" "id"]
+                            assoc :min-time (dec @back-to))
+            (request-next-batch "url" "id")
+            (should= [["CLOSE" "id"]] (mem/get-mem :stub-send))
+            (should= nil (mem/get-mem [:active-subscriptions "url" "id"])))))
       )
     )
   )
