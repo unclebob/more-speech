@@ -60,6 +60,9 @@
 (def max-nodes-per-tab 1000)
 (def prune-tabs-frequency-in-minutes 60)
 
+(def batch-time 1000)
+(def batch-size 50)
+
 ;(def max-nodes-per-tab 50)
 ;(def prune-tabs-frequency-in-minutes 1)
 

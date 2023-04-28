@@ -23,7 +23,7 @@
     (when (not= :read-none (get-in @relays [url :read]))
       (let [relay (:connection (get @relays url))]
         (when (some? relay)
-          (set-mem [:active-subscriptions url id] {:close true})
+          (set-mem [:active-subscriptions url id] {:eose :close})
           (relay/send relay request))))))
 
 (defn- make-request-id []
@@ -64,6 +64,45 @@
       (assoc filters type selected-keys))
     filters))
 
+(defn request-batch [url id back-to filter]
+  (let [relay (get-in @relays [url :connection])
+        since (- (util/get-now) config/batch-time)
+        until (util/get-now)
+        query (assoc filter "since" since
+                            "until" until
+                            "limit" config/batch-size)]
+    (set-mem [:active-subscriptions url id]
+             {:eose :next-batch
+              :min-time (util/get-now) :max-time 0 :event-counter 0
+              :back-to back-to :since since :until until :filter filter})
+    (relay/send relay ["REQ" id query])))
+
+(defn request-next-batch [url id]
+  (let [relay (get-in @relays [url :connection])
+        {:keys [min-time event-counter back-to
+                filter since]} (get-mem [:active-subscriptions url id])
+        new-since (if (or (zero? event-counter)
+                          (< (- min-time since)
+                             (quot config/batch-time 2)))
+                    (- since config/batch-time)
+                    since)
+        until (if (zero? event-counter) since min-time)
+        query (assoc filter "since" new-since
+                            "until" until
+                            "limit" config/batch-size)]
+    (cond
+      (< min-time back-to)
+      (do
+        (prn 'min-time min-time 'back-to back-to)
+        (update-mem [:active-subscriptions "url"] dissoc id)
+        (relay/send relay ["CLOSE" id]))
+
+      :else
+      (do
+        (update-mem [:active-subscriptions url id]
+                    assoc :since new-since :until until :max-time 0 :event-counter 0)
+        (relay/send relay ["REQ" id query])))))
+
 (defn send-subscription
   ([relay since now]
    (send-subscription relay since now nil))
@@ -78,12 +117,13 @@
          past-author-filter (add-trustees "authors" past-filter short-who)
          future-author-filter (add-trustees "authors" future-filter short-who)
          past-mention-filter (add-trustees "#p" past-filter trustees)
-         future-mention-filter (add-trustees "#p" future-filter trustees)]
+         future-mention-filter (add-trustees "#p" future-filter trustees)
+         url (::ws-relay/url relay)]
      (when (> now since)
-       (set-mem [:active-subscriptions (::ws-relay/url relay) "ms-past"] {:close true})
        (if (some? who)
-         (relay/send relay ["REQ" "ms-past" past-author-filter past-mention-filter])
-         (relay/send relay ["REQ" "ms-past" past-filter])))
+         (do (request-batch url "ms-past-author" since past-author-filter)
+             (request-batch url "ms-past-mention" since past-mention-filter))
+         (request-batch url "ms-past" since past-filter)))
      (if (some? who)
        (relay/send relay ["REQ" "ms-future" future-author-filter future-mention-filter])
        (relay/send relay ["REQ" "ms-future" future-filter])))))
@@ -120,22 +160,41 @@
         latest (if (nil? latest) time (max latest time))]
     [earliest latest]))
 
+(defn close-subscription [relay url id]
+  (relay/send relay ["CLOSE" id])
+  (update-mem [:active-subscriptions url] dissoc id))
+
+(defn count-event [active-subscription event]
+  (let [{:keys [event-counter min-time max-time]} active-subscription
+        created-at (get event "created_at")
+        min-time (if (nil? min-time) created-at min-time)
+        max-time (if (nil? max-time) created-at max-time)
+        event-counter (if (nil? event-counter) 0 event-counter)
+        min-time (min created-at min-time)
+        max-time (max created-at max-time)
+        event-counter (inc event-counter)]
+    (assoc active-subscription
+      :min-time min-time
+      :max-time max-time
+      :event-counter event-counter)))
+
 (defn handle-relay-message [url message]
   (let [relay (:connection (get @relays url))
         [type id event] message]
 
     (cond
       (= type "EVENT")                                      ;nobody uses this right now...
-      (let [created-at (get event "created_at")]
-        (update-mem [:relay-subscription-event-times url id] add-event-time created-at))
+      (update-mem [:active-subscriptions url id] count-event event)
 
       (= type "EOSE")
       (let [active-subscription (get-mem [:active-subscriptions url id])]
-        (when (and (some? active-subscription)
-                   (:close active-subscription))
-          (relay/send relay ["CLOSE" id])
-          (update-mem [:active-subscriptions url] dissoc id)))
-      )
+        (prn "EOSE" url id)
+        (when (some? active-subscription)
+          (prn 'active-subscription url id active-subscription)
+          (condp = (:eose active-subscription)
+            :close (close-subscription relay url id)
+            :next-batch (request-next-batch url id)
+            nil))))
     (update-mem :websocket-backlog inc)
     (update-mem :incoming-events inc)
     (update-mem [:events-by-relay url] #(if (nil? %) 1 (inc %)))
