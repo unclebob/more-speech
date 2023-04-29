@@ -80,8 +80,8 @@
   (let [selected-listbox (select frame [:#selected-users])
         trusted-listbox (select frame [:#trusted-users-listbox])
         selected-group (get-mem [:user-window :selection-group])]
-      (config! selected-listbox :model (get-mem [:user-window selected-group]))
-      (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))))
+    (config! selected-listbox :model (get-mem [:user-window selected-group]))
+    (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))))
 
 (defn select-recent-users [frame _e]
   (set-mem [:user-window :selection-group] :recent-user-items)
@@ -164,20 +164,18 @@
           (set-mem [:user-window :contact-list-changed] true))))))
 
 (defn listbox-click [listbox e]
-  (when (.isPopupTrigger e)
-    (let [index (.locationToIndex listbox (Point. (.getX e) (.getY e)))
-          model (.getModel listbox)
-          item (.getElementAt model index)
-          user-id (second item)
-          tab-names (vec (remove #(= "all" %) (map :name (get-mem :tabs-list))))
-          tab-names (conj tab-names "<new-tab>")
-          add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab user-id %)) tab-names)
-
-          p (popup :items [(action :name "Get Info..." :handler (fn [_e] (article-panel/show-user-profile user-id)))
-                           (menu :text "Add author to tab" :items add-author-actions)])]
-      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))
-    )
-  )
+  (let [index (.locationToIndex listbox (Point. (.getX e) (.getY e)))
+        model (.getModel listbox)
+        item (.getElementAt model index)
+        user-id (second item)
+        tab-names (vec (remove #(= "all" %) (map :name (get-mem :tabs-list))))
+        tab-names (conj tab-names "<new-tab>")
+        add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab user-id %)) tab-names)]
+    (protocol/request-profiles-and-contacts-for user-id)
+    (when (.isPopupTrigger e)
+      (let [p (popup :items [(action :name "Get Info..." :handler (fn [_e] (article-panel/show-user-profile user-id)))
+                             (menu :text "Add author to tab" :items add-author-actions)])]
+        (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))))
 
 (defn- repaint-user-window [frame]
   (.repaint frame))

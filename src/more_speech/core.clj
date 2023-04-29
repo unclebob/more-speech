@@ -44,7 +44,7 @@
       (let [latest-old-message-time
             (if (not (config/is-test-run?))
               (data-storage/load-event-history handler)
-              (-> (util/get-now) (- 86400)))
+              (-> (util/get-now) (- 7200)))
             latest-old-message-time
             (if (some? (get-mem :request-hours-ago))
               (- (util/get-now) (* 3600 (get-mem :request-hours-ago)))
