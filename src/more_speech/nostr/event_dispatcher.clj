@@ -207,7 +207,7 @@
 
 (defn handle-notification [envelope url]
   (set-mem [:relay-notice url] (with-out-str (clojure.pprint/pprint envelope)))
-  (log-pr 1 'NOTICE url envelope))
+  (log-pr 2 'NOTICE url envelope))
 
 (defn inc-if-nil [n]
   (if (nil? n) 1 (inc n)))
@@ -242,7 +242,7 @@
               (process-event event url)
               (when (is-text-event? event)
                 (handle-text-event ui-handler event))))
-          (log-pr 1 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope))))))
+          (log-pr 2 'id-mismatch url 'computed-id (util/num32->hex-string computed-id) envelope))))))
 
 (defn try-validate-and-process-event [url envelope]
   (try

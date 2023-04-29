@@ -218,7 +218,7 @@
   (send-event (compose-metadata-event))
   (let [server-urls (filter #(:write (get @relays %)) (keys @relays))
         server-urls (map remove-arguments server-urls)]
-    (log-pr 1 'server-urls server-urls)
+    (log-pr 2 'server-urls server-urls)
     (future
       (doseq [url server-urls]
         (Thread/sleep 5000)

@@ -172,7 +172,7 @@
           tab (swing-util/get-tab-by-name tab-name)
           ids (gateway/get-ids-by-author-since (get-db) public-key since)]
       (swing-util/select-tab tab-name)
-      (log-pr 1 'adding (count ids) 'events)
+      (log-pr 2 'adding (count ids) 'events)
       (doseq [id ids]
         (add-event-to-tab tab (gateway/get-event (get-db) id))))))
 
@@ -190,7 +190,7 @@
             ids (gateway/get-ids-that-cite-since (get-db) root-of-thread since)
             ids (set (concat [root-of-thread event-id] ids))]
         (swing-util/select-tab tab-name)
-        (log-pr 1 'adding (count ids) 'events)
+        (log-pr 2 'adding (count ids) 'events)
         (doseq [id ids]
           (add-event-to-tab tab (gateway/get-event (get-db) id)))))))
 
@@ -317,20 +317,20 @@
 (defn delete-last-event-if-too-many [model max-nodes]
   (let [root (.getRoot model)]
     (when (> (.getChildCount root) max-nodes)
-      (log-pr 1 'nodes (.getChildCount root))
+      (log-pr 2 'nodes (.getChildCount root))
       (while (> (.getChildCount root) max-nodes)
         (delete-last-event-from-tree-model model))
-      (log-pr 1 'nodes-remaining (.getChildCount root)))))
+      (log-pr 2 'nodes-remaining (.getChildCount root)))))
 
 (defn prune-tabs []
-  (log-pr 1 'prune-tabs)
+  (log-pr 2 'prune-tabs)
   (loop [tabs-list (get-mem :tabs-list)]
     (if (empty? tabs-list)
       nil
       (let [tab-name (:name (first tabs-list))
             tree (get-mem [:tab-tree-map tab-name])
             model (config tree :model)]
-        (log-pr 1 'pruning tab-name)
+        (log-pr 2 'pruning tab-name)
         (delete-last-event-if-too-many model config/max-nodes-per-tab)
         (recur (rest tabs-list))))))
 

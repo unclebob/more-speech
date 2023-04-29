@@ -35,13 +35,13 @@
 (defrecord listener [buffer relay]
   WebSocket$Listener
   (onOpen [_this webSocket]
-    (log-pr 1 'open (::url relay))
+    (log-pr 2 'open (::url relay))
     (.request webSocket 1))
   (onText [this webSocket data last]
     (handle-text this data last)
     (.request webSocket 1))
   (onBinary [_this _webSocket _data _last]
-    (log-pr 1 'binary))
+    (log-pr 2 'binary))
   (onPing [_this webSocket message]
     (set-mem [:deadman (::url relay)] (util/get-now))
     (.sendPong webSocket message)
@@ -50,10 +50,10 @@
     (set-mem [:deadman (::url relay)] (util/get-now))
     (.request webSocket 1))
   (onClose [_this _webSocket _statusCode _reason]
-    (log-pr 1 'websocket-closed (::url relay))
+    (log-pr 2 'websocket-closed (::url relay))
     ((:close (::callbacks relay)) relay))
   (onError [_this _webSocket error]
-    (log-pr 1 'websocket-listener-error (::url relay) (:cause error))
+    (log-pr 2 'websocket-listener-error (::url relay) (:cause error))
     ((:close (::callbacks relay)) relay))
   )
 
@@ -92,14 +92,14 @@
             ws (deref wsf 30000 :time-out)]
         (if (= ws :time-out)
           (do
-            (log-pr 1 'connection-time-out url)
+            (log-pr 2 'connection-time-out url)
             (future ((:close (::callbacks relay)) relay))
             relay)
           (let [open-relay (assoc relay ::socket ws)]
             (send-ping open-relay)
             (assoc open-relay ::timer (start-timer open-relay)))))
       (catch Exception e
-        (log-pr 1 'connect-to-relay-failed url (:reason e))
+        (log-pr 2 'connect-to-relay-failed url (:reason e))
         (future ((:close (::callbacks relay)) relay))
         relay))))
 
@@ -108,7 +108,7 @@
     (when (and socket (not (.isOutputClosed socket)))
       (try
         (let [json (to-json message)]
-          (log 1 (str "sending to:" url " " json))
+          (log 2 (str "sending to:" url " " json))
           (.sendText socket json true)
           (.request socket 1))
         (catch Exception e

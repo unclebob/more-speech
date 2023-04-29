@@ -358,8 +358,8 @@
           (try
             (browse/browse-url url)
             (catch Exception ex
-              (log-pr 1 'open-link url (.getMessage ex))
-              (log-pr 1 ex)))
+              (log-pr 2 'open-link url (.getMessage ex))
+              (log-pr 2 ex)))
 
           (= type "ms-idreference")
           (let [id (util/unhexify subject)]

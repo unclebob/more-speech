@@ -6,7 +6,7 @@
   (:require [clojure.core.async :as async]
             [more-speech.config :as config]
             [more-speech.data-storage :as data-storage]
-            [more-speech.logger.default :refer [log-pr]]
+            [more-speech.logger.default :refer [log-pr log-level]]
             [more-speech.mem :refer :all]
             [more-speech.migrator :as migrator]
             [more-speech.nostr.main :as main]
@@ -24,7 +24,10 @@
       (System/exit 1))
     (log-pr 1 'main arg 'start)
     (when (= "test" arg)
-      (config/test-run!))
+      (config/test-run!)
+      (reset! log-level 2))
+    (when (= "dev" arg)
+      (reset! log-level 2))
     (when (and (some? arg) (re-matches #"hours:\d+" arg))
       (let [hours (Integer/parseInt (subs arg 6))]
         (set-mem :request-hours-ago hours))
@@ -40,7 +43,7 @@
       (log-pr 2 'main 'main-window-setup-complete)
       (set-mem :send-chan send-chan)
       (set-mem :event-handler handler)
-      (log-pr 1 'main 'reading-in-last-n-days)
+      (log-pr 2 'main 'reading-in-last-n-days)
       (let [latest-old-message-time
             (if (not (config/is-test-run?))
               (data-storage/load-event-history handler)
@@ -49,9 +52,9 @@
             (if (some? (get-mem :request-hours-ago))
               (- (util/get-now) (* 3600 (get-mem :request-hours-ago)))
               latest-old-message-time)
-            _ (log-pr 1 'main 'getting-events)
+            _ (log-pr 2 'main 'getting-events)
             exit-condition (main/start-nostr latest-old-message-time)]
-        (log-pr 1 'starting-exit-process)
+        (log-pr 2 'starting-exit-process)
         (when (not (config/is-test-run?))
           (data-storage/write-configuration))
         (if (= exit-condition :relaunch)

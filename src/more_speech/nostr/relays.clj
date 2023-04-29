@@ -80,10 +80,10 @@
   (let [checked-url (validate-relay-url url)]
     (when (and (not (empty? url))
                (empty? checked-url))
-      (log-pr 1 'invalid-relay url))
+      (log-pr 2 'invalid-relay url))
     (when (and (not (empty? checked-url))
                (not (contains? @relays checked-url)))
-      (log-pr 1 'adding-relay checked-url)
+      (log-pr 2 'adding-relay checked-url)
       (swap! relays assoc checked-url {:read :read-none :write false}))))
 
 (defn add-recommended-relays-in-tags [event]

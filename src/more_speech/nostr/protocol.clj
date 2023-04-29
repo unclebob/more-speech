@@ -238,7 +238,7 @@
 
 (defn subscribe-to-relays [subscription-time now]
   (let [date (- subscription-time 3600)]
-    (log-pr 1 'subscription-date date (format-time date))
+    (log-pr 2 'subscription-date date (format-time date))
     (doseq [url (keys @relays)]
       (subscribe-to-relay url date now))))
 
@@ -275,14 +275,14 @@
 (defn handle-close [relay]
   (let [url (::ws-relay/url relay)]
     (swap! relays assoc-in [url :connection] nil)
-    (log-pr 1 url 'is-closed)))
+    (log-pr 2 url 'is-closed)))
 
 (defn make-relay [url]
   (ws-relay/make url {:recv handle-relay-message
                       :close handle-close}))
 
 (defn reconnect-to-relay [url since now]
-  (log-pr 1 'reconnecting-to url)
+  (log-pr 2 'reconnecting-to url)
   (connect-to-relay (make-relay url))
   (subscribe-to-relay url since now))
 
@@ -290,14 +290,14 @@
   (let [now (util/get-now)
         retrying? (get-in @relays [url :retrying])]
     (when (not retrying?)
-      (log-pr 1 'relay-closed url)
+      (log-pr 2 'relay-closed url)
       (swap! relays assoc-in [url :retrying] true)
       (swap! relays assoc-in [url :connection] nil)
       (future
         (let [retries (get-in @relays [url :retries] 0)
               seconds-to-wait (min 300 (* retries 30))]
-          (log-pr 1 'retries retries url)
-          (log-pr 1 'waiting seconds-to-wait 'seconds url)
+          (log-pr 2 'retries retries url)
+          (log-pr 2 'waiting seconds-to-wait 'seconds url)
           (swap! relays increment-relay-retry url)
           (Thread/sleep (* 1000 seconds-to-wait))
           (swap! relays assoc-in [url :retrying] false)
@@ -314,7 +314,7 @@
   (let [relay (get-in @relays [url :connection])]
     (when-not (get-in @relays [url :retrying])
       (when (is-dead? url)
-        (log-pr 1 'relay-check-open-deadman-timeout url)
+        (log-pr 2 'relay-check-open-deadman-timeout url)
         (when (some? relay)
           (relay/close relay))
         (future (retry-relay url (get-mem [:deadman url])))))))
@@ -338,10 +338,10 @@
   (doseq [url (keys @relays)]
     (let [relay (make-relay url)]
       (connect-to-relay relay)))
-  (log-pr 1 'relay-connection-attempts-complete))
+  (log-pr 2 'relay-connection-attempts-complete))
 
 (defn request-contact-lists-from-relays []
-  (log-pr 1 'requesting-contact-lists)
+  (log-pr 2 'requesting-contact-lists)
   (doseq [url (keys @relays)]
     (let [relay (get-in @relays [url :connection])
           read-type (get-in @relays [url :read])]
@@ -349,7 +349,7 @@
         (request-contact-lists relay)))))
 
 (defn request-metadata-from-relays [since]
-  (log-pr 1 'requesting-metadata)
+  (log-pr 2 'requesting-metadata)
   (doseq [url (keys @relays)]
     (let [relay (get-in @relays [url :connection])
           read? (get-in @relays [url :read])]

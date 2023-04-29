@@ -53,24 +53,24 @@
     menu-bar))
 
 (defn make-main-window []
-  (log-pr 1 'make-main-window)
+  (log-pr 2 'make-main-window)
   (let [title (str "More-Speech:" (:name (get-mem :keys)) " - " config/version)
         title (if (config/is-test-run?) (str title " - TEST") title)
         main-frame (frame :title title :size [1000 :by 1000] :menubar (make-menubar))
         _ (set-mem :frame main-frame)
-        _ (log-pr 1 'make-main-window 'making-article-area)
+        _ (log-pr 2 'make-main-window 'making-article-area)
         article-area (article-panel/make-article-area)
         _ (listen article-area :hyperlink article-panel/open-link)
         header-tab-panel (tabbed-panel :tabs (tabs/make-tabs) :id :header-tab-panel)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)
                                     :south (article-panel/make-control-panel))
-        _ (log-pr 1 'make-main-window 'article-panel-complete)
+        _ (log-pr 2 'make-main-window 'article-panel-complete)
         messages-panel (top-bottom-split
                          header-tab-panel
                          article-panel
                          :divider-location 1/2)
-        _ (log-pr 1 'make-main-window 'messages-panel-complete)]
+        _ (log-pr 2 'make-main-window 'messages-panel-complete)]
     (config! main-frame :content messages-panel)
     (listen main-frame :window-closing
             (fn [_]

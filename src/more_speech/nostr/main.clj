@@ -40,9 +40,9 @@
       (do
         (user-configuration/set-last-time-profile-exported now-in-seconds)
         (future (composers/compose-and-send-metadata-and-relay-recommendations)))
-      (log 1 "Not time to export profile yet."))
+      (log 2 "Not time to export profile yet."))
     (let [exit-condition (process-send-channel)]
       (protocol/close-all-relays)
       (Thread/sleep 100)
-      (log-pr 1 'done)
+      (log-pr 2 'done)
       exit-condition)))
