@@ -17,7 +17,12 @@
 (def instance (atom (make-default-logger)))
 (def log-level (atom 1))
 
+(defn log-agent-error-handler [log-agent e]
+  (prn 'log-agent-error e)
+  (restart-agent log-agent nil))
+
 (def log-agent (agent nil))
+(set-error-handler! log-agent log-agent-error-handler)
 
 (defn set-level [level]
   (reset! log-level level))
@@ -39,7 +44,7 @@
   (flush))
 
 (defmethod log-msg ::default [_logger time level message]
-  (send log-agent do-log time level message)
+  (send-off log-agent do-log time level message)
   )
 
 

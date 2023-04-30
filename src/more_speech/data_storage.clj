@@ -29,13 +29,16 @@
       (log-pr 2 `write-keys (dissoc keys :private-key))
       (spit @config/keys-filename keys-string))))
 
+(defn write-tabs []
+  (log-pr 2 'writing-tabs)
+    (spit @config/tabs-list-filename
+          (with-out-str
+            (clojure.pprint/pprint (get-mem :tabs-list)))))
+
 (defn write-configuration []
   (log-pr 2 'writing-relays)
   (write-relays)
-  (log-pr 2 'writing-tabs)
-  (spit @config/tabs-list-filename
-        (with-out-str
-          (clojure.pprint/pprint (get-mem :tabs-list))))
+  (write-tabs)
 
   (log-pr 2 'writing-user-configuration)
   (spit @config/user-configuration-filename

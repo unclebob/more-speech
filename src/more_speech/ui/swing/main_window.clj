@@ -13,7 +13,8 @@
             [more-speech.ui.swing.relay-manager :as relay-manager]
             [more-speech.ui.swing.stats-window :as stats-window]
             [more-speech.ui.swing.tabs :as tabs]
-            [more-speech.ui.swing.users-window :as users-window])
+            [more-speech.ui.swing.users-window :as users-window]
+            [more-speech.ui.swing.tabs-window :as tabs-window])
   (:use (seesaw [core]))
   (:import (java.util Timer TimerTask)))
 
@@ -31,8 +32,6 @@
         name (formatter-util/abbreviate (:name profile) 20)]
     (format "%-20s %s %s" name (util/num32->hex-string id) (:picture profile))))
 
-(defn manage-tabs [_e])
-
 (defn make-menubar []
   (let [relays-item (menu-item :action (action :name "Relays..." :handler relay-manager/show-relay-manager)
                                :id :relays-menu)
@@ -46,7 +45,7 @@
                                                 :handler profile-window/make-profile-frame)
                                 :id :profile-menu)
         tabs-item (menu-item :action (action :name "Tabs..."
-                                                :handler manage-tabs)
+                                                :handler tabs-window/make-tabs-window)
                                 :id :tabs-menu)
         manage-menu (menu :text "Manage" :items [relays-item stats-item users-item profile-item tabs-item])
         menu-bar (menubar :items [manage-menu])]

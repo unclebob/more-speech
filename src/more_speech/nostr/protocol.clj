@@ -30,11 +30,16 @@
   (let [r (rand-int 1000000)]
     (str "ms-request-" r)))
 
+(defn request-notes [ids]
+  (let [req-id (make-request-id)
+        hex-ids (map util/hexify ids)
+        request ["REQ" req-id {"kinds" [1] "ids" hex-ids}]]
+    (send-request request)))
+
 (defn request-note [id]
   (let [req-id (make-request-id)
         request ["REQ" req-id {"kinds" [1] "ids" [(util/hexify id)]}]]
-    (send-request request))
-  )
+    (send-request request)))
 
 (defn request-profiles-and-contacts-for [authors]
   (let [authors (if (coll? authors) authors [authors])

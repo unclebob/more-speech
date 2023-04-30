@@ -1,5 +1,6 @@
 (ns more-speech.ui.swing.stats-window
-  (:require [more-speech.mem :refer :all])
+  (:require [more-speech.mem :refer :all]
+            [more-speech.logger.default :refer :all])
    (:use [seesaw core])
    (:import (java.util Timer TimerTask)))
 
@@ -43,7 +44,7 @@
   )
 
 (defn make-stats-frame [_e]
-  (let [stats-frame (frame :title "Stats")
+  (let [stats-frame (frame :title (str "Stats - " @log-level) )
         incoming-panel (make-stat-panel "Incoming events." :incoming-data)
         backlog-panel (make-stat-panel "Backlog." :backlog-data)
         processed-panel (make-stat-panel "Processed events." :processed-data)

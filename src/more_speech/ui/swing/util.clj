@@ -6,8 +6,7 @@
             [more-speech.nostr.event-dispatcher :as event-handlers]
             [more-speech.nostr.util :as util]
             [more-speech.ui.swing.article-tree-util :as at-util])
-  (:use (seesaw [core]))
-  (:import (java.awt.datatransfer StringSelection)))
+  (:use (seesaw [core])))
 
 (defn clear-popup [popup]
   (while (not (empty? (.getSubElements popup)))
@@ -69,6 +68,23 @@
         new-tabs-list (conj tabs-list tab-desc)]
     (set-mem :tabs-list new-tabs-list)
     tab-desc))
+
+(defn remove-id-from-tab [tab-name key id]
+  (loop [tabs-list (get-mem :tabs-list)
+         new-tabs-list []]
+    (cond
+      (empty? tabs-list)
+      (set-mem :tabs-list new-tabs-list)
+
+      (= tab-name (:name (first tabs-list)))
+      (let [tab-descriptor (first tabs-list)
+            id-list (get tab-descriptor key [])
+            id-list (remove #(= id %) id-list)]
+        (recur (rest tabs-list) (conj new-tabs-list (assoc tab-descriptor key id-list))))
+
+      :else
+      (recur (rest tabs-list)
+             (conj new-tabs-list (first tabs-list))))))
 
 
 (defn add-id-to-tab [tab-name key id]
