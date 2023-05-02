@@ -1,14 +1,18 @@
 (ns more-speech.nostr.protocol
-  (:require [more-speech.config :as config]
-            [more-speech.logger.default :refer [log-pr]]
-            [more-speech.mem :refer :all]
-            [more-speech.mem :refer :all]
-            [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.nostr.event-dispatcher :as handlers]
-            [more-speech.nostr.events :as events]
-            [more-speech.nostr.util :as util]
-            [more-speech.relay :as relay]
-            [more-speech.websocket-relay :as ws-relay])
+  (:require
+    [clj-http.client :as client]
+    [clojure.data.json :as json]
+    [more-speech.config :as config]
+    [more-speech.logger.default :refer [log-pr]]
+    [more-speech.mem :refer :all]
+    [more-speech.mem :refer :all]
+    [more-speech.nostr.contact-list :as contact-list]
+    [more-speech.nostr.event-dispatcher :as handlers]
+    [more-speech.nostr.events :as events]
+    [more-speech.nostr.relays :as relays]
+    [more-speech.nostr.util :as util]
+    [more-speech.relay :as relay]
+    [more-speech.websocket-relay :as ws-relay])
   (:import (java.util Date)
            (java.text SimpleDateFormat)
            (java.util Timer TimerTask)))
@@ -247,6 +251,14 @@
     (doseq [url (keys @relays)]
       (subscribe-to-relay url date now))))
 
+(defn get-relay-info [url]
+  (try
+    (let [domain-name (relays/get-domain-name url)
+          relay-info (client/get (str "https://" domain-name) {:headers {"Accept" "application/nostr+json"}})]
+      (json/read-str (:body relay-info)))
+    (catch Exception _e
+      nil)))
+
 (defn connect-to-relay [relay]
   (let [url (::ws-relay/url relay)
         relay-config (get @relays url)
@@ -261,7 +273,8 @@
                      (relay/open relay)
                      nil)]
     (when (some? open-relay)
-      (swap! relays assoc-in [url :connection] open-relay))))
+      (swap! relays assoc-in [url :connection] open-relay)
+      (swap! relays assoc-in [url :relay-info] (get-relay-info url)))))
 
 (defn increment-relay-retry
   "used in a swap!, increments retries counter unless the last retry was over an hour ago

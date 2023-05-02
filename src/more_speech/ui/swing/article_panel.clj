@@ -358,8 +358,8 @@
           (try
             (browse/browse-url url)
             (catch Exception ex
-              (log-pr 2 'open-link url (.getMessage ex))
-              (log-pr 2 ex)))
+              (log-pr 1 'open-link url (.getMessage ex))
+              (log-pr 1 ex)))
 
           (= type "ms-idreference")
           (let [id (util/unhexify subject)]
@@ -367,9 +367,12 @@
             (swing-util/select-event id))
 
           (= type "ms-notereference")
-          (let [id (bech32/address->number subject)]
-            (protocol/request-note id)
-            (swing-util/select-event id))
+          (try
+            (let [id (bech32/address->number subject)]
+              (protocol/request-note id)
+              (swing-util/select-event id))
+            (catch Exception ex
+              (log-pr 1 'open-link url (.getMessage ex))))
 
           (= type "ms-namereference")
           (pop-up-name-menu e subject)

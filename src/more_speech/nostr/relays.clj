@@ -1,10 +1,11 @@
 (ns more-speech.nostr.relays
   (:require [clojure.spec.alpha :as s]
+            [clojure.string :as string]
+            (more-speech
+              [config :as config]
+              [relay :as relay]
+              [websocket-relay :as ws-relay])
             [more-speech.logger.default :refer [log-pr]]
-            [more-speech
-             [config :as config]
-             [relay :as relay]
-             [websocket-relay :as ws-relay]]
             [more-speech.mem :refer [relays]]))
 
 (defn- connection? [c]
@@ -94,3 +95,13 @@
         (when (or (= tag-type :e) (= tag-type :p))
           (add-relay url)
           (recur (rest tags)))))))
+
+(defn get-domain-name [url]
+  (try
+    (let [[_protocol uri] (string/split url #"://")
+          [domain-name _args] (string/split uri #"/")]
+      domain-name)
+    (catch Exception _e
+      nil
+      ))
+  )

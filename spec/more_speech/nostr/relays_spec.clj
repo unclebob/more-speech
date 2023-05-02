@@ -1,8 +1,8 @@
 (ns more-speech.nostr.relays-spec
-  (:require [speclj.core :refer :all]
+  (:require [clojure.spec.alpha :as s]
             [more-speech.mem :refer :all]
             [more-speech.nostr.relays :refer :all :as relays]
-            [clojure.spec.alpha :as s]))
+            [speclj.core :refer :all]))
 
 (describe "Relays"
   (context "loads relays from the \"relays\" file and sets defaults."
@@ -46,7 +46,7 @@
               "url3" {:read :read-trusted :write false}}
              (relays-for-writing))))
 
-(describe "validate-relay-url"
+(describe "relay-urls"
   (it "allows valid urls"
     (let [urls ["ws://hi.com"
                 "wss://hi.com"
@@ -70,6 +70,11 @@
   (it "trims and lower cases urls"
     (should= "wss://hi.com" (validate-relay-url " wss://HI.com\t")))
 
+  (it "gets domain name of relay"
+    (should= "hi.com" (get-domain-name "wss://hi.com"))
+    (should= "filter.nostr.wine"
+             (get-domain-name "wss://filter.nostr.wine/npub19mun7qwdyjf7qs3456u8kyxncjn5u2n7klpu4utgy68k4aenzj6synjnft?broadcast=true"))
+    )
   )
 
 

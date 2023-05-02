@@ -5,7 +5,9 @@
     [more-speech.mem :refer :all]
     [more-speech.nostr.protocol :as protocol]
     [more-speech.config :as config]
-    [more-speech.nostr.util :as util])
+    [more-speech.nostr.relays :as relays]
+    [more-speech.nostr.util :as util]
+    [more-speech.ui.swing.article-panel :as article-panel])
   (:import (java.awt Point)
            (java.util Timer TimerTask)))
 
@@ -58,11 +60,41 @@
 (defn make-relay-element-id [type relay-name]
   (keyword (str type (relay-id relay-name))))
 
+(defn make-html-document [style body]
+  (str "<head>" style "</head>"
+       "<body>" body "</body>"))
+
+(defn show-relay-info [url _e]
+  (let [relay-info (get-in @relays [url :relay-info])
+        html-doc (make-html-document
+                   config/editor-pane-stylesheet
+                   (str "<h2> Name:</h2>" (get relay-info "name")
+                        "<h2> Description: </h2>" (get relay-info "description")
+                        "<h2> Pubkey: </h2>" (get relay-info "pubkey")
+                        "<h2> Contact: </h2>" (get relay-info "contact")
+                        "<h2> Software: </h2>" (get relay-info "software") " V:" (get relay-info "version")
+                        )
+                   )
+        info-pane (editor-pane
+                       :content-type "text/html"
+                       :editable? false
+                       :id :article-area
+                       :text html-doc)
+        info-frame (frame :title (str "Relay info for " (relays/get-domain-name url))
+                             :content (scrollable info-pane)
+                             :size [500 :by 600])]
+    (listen info-pane :hyperlink article-panel/open-link)
+    (pack! info-frame)
+    (show! info-frame)))
+
 (defn make-relay-element
   ([url]
    (let [relay (get @relays url)
          relay-name url
-         connection-mark (if (is-connected? url) "✓" "X")
+         relay-info (:relay-info relay)
+         paid? (get-in relay-info ["limitation" "payment_required"])
+         paid-mark (if paid? "$" " ")
+         connection-mark (str paid-mark (if (is-connected? url) "✓" "X"))
          write-status (str (:write relay))
          read-status (str (:read relay))]
      (make-relay-element url relay-name connection-mark read-status write-status)))
@@ -74,10 +106,14 @@
                           :font :monospaced :editable? true :multi-line? true :wrap-lines? true
                           :id :relay-name)
          connection-label-id (if dummy? nil (make-relay-element-id "connection-" relay-name))
-         connection-label (label :text connection-mark :size [10 :by field-height]
+         connection-label (label :text connection-mark :size [20 :by field-height]
                                  :id connection-label-id)
          read-label (text :text read-status :editable? false :size [100 :by field-height])
          write-label (text :text write-status :size [50 :by field-height])
+         info-button (label :text "ℹ"
+                            :foreground :red
+                            :size [10 :by field-height]
+                            :user-data url)
          relay-event-counter-id (if dummy? nil (make-relay-element-id "events-" relay-name))
          events-label (label :text "" :size [60 :by field-height] :id relay-event-counter-id)
          notice-label-id (if dummy? nil (make-relay-element-id "notice-" relay-name))
@@ -85,9 +121,12 @@
                              :size [info-width :by field-height]
                              :id notice-label-id
                              :halign :left)
+         status-bar-items [connection-label read-label write-label]
+         status-bar-items (if (some? url) (concat status-bar-items [info-button events-label])
+                                          (concat status-bar-items [events-label]))
          status-bar (horizontal-panel :size [info-width :by field-height]
                                       :border 0
-                                      :items [connection-label read-label write-label events-label])
+                                      :items status-bar-items)
          info-area (border-panel :north status-bar :south notice-label :drag-enabled? false :border 0)
          element (left-right-split name-field info-area
                                    :size [manager-width :by element-height]
@@ -97,6 +136,7 @@
      (listen write-label :mouse-pressed (partial write-click url))
      (listen name-field :key-pressed (partial key-pressed-in-name url))
      (listen name-field :mouse-pressed (partial mouse-pressed-in-name url))
+     (listen info-button :mouse-pressed (partial show-relay-info url))
      element)))
 
 (defn valid-relay-url? [url]
@@ -181,13 +221,17 @@
             notice-label (select relay-panel [notice-label-selector])
             connection-label-selector (keyword (str "#connection-" (relay-id url)))
             connection-label (select relay-panel [connection-label-selector])
+            relay (get @relays url)
+            relay-info (:relay-info relay)
+            paid? (get-in relay-info ["limitation" "payment_required"])
+            paid-mark (if paid? "$" " ")
             ]
         (config! event-label
                  :text (str (get-mem [:events-by-relay url])))
         (config! notice-label
                  :text (get-mem [:relay-notice url]))
         (config! connection-label
-                 :text (if (is-connected? url) "✓" "X"))
+                 :text (str paid-mark (if (is-connected? url) "✓" "X")))
         ))
     ))
 
