@@ -1,13 +1,13 @@
 (ns more-speech.ui.swing.relay-manager
-  (:use [seesaw core])
   (:require
+    [more-speech.config :as config]
     [more-speech.data-storage :as data-storage]
     [more-speech.mem :refer :all]
     [more-speech.nostr.protocol :as protocol]
-    [more-speech.config :as config]
     [more-speech.nostr.relays :as relays]
     [more-speech.nostr.util :as util]
     [more-speech.ui.swing.article-panel :as article-panel])
+  (:use (seesaw [core]))
   (:import (java.awt Point)
            (java.util Timer TimerTask)))
 
@@ -65,27 +65,27 @@
        "<body>" body "</body>"))
 
 (defn show-relay-info [url _e]
-  (let [relay-info (get-in @relays [url :relay-info])
-        html-doc (make-html-document
-                   config/editor-pane-stylesheet
-                   (str "<h2> Name:</h2>" (get relay-info "name")
-                        "<h2> Description: </h2>" (get relay-info "description")
-                        "<h2> Pubkey: </h2>" (get relay-info "pubkey")
-                        "<h2> Contact: </h2>" (get relay-info "contact")
-                        "<h2> Software: </h2>" (get relay-info "software") " V:" (get relay-info "version")
-                        )
-                   )
-        info-pane (editor-pane
-                       :content-type "text/html"
-                       :editable? false
-                       :id :article-area
-                       :text html-doc)
-        info-frame (frame :title (str "Relay info for " (relays/get-domain-name url))
-                             :content (scrollable info-pane)
-                             :size [500 :by 600])]
-    (listen info-pane :hyperlink article-panel/open-link)
-    (pack! info-frame)
-    (show! info-frame)))
+  (when-let [relay-info (get-in @relays [url :relay-info])]
+    (let [html-doc (make-html-document
+                     config/editor-pane-stylesheet
+                     (str "<h2> Name:</h2>" (get relay-info "name")
+                          "<h2> Description: </h2>" (get relay-info "description")
+                          "<h2> Pubkey: </h2>" (get relay-info "pubkey")
+                          "<h2> Contact: </h2>" (get relay-info "contact")
+                          "<h2> Software: </h2>" (get relay-info "software") " V:" (get relay-info "version")
+                          )
+                     )
+          info-pane (editor-pane
+                      :content-type "text/html"
+                      :editable? false
+                      :id :article-area
+                      :text html-doc)
+          info-frame (frame :title (str "Relay info for " (relays/get-domain-name url))
+                            :content (scrollable info-pane)
+                            :size [500 :by 600])]
+      (listen info-pane :hyperlink article-panel/open-link)
+      (pack! info-frame)
+      (show! info-frame))))
 
 (defn make-relay-element
   ([url]

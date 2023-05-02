@@ -6,6 +6,7 @@
     [more-speech.mem :refer :all]
     [more-speech.nostr.elliptic-signature :as es]
     [more-speech.nostr.event-composers :as event-composers]
+    [more-speech.nostr.protocol :as protocol]
     [more-speech.nostr.util :as util])
   (:use (seesaw [core])))
 
@@ -160,7 +161,8 @@
                         :nip05 nip05
                         :lud16 lud16})
         (data-storage/write-keys (get-mem :keys))
-        (future (event-composers/compose-and-send-metadata-event)))
+        (future (event-composers/compose-and-send-metadata-event)
+                (protocol/request-profiles-and-contacts-for [public-key])))
 
       (close-profile-frame (select (get-mem :frame) [:#profile-menu]) nil)
       (dispose! profile-frame))))

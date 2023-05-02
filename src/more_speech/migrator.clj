@@ -30,7 +30,7 @@
                                    :private-key (util/bytes->hex-string private-key)})
       (println "A private and public key have been generated for you.")
       (println "Your temporary user name is: " temp-user-name)
-      (println "Please edit private/keys to change it."))
+      (println "Please go to Manage->Profile to change it."))
     )
   (when-not (file-exists? @config/nicknames-filename)
     (spit @config/nicknames-filename {16r2ef93f01cd2493e04235a6b87b10d3c4a74e2a7eb7c3caf168268f6af73314b5 "unclebobmartin"}))
