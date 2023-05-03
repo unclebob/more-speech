@@ -44,7 +44,7 @@
   )
 
 (defn make-stats-frame [_e]
-  (let [stats-frame (frame :title (str "Stats - " @log-level) )
+  (let [stats-frame (frame :title "Stats")
         incoming-panel (make-stat-panel "Incoming events." :incoming-data)
         backlog-panel (make-stat-panel "Backlog." :backlog-data)
         processed-panel (make-stat-panel "Processed events." :processed-data)
