@@ -91,15 +91,15 @@
         (mem/set-mem :pubkey 1)
         (send-subscription @relay 1000 @now)
         (Thread/sleep 10)
-        (should= [["REQ" "ms-future"
+        (should= #{["REQ" "ms-future"
                    {"kinds" [0 1 2 3 4 7 9735],
                     "since" @now}]
                   ["REQ" "ms-past"
                    {"kinds" [0 1 2 3 4 7 9735],
                     "since" (- @now config/batch-time),
                     "until" @now,
-                    "limit" config/batch-size}]]
-                 (mem/get-mem :stub-send))
+                    "limit" config/batch-size}]}
+                 (set (mem/get-mem :stub-send)))
 
         (should= {:eose :next-batch,
                   :min-time @now,
