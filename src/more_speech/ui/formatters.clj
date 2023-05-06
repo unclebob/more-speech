@@ -313,4 +313,4 @@
 (defn hexify-event [event]
   (assoc event :pubkey (hexify (:pubkey event))
                :id (hexify (:id event))
-               :sig (hexify (:sig event))))
+               :sig (->> (:sig event) (util/num->bytes 64) util/bytes->hex-string)))
