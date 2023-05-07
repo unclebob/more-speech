@@ -260,11 +260,15 @@
     :else s))
 
 (defn get-author-name [npub]
-  (let [id (bech32/address->number npub)
-        profile (gateway/get-profile (get-db) id)]
-    (if (nil? profile)
-      npub
-      (:name profile))))
+  (try
+    (let [id (bech32/address->number npub)
+          profile (gateway/get-profile (get-db) id)]
+      (if (nil? profile)
+        npub
+        (:name profile)))
+    (catch Exception e
+      (log-pr 2 'get-author-name (.getMessage e))
+      npub)))
 
 (defn reformat-article-into-html [article]
   (let [segments (segment-article article)]
