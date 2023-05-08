@@ -7,9 +7,11 @@
             [more-speech.db.gateway :as gateway]
             [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
+            [more-speech.nostr.contact-list :as contact-list]
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.protocol :as protocol]
+            [more-speech.nostr.trust-updater :as trust-updater]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.zaps :as zaps]
             [more-speech.ui.formatter-util :as formatter-util]
@@ -53,11 +55,13 @@
   (str "<head>" style "</head>"
        "<body>" body "</body>"))
 
-(defn show-profile [profile]
+(defn show-profile [id profile]
   (let [created-at (:created-at profile)
         html-doc (make-html-document
                    config/editor-pane-stylesheet
                    (str "<h2> Name:</h2>" (:name profile)
+                        "<h2> Petname:</h2>" (contact-list/get-petname id)
+                        "<h2> Pubkey:</h2>" (util/hexify id)
                         "<h2> About: </h2>" (:about profile)
                         "<h2> Display name: </h2>" (:display-name profile)
                         "<h2> Banner: </h2>" (:banner profile)
@@ -84,7 +88,7 @@
 
 (defn show-user-profile [id]
   (when-let [profile (gateway/get-profile (get-db) id)]
-    (show-profile profile)))
+    (show-profile id profile)))
 
 (defn user-name-click [type frame e]
   (let [x (.x (.getPoint e))
@@ -333,20 +337,34 @@
       (bech32/address->number subject)
 
       :else
-      (gateway/get-id-from-username (get-db) subject))
+      (do
+        (let [petname-id (contact-list/get-pubkey-from-petname subject)]
+          (if (some? petname-id)
+            petname-id
+            (gateway/get-id-from-username (get-db) subject)))
+        ))
     (catch Exception _e
       nil)))
 
-(defn get-user-info [subject _e]
-  (when-let [id (get-user-id-from-subject subject)]
-    (show-user-profile id)))
+(defn get-user-info [id _e]
+  (show-user-profile id))
+
+(defn trust-author [id _e]
+  (trust-updater/trust-this-author id))
 
 (defn pop-up-name-menu [e subject]
-  (let [p (popup :items [(action :name "Get Info..."
-                                 :handler (partial get-user-info subject))])
+  (let [id (get-user-id-from-subject subject)
+        profile (gateway/get-profile (get-db) id)
+        p (popup :items [(action :name "Get Info..."
+                                 :handler (partial get-user-info id))
+                         ;(action :name "Trust this author..."
+                         ;        :handler (partial trust-author id))
+                         ])
         ev (.getInputEvent e)
         [x y] (mouse/location ev)]
-    (.show p (to-widget e) x y)))
+    (if (some? profile)
+      (.show p (to-widget e) x y)
+      (protocol/request-profiles-and-contacts-for id))))
 
 ;---Declared
 (defn open-link [e]
@@ -364,6 +382,7 @@
           (= type "ms-idreference")
           (let [id (util/unhexify subject)]
             (protocol/request-note id)
+            (protocol/request-profiles-and-contacts-for id)
             (swing-util/select-event id))
 
           (= type "ms-notereference")

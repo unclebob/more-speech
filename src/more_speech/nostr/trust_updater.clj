@@ -51,8 +51,11 @@
         (do (alert (str "Invalid pet-name: " petname))
             (recur profile))))))
 
-(defn trust-this-author [event _e]
-  (let [his-pubkey (:pubkey event)
-        petname (ask-for-petname his-pubkey)]
+(defn trust-this-author [id]
+  (let [petname (ask-for-petname id)]
     (when (some? petname)
-      (entrust-and-send his-pubkey petname))))
+      (entrust-and-send id petname))))
+
+(defn trust-author-of-this-event [event _e]
+  (let [id (:pubkey event)]
+    (trust-this-author id)))

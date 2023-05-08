@@ -73,20 +73,26 @@
           (log-pr 1 (.getMessage e))
           "@-unknown-")))))
 
-(defn b32->user-name [b32]
+(defn get-author-name [npub]
   (try
-    (let [name (:name (gateway/get-profile (get-db) (bech32/address->number b32)))]
-      (if (nil? name) b32 name))
-    (catch Exception _e
-      b32)))
+    (let [id (bech32/address->number npub)
+          profile (gateway/get-profile (get-db) id)
+          petname (contact-list/get-petname id)]
+      (cond
+        (some? petname) petname
+        (some? profile) (:name profile)
+        :else npub))
+    (catch Exception e
+      (log-pr 2 'get-author-name (.getMessage e))
+      npub)))
 
 (defn replace-nostr-references [s]
   (let [padded-content (str " " s " ")
-        references (re-seq config/nostr-reference-pattern padded-content)
+        references (re-seq config/nostr-npub-reference-pattern padded-content)
         references (mapv second references)
-        references (mapv b32->user-name references)
+        references (mapv get-author-name references)
         references (mapv #(str "nostr:" %) references)
-        segments (string/split padded-content config/nostr-reference-pattern)
+        segments (string/split padded-content config/nostr-npub-reference-pattern)
         referents (conj references " ")
         replaced-content (string/trim (apply str (interleave segments referents)))]
     replaced-content)
@@ -99,7 +105,7 @@
         referents (mapv (partial lookup-reference event) references)
         referents (conj referents " ")
         replaced-content (string/trim (apply str (interleave segments referents)))]
-    (replace-nostr-references replaced-content)))
+    replaced-content))
 
 (defn get-subject [tags]
   (if (empty? tags)
@@ -135,6 +141,7 @@
                          "%s%s %20s %s %s%s%s\n"
                          "%s%s %s %s %s%s%s")
            content (replace-references event)
+           content (replace-nostr-references content)
            name (format-user-id pubkey)
            time (format-time created-at)
            subject (get-subject tags)
@@ -259,17 +266,6 @@
     (.startsWith s "@") (subs s 1)
     :else s))
 
-(defn get-author-name [npub]
-  (try
-    (let [id (bech32/address->number npub)
-          profile (gateway/get-profile (get-db) id)]
-      (if (nil? profile)
-        npub
-        (:name profile)))
-    (catch Exception e
-      (log-pr 2 'get-author-name (.getMessage e))
-      npub)))
-
 (defn reformat-article-into-html [article]
   (let [segments (segment-article article)]
     (reduce
@@ -294,15 +290,13 @@
           (= seg-type :nostrnamereference)
           (str formatted-content (ms-linkify "ms-namereference" "nostr:" (extract-reference seg)))
 
-          (or (= seg-type :nostrnpubreference)
-              (= seg-type :nostrprofilereference))
+          (= seg-type :nostrnpubreference)
           (str formatted-content (ms-linkify "ms-namereference" "nostr:" (get-author-name (extract-reference seg))))
 
           (= seg-type :idreference)
           (str formatted-content (ms-linkify "ms-idreference" "@" (subs seg 1)))
 
-          (or (= seg-type :nostrnotereference)
-              (= seg-type :nostreventreference))
+          (= seg-type :nostrnotereference)
           (str formatted-content (ms-linkify "ms-notereference" "nostr:" (extract-reference seg)))
 
           (= seg-type :img)

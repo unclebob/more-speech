@@ -266,7 +266,7 @@
           p (popup :items [(action :name "Get info..."
                                    :handler (partial get-info event))
                            (action :name "Trust this author..."
-                                   :handler (partial trust-updater/trust-this-author event))
+                                   :handler (partial trust-updater/trust-author-of-this-event event))
                            (menu :text "Add author to tab" :items add-author-actions)
                            (menu :text "Block author from tab" :items block-author-actions)
                            (menu :text "Add note to tab" :items add-article-actions)

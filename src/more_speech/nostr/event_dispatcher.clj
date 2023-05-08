@@ -59,8 +59,12 @@
                        :lud06 lud06
                        :lud16 lud16
                        :nip05 nip05
-                       :created-at created-at}]
-      (gateway/add-profile db pubkey profile-doc))
+                       :created-at created-at}
+          old-profile (gateway/get-profile db pubkey)
+          old-date (get old-profile :created-at)]
+      (when (or (nil? old-date)
+                 (> created-at old-date))
+        (gateway/add-profile db pubkey profile-doc)))
     (catch Exception e
       (log-pr 1 'json-exception-process-name-event-ignored (.getMessage e))
       (log-pr 1 event))))

@@ -54,6 +54,32 @@
           header (trim-header (format-header event))]
       (should= (str "(user-1) " timestamp " the message") header)))
 
+  (it "formats a message with a user reference"
+    (gateway/add-profile @db 1 {:name "user-1"})
+    (gateway/add-profile @db 2 {:name "user-2"})
+    (let [npub2 (bech32/encode "npub" 2)
+          event {:pubkey 1
+                 :created-at 1
+                 :content (str "the message nostr:" npub2)
+                 :tags []}
+          timestamp (format-time (event :created-at))
+          header (trim-header (format-header event))]
+      (should= (str "(user-1) " timestamp " the message nostr:user-2") header)))
+
+  (it "formats a message with a user reference that has a petname"
+      (gateway/add-profile @db 1 {:name "user-1"})
+      (gateway/add-profile @db 2 {:name "user-2"})
+      (set-mem :pubkey 1)
+      (gateway/add-contacts @db 1 [{:pubkey 2 :petname "petname"}])
+      (let [npub2 (bech32/encode "npub" 2)
+            event {:pubkey 1
+                   :created-at 1
+                   :content (str "the message nostr:" npub2)
+                   :tags []}
+            timestamp (format-time (event :created-at))
+            header (trim-header (format-header event))]
+        (should= (str "user-1 " timestamp " the message nostr:petname") header)))
+
   (it "formats a long message with line ends."
     (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
                  :created-at 1
@@ -154,22 +180,6 @@
       (let [content "nostr:npub1qq"
             event {:content content}]
         (should= "nostr:npub1qq" (replace-references event))))
-
-    (it "replaces nostr:<bech32> references with nostr:<username> if user exists"
-      (let [user-id (rand-int 1000000000)
-            b32 (bech32/encode "npub" user-id)
-            content (str "nostr:" b32)
-            event {:content content}]
-        (gateway/add-profile @db user-id {:name "user1"})
-        (should= "nostr:user1" (replace-references event))))
-
-    (it "replaces multiple nostr:<bech32> references"
-      (let [user-id (rand-int 1000000000)
-            b32 (bech32/encode "npub" user-id)
-            content (str "first nostr:" b32 " second nostr:nprofile1qq done.")
-            event {:content content}]
-        (gateway/add-profile @db user-id {:name "user1"})
-        (should= "first nostr:user1 second nostr:nprofile1qq done." (replace-references event))))
     )
   )
 
