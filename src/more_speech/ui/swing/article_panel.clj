@@ -129,6 +129,13 @@
 (defn dn-click [_e]
   (reaction-click "-"))
 
+(declare load-article-info)
+
+(defn reload-article []
+  (let [id (get-mem :article-window-event-id)]
+    (when (some? id)
+      (load-article-info id))))
+
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
         label-font (uconfig/get-small-font)
@@ -269,7 +276,9 @@
         zap-items (map format-zap (:zaps event))
         event-id (select main-frame [:#id-label])
         author-name-label (select main-frame [:#author-name-label])]
-    (protocol/request-profiles-and-contacts-for (:pubkey event))
+    (when (not= (get-mem :article-window-event-id) selected-id)
+      (protocol/request-profiles-and-contacts-for (:pubkey event)))
+    (set-mem :article-window-event-id selected-id)
     (text! reactions-label (str reactions))
     (if reacted?
       (do

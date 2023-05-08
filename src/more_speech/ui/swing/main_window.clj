@@ -89,12 +89,15 @@
                           (run [] (tabs/prune-tabs)))
         repaint-task (proxy [TimerTask] []
                        (run [] (repaint-main-window)))
+        reload-article-task (proxy [TimerTask] []
+                              (run [] (article-panel/reload-article)))
         prune-tabs-frequency (* config/prune-tabs-frequency-in-minutes 60 1000)]
     (.schedule main-timer
                prune-tabs-task
                (long prune-tabs-frequency)
                (long prune-tabs-frequency))
-    (.schedule main-timer repaint-task 1000 1000)))
+    (.schedule main-timer repaint-task 1000 1000)
+    (.schedule main-timer reload-article-task 1000 1000)))
 
 (defn setup-main-window []
   (setup-main-timer)

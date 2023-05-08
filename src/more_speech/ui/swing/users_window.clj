@@ -223,7 +223,7 @@
                                               selection-panel])
         user-window-timer (Timer. "User window timer")
         user-window-repaint-task (proxy [TimerTask] []
-                                   (run [] repaint-user-window users-frame))]
+                                   (run [] (repaint-user-window users-frame)))]
     (set-mem [:user-window :selection-group] :recent-user-items)
     (load-user-window-data)
     (config! trusted-users-listbox :model (get-mem [:user-window :trusted-user-items]))

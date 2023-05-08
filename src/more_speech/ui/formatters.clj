@@ -225,9 +225,9 @@
 
   ([content segments]
    (let [patterns [[:nostrnotereference config/nostr-note-reference-pattern]
-                   [:nostreventreference config/nostr-event-reference-pattern]
+                   ;[:nostreventreference config/nostr-event-reference-pattern]
                    [:nostrnpubreference config/nostr-npub-reference-pattern]
-                   [:nostrprofilereference config/nostr-profile-reference-pattern]
+                   ;[:nostrprofilereference config/nostr-profile-reference-pattern]
                    [:nostrnamereference config/nostr-name-reference-pattern]
                    [:idreference config/id-reference-pattern]
                    [:namereference config/user-reference-pattern]
@@ -286,6 +286,11 @@
 
           (= seg-type :namereference)
           (str formatted-content (ms-linkify "ms-namereference" "@" (extract-reference seg)))
+
+          (and (= seg-type :nostrnamereference)
+               (or (.startsWith seg ":nostr:nevent1")
+                   (.startsWith seg ":nostr:nprofile1")))
+          seg
 
           (= seg-type :nostrnamereference)
           (str formatted-content (ms-linkify "ms-namereference" "nostr:" (extract-reference seg)))

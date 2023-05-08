@@ -46,17 +46,17 @@
     (send-request request)))
 
 (defn request-profiles-and-contacts-for [authors]
-  (let [authors (if (coll? authors) authors [authors])
-        hexified-authors (map util/hexify authors)
-        trimmed-authors (if (<= (count hexified-authors) 100)
-                          hexified-authors
-                          (map #(subs % 0 10) (take 1000 (shuffle hexified-authors))))
-        r (rand-int 1000000)
-        request ["REQ" (str "ms-request-" r)
-                 {"kinds" [0 3]
-                  "authors" trimmed-authors}]]
-    (send-request request)
-    ))
+  (when (some? authors)
+    (let [authors (if (coll? authors) authors [authors])
+          hexified-authors (map util/hexify authors)
+          trimmed-authors (if (<= (count hexified-authors) 100)
+                            hexified-authors
+                            (map #(subs % 0 10) (take 1000 (shuffle hexified-authors))))
+          r (rand-int 1000000)
+          request ["REQ" (str "ms-request-" r)
+                   {"kinds" [0 3]
+                    "authors" trimmed-authors}]]
+      (send-request request))))
 
 (defn request-batch [url id back-to filter]
   (let [relay (get-in @relays [url :connection])
