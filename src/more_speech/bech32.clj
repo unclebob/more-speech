@@ -230,3 +230,16 @@
               (recur remainder (assoc tlv :relays (concat relays [relay]))))
 
           (recur remainder tlv))))))
+
+(defn tlv-encode [hrp data]
+  (let [id (:special data)
+        relays (:relays data)
+        id-bytes (map #(Integer/parseInt (apply str %) 16) (partition 2 id))
+        tlv (concat [0 32] id-bytes)]
+    (loop [relays relays
+           tlv tlv]
+      (if (empty? relays)
+        (encode-str hrp tlv)
+        (let [relay (first relays)
+              relay-tlv [1 (count relay)]]
+          (recur (rest relays) (concat tlv relay-tlv (map int relay))))))))

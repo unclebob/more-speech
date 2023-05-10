@@ -128,5 +128,10 @@
       (should= {:special "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"
                 :relays ["wss://r.x.com" "wss://djbas.sadkb.com"]}
                (address->tlv "nprofile1qqsrhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8gpp4mhxue69uhhytnc9e3k7mgpz4mhxue69uhkg6nzv9ejuumpv34kytnrdaksjlyr9p")))
+
+    (focus-it "encodes the nprofile from NIP-19"
+      (should= "nprofile1qqsrhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8gpp4mhxue69uhhytnc9e3k7mgpz4mhxue69uhkg6nzv9ejuumpv34kytnrdaksjlyr9p"
+               (tlv-encode "nprofile" {:special "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"
+                                       :relays ["wss://r.x.com" "wss://djbas.sadkb.com"]})))
     )
   )
