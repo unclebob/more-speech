@@ -1,5 +1,6 @@
 (ns more-speech.nostr.trust-updater
   (:require
+    [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
     [more-speech.config :refer [get-db]]
     [more-speech.db.gateway :as gateway]
@@ -7,7 +8,7 @@
     [more-speech.nostr.event-composers :as composers]
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatter-util :as f-util]
-    )
+    [more-speech.ui.formatters :as formatters])
   (:use [seesaw.core]))
 
 (defn untrust [his-pubkey]
@@ -15,7 +16,8 @@
         my-contacts (gateway/get-contacts (get-db) my-pubkey)
         reduced-contacts (remove #(= his-pubkey (:pubkey %)) my-contacts)]
     (gateway/add-contacts (get-db) my-pubkey reduced-contacts)
-    (gateway/sync-db (get-db)))
+    (gateway/sync-db (get-db))
+    reduced-contacts)
   )
 
 (defn entrust [his-pubkey his-petname]
@@ -35,6 +37,10 @@
   (let [my-contact-list (entrust his-pubkey his-petname)]
     (composers/compose-and-send-contact-list my-contact-list)))
 
+(defn untrust-and-send [his-pubkey]
+  (let [my-contact-list (untrust his-pubkey)]
+    (composers/compose-and-send-contact-list my-contact-list)))
+
 (defn ask-for-petname [pubkey]
   (loop [profile (gateway/get-profile (get-db) pubkey)]
     (let [petname (input "Name this author"
@@ -50,6 +56,15 @@
         :else
         (do (alert (str "Invalid pet-name: " petname))
             (recur profile))))))
+
+(defn verify-untrust [id]
+  (let [untrusted-name (formatters/format-user-id id)
+        question (dialog :content
+                         (str "Are you sure you want to untrust " untrusted-name
+                              "\nID: " (util/hexify id)
+                              "\n" (bech32/encode "npub" id))
+                         :option-type :ok-cancel)]
+    (show! (pack! question))))
 
 (defn trust-this-author [id]
   (let [petname (ask-for-petname id)]

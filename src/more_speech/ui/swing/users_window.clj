@@ -1,7 +1,6 @@
 (ns more-speech.ui.swing.users-window
   (:require
     [clojure.set :as set]
-    [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
     [more-speech.config :refer [get-db]]
     [more-speech.db.gateway :as gateway]
@@ -140,15 +139,9 @@
       (let [untrusted-user (second selected-item)
             recent-button (select frame [:#recent-button])
             selected-listbox (select frame [:#selected-users])
-            untrusted-name (formatters/format-user-id untrusted-user)
-            question (dialog :content
-                             (str "Are you sure you want to untrust " untrusted-name
-                                  "\nID: " (util/hexify untrusted-user)
-                                  "\n" (bech32/encode "npub" untrusted-user))
-                             :option-type :ok-cancel)
-            answer (show! (pack! question))]
+            answer (trust-updater/verify-untrust untrusted-user)]
         (when (= answer :success)
-          (trust-updater/untrust untrusted-user)
+          (trust-updater/untrust-and-send untrusted-user)
           (load-trusted-users)
           (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))
           (config! recent-button :selected? true)
