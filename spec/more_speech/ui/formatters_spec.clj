@@ -355,12 +355,12 @@
                           npub "\">nostr:" npub "</a>")
                      (reformat-article-into-html (str "nostr:" npub)))))
 
-    ;(it "should replace nostr:nevent with notereference link"
-    ;      (let [user-id (rand-int 1000000000)
-    ;            npub (bech32/encode "nevent" user-id)]
-    ;        (should= (str "<a href=\"ms-notereference://"
-    ;                      npub "\">nostr:" npub "</a>")
-    ;                 (reformat-article-into-html (str "nostr:" npub)))))
+    (it "should replace nostr:nevent with notereference link"
+          (let [user-id (rand-int 1000000000)
+                nevent (bech32/tlv-encode "nevent" {:special (hexify user-id)})]
+            (should= (str "<a href=\"ms-neventreference://"
+                          nevent "\">nostr:[event]</a>")
+                     (reformat-article-into-html (str "nostr:" nevent)))))
 
     (it "should replace nostr:note with notereference link"
               (let [user-id (rand-int 1000000000)

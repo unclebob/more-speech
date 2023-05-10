@@ -196,8 +196,8 @@
         uri (if (= 2 (count split-url)) (second split-url) url)]
     (str "<a href=\"" url "\">" uri "</a>")))
 
-(defn ms-linkify [type prefix subject]
-  (str "<a href=\"" (str type "://" subject) "\">" prefix subject "</a>"))
+(defn ms-linkify [type subject link-text]
+  (str "<a href=\"" (str type "://" subject) "\">" link-text "</a>"))
 
 (defn img-ify [seg]
   (str "<a href=\"" seg "\"><img src=\"" seg "\"></a><br>" (linkify seg)))
@@ -225,7 +225,7 @@
 
   ([content segments]
    (let [patterns [[:nostrnotereference config/nostr-note-reference-pattern]
-                   ;[:nostreventreference config/nostr-event-reference-pattern]
+                   [:nostreventreference config/nostr-event-reference-pattern]
                    [:nostrnpubreference config/nostr-npub-reference-pattern]
                    ;[:nostrprofilereference config/nostr-profile-reference-pattern]
                    [:nostrnamereference config/nostr-name-reference-pattern]
@@ -270,46 +270,52 @@
   (let [segments (segment-article article)]
     (reduce
       (fn [formatted-content [seg-type seg]]
-        (cond
-          (= seg-type :text)
-          (str formatted-content
-               ((comp
-                  non-breaking-spaces
-                  break-newlines
-                  html-escape
-                  format-replies
-                  ) seg)
-               )
+        (let [reference (extract-reference seg)]
+          (cond
+            (= seg-type :text)
+            (str formatted-content
+                 ((comp
+                    non-breaking-spaces
+                    break-newlines
+                    html-escape
+                    format-replies
+                    ) seg)
+                 )
 
-          (= seg-type :url)
-          (str formatted-content (linkify seg))
+            (= seg-type :url)
+            (str formatted-content (linkify seg))
 
-          (= seg-type :namereference)
-          (str formatted-content (ms-linkify "ms-namereference" "@" (extract-reference seg)))
+            (= seg-type :namereference)
+            (str formatted-content (ms-linkify "ms-namereference" reference (str "@" reference)))
 
-          (and (= seg-type :nostrnamereference)
-               (or (.startsWith seg ":nostr:nevent1")
-                   (.startsWith seg ":nostr:nprofile1")))
-          seg
+            (and (= seg-type :nostrnamereference)
+                 (or (.startsWith seg ":nostr:nevent1")
+                     (.startsWith seg ":nostr:nprofile1")))
+            seg
 
-          (= seg-type :nostrnamereference)
-          (str formatted-content (ms-linkify "ms-namereference" "nostr:" (extract-reference seg)))
+            (= seg-type :nostrnamereference)
+            (str formatted-content (ms-linkify "ms-namereference" reference (str "nostr:" reference)))
 
-          (= seg-type :nostrnpubreference)
-          (str formatted-content (ms-linkify "ms-namereference" "nostr:" (get-author-name (extract-reference seg))))
+            (= seg-type :nostrnpubreference)
+            (let [author (get-author-name reference)]
+              (str formatted-content (ms-linkify "ms-namereference" author (str "nostr:" author))))
 
-          (= seg-type :idreference)
-          (str formatted-content (ms-linkify "ms-idreference" "@" (subs seg 1)))
+            (= seg-type :idreference)
+            (let [id (subs seg 1)]
+              (str formatted-content (ms-linkify "ms-idreference" id (str "@" id))))
 
-          (= seg-type :nostrnotereference)
-          (str formatted-content (ms-linkify "ms-notereference" "nostr:" (extract-reference seg)))
+            (= seg-type :nostrnotereference)
+            (str formatted-content (ms-linkify "ms-notereference" reference (str "nostr:" reference)))
 
-          (= seg-type :img)
-          (str formatted-content (img-ify seg))
+            (= seg-type :nostreventreference)
+            (str formatted-content (ms-linkify "ms-neventreference" reference "nostr:[event]"))
 
-          :else
-          formatted-content
-          ))
+            (= seg-type :img)
+            (str formatted-content (img-ify seg))
+
+            :else
+            formatted-content
+            )))
       ""
       segments)))
 

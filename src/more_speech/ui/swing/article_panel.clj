@@ -407,6 +407,16 @@
             (catch Exception ex
               (log-pr 1 'open-link url (.getMessage ex))))
 
+          (= type "ms-neventreference")
+          (try
+            (let [tlv (bech32/address->tlv subject)
+                  hex-id (:special tlv)
+                  id (util/unhexify hex-id)]
+              (protocol/request-note id)
+              (swing-util/select-event id))
+            (catch Exception e
+              (log-pr 1 'open-link url (.getMessage e))))
+
           (= type "ms-namereference")
           (pop-up-name-menu e subject)
 
