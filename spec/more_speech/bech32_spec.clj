@@ -99,21 +99,34 @@
         (should= long-string (address->str lnurl))))
 
     (it "encodes and decodes a one byte string"
-           (let [known-string "t"
-                 known-lnurl "lnurl1ws4pqzkn"]
-             (should= known-lnurl (encode-str "lnurl" known-string))
-             (should= known-string (address->str known-lnurl))))
+      (let [known-string "t"
+            known-lnurl "lnurl1ws4pqzkn"]
+        (should= known-lnurl (encode-str "lnurl" known-string))
+        (should= known-string (address->str known-lnurl))))
 
     (it "encodes and decodes a known short string"
-          (let [known-string "this is the string"
-                known-lnurl "lnurl1w35xjueqd9ejqargv5s8xarjd9hxw9sar9p"]
-            (should= known-lnurl (encode-str "lnurl" known-string))
-            (should= known-string (address->str known-lnurl))))
+      (let [known-string "this is the string"
+            known-lnurl "lnurl1w35xjueqd9ejqargv5s8xarjd9hxw9sar9p"]
+        (should= known-lnurl (encode-str "lnurl" known-string))
+        (should= known-string (address->str known-lnurl))))
 
     (it "encodes and decodes a known long string"
       (let [known-string "https://service.com/api?q=3fc3645b439ce8e7f2553a69e5267081d96dcd340693afabe04be7b0ccd178df"
             known-lnurl "lnurl1dp68gurn8ghj7um9wfmxjcm99e3k7mf0v9cxj0m385ekvcenxc6r2c35xvukxefcv5mkvv34x5ekzd3ev56nyd3hxqurzepexejxxepnxscrvwfnv9nxzcn9xq6xyefhvgcxxcmyxymnserxfq5fns"]
         (should= known-string (address->str known-lnurl))
         (should= known-lnurl (encode-str "lnurl" known-string))))
+
+    (it "encodes a long string of binary zeros"
+      (doseq [zeroes [[0] [0 0] [0 0 0] [0 0 0 0] [0 0 0 0 0] [0 0 0 0 0 0] [0 0 0 0 0 0 0] [0 0 0 0 0 0 0 0]]]
+        (should= zeroes
+                 (map int
+                      (->> zeroes (encode-str "xxxx") (address->str))))))
+    )
+
+  (context "Nip-19 TLV"
+    (it "decodes the nprofile from NIP-19"
+      (should= {:special "3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d"
+                :relays ["wss://r.x.com" "wss://djbas.sadkb.com"]}
+               (address->tlv "nprofile1qqsrhuxx8l9ex335q7he0f09aej04zpazpl0ne2cgukyawd24mayt8gpp4mhxue69uhhytnc9e3k7mgpz4mhxue69uhkg6nzv9ejuumpv34kytnrdaksjlyr9p")))
     )
   )

@@ -150,18 +150,24 @@
       (align-num n the-string)
       (recur (rest s) (+ (* 256 n) (int (first s)))))))
 
-(defn- num->32bit-data [n]
+(defn- num->32bit-data [n digits]
   (loop [n n
-         data (list)]
-    (if (zero? n)
+         data (list)
+         digits digits]
+    (if (zero? digits)
       data
-      (recur (quot n 32) (conj data (int (rem n 32)))))))
+      (recur (quot n 32)
+             (conj data (int (rem n 32)))
+             (dec digits)))))
 
 (defn encode-str
   "create a bech32 representation of a string"
   [hrp s]
-  (let [big-number (str->num s)
-        data (num->32bit-data big-number)
+  (let [n-bits (* 8 (count s))
+        n-digits (quot n-bits 5)
+        n-digits (if (zero? (rem n-bits 5)) n-digits (inc n-digits))
+        big-number (str->num s)
+        data (num->32bit-data big-number n-digits)
         cksum-data (create-checksum hrp data)]
     (str hrp "1" (apply str (map to-char (concat data cksum-data))))))
 
@@ -171,16 +177,20 @@
     (if valid?
       (let [values (map to-n data)
             accumulator (reduce (fn [n value]
-                          (+ value (* n 32)))
-                        0N values)
+                                  (+ value (* n 32)))
+                                0N values)
             n-bits (* 5 (count data))
             shift-n (rem n-bits 8)
+            n-bytes (quot n-bits 8)
             aligned-accumulator (quot accumulator (reduce * (repeat shift-n 2)))]
         (loop [n aligned-accumulator
-               chars (list)]
-          (if (zero? n)
+               chars (list)
+               n-bytes n-bytes]
+          (if (zero? n-bytes)
             (apply str chars)
-            (recur (quot n 256) (conj chars (char (rem n 256)))))))
+            (recur (quot n 256)
+                   (conj chars (char (rem n 256)))
+                   (dec n-bytes)))))
       (throw (Exception. "bech32/address->str: invalid checksum")))
     )
   )
@@ -198,3 +208,25 @@
                         0N values)]
         (/ acc byte-over-correction))
       (throw (Exception. "bech32: invalid checksum")))))
+
+
+
+(defn address->tlv [address]
+  (loop [chars (address->str address)
+         tlv {}]
+    (if (empty? chars)
+      tlv
+      (let [[t l & data] chars
+            type (int t)
+            length (int l)
+            argument (take length data)
+            remainder (drop length data)]
+        (condp = type
+          0 (let [hexid (apply str (map #(format "%02x" (int %)) argument))]
+              (recur remainder (assoc tlv :special hexid)))
+
+          1 (let [relay (apply str argument)
+                  relays (:relays tlv)]
+              (recur remainder (assoc tlv :relays (concat relays [relay]))))
+
+          (recur remainder tlv))))))
