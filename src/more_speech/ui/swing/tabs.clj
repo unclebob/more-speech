@@ -238,9 +238,16 @@
     (conj tab-list {:name "all" :selected [] :blocked []})))
 
 (defn get-info [event _e]
-  (alert
-    (with-out-str
-      (clojure.pprint/pprint (formatters/hexify-event event)))))
+  (let [event-info (with-out-str
+                     (clojure.pprint/pprint
+                       (formatters/hexify-event event)))
+        info-panel (text :multi-line? true
+                         :editable? false
+                         :text event-info)
+        info-frame (frame :title "Event info"
+                          :content (scrollable info-panel))]
+    (pack! info-frame)
+    (show! info-frame)))
 
 (defn dm-author [event _e]
   (let [pubkey (:pubkey event)
