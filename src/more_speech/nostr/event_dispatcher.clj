@@ -67,7 +67,7 @@
           old-profile (gateway/get-profile db pubkey)
           old-date (get old-profile :created-at)]
       (when (or (nil? old-date)
-                 (> created-at old-date))
+                 (>= created-at old-date))
         (gateway/add-profile db pubkey profile-doc)))
     (catch Exception e
       (log-pr 1 'json-exception-process-name-event-ignored (.getMessage e))

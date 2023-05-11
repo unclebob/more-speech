@@ -121,13 +121,17 @@
         npub (bech32/encode "npub" pubkey)
         event-id (config (select frame [:#id-label]) :user-data)
         event (gateway/get-event (get-db) event-id)
+        profile (gateway/get-profile (get-db) pubkey)
         popup-items [(action :name (str "Copy " (subs hex-id 0 10) "...")
                              :handler (partial copy-to-clipboard hex-id))
                      (action :name (str "Copy " (subs npub 0 10) "...")
-                             :handler (partial copy-to-clipboard npub))
-                     (action :name "Get info..."
-                             :handler (fn [_e] (show-user-profile pubkey)))]
-        popup-items (if (= type :author)
+                             :handler (partial copy-to-clipboard npub))]
+        popup-items (if (some? profile)
+                      (conj popup-items (action :name "Get info..."
+                                                :handler (fn [_e] (show-user-profile pubkey))))
+                      popup-items)
+        popup-items (if (and (= type :author)
+                             (some? profile))
                       (conj popup-items (action :name "Zap author..."
                                                 :handler (partial zaps/zap-author event)))
                       popup-items)
@@ -306,60 +310,61 @@
     (when (or new-id?
               (not= (get-mem :article-html) article-html))
       (set-mem :article-html article-html)
-      (text! reactions-label (str reactions))
-      (if reacted?
-        (do
-          (text! up-arrow " ")
-          (text! dn-arrow " "))
-        (do
-          (text! up-arrow "👍🏻")
-          (text! dn-arrow "👎🏻")))
-      (if zapped?
-        (text! zap-icon "❗⚡ ")                              ;₿ use the bitcoin char?
-        (text! zap-icon ""))
-      (swing-util/clear-popup relays-popup)
-      (swing-util/clear-popup reactions-popup)
-      (swing-util/clear-popup zaps-popup)
-      (config! relays-popup :items relay-names)
-      (config! reactions-popup :items (reaction-items (:reactions event)))
-      (config! zaps-popup :items zap-items)
-      (text! article-area article-html)
-      (text! author-name-label
-             (formatters/format-user-id (:pubkey event) 50))
-      (config! author-name-label :user-data (:pubkey event))
-      (text! (select main-frame [:#created-time-label])
-             (f-util/format-time (:created-at event)))
-      (config! event-id
-               :user-data (:id event)
-               :text (f-util/abbreviate (util/num32->hex-string (:id event)) 20))
-      (if (some? referent)
-        (let [replied-event (gateway/get-event (get-db) referent)
-              reply-to-id (:pubkey replied-event)]
-          (config! reply-to
-                   :user-data reply-to-id
-                   :text (formatters/format-user-id reply-to-id 50))
-          (config! citing
-                   :user-data referent
-                   :text (f-util/abbreviate (util/num32->hex-string referent) 20)
-                   :font (if (nil? replied-event)
-                           (uconfig/get-small-font)
-                           (uconfig/get-small-bold-font))
-                   ))
-        (do (text! reply-to "")
-            (text! citing "")))
-      (if (some? root-id)
-        (let [root-event-exists? (gateway/event-exists? (get-db) root-id)]
-          (config! root-label
-                   :user-data root-id
-                   :text (f-util/abbreviate (util/num32->hex-string root-id) 20)
-                   :font (if root-event-exists?
-                           (uconfig/get-small-bold-font)
-                           (uconfig/get-small-font))))
-        (text! root-label ""))
-      (text! subject-label (formatters/get-subject (:tags event)))
-      (text! relays-label (format "%d %s"
-                                  (count relay-names)
-                                  (f-util/abbreviate (first relay-names) 40))))))
+      (text! article-area article-html))
+
+    (text! reactions-label (str reactions))
+    (if reacted?
+      (do
+        (text! up-arrow " ")
+        (text! dn-arrow " "))
+      (do
+        (text! up-arrow "👍🏻")
+        (text! dn-arrow "👎🏻")))
+    (if zapped?
+      (text! zap-icon "❗⚡ ")                                ;₿ use the bitcoin char?
+      (text! zap-icon ""))
+    (swing-util/clear-popup relays-popup)
+    (swing-util/clear-popup reactions-popup)
+    (swing-util/clear-popup zaps-popup)
+    (config! relays-popup :items relay-names)
+    (config! reactions-popup :items (reaction-items (:reactions event)))
+    (config! zaps-popup :items zap-items)
+    (text! author-name-label
+           (formatters/format-user-id (:pubkey event) 50))
+    (config! author-name-label :user-data (:pubkey event))
+    (text! (select main-frame [:#created-time-label])
+           (f-util/format-time (:created-at event)))
+    (config! event-id
+             :user-data (:id event)
+             :text (f-util/abbreviate (util/num32->hex-string (:id event)) 20))
+    (if (some? referent)
+      (let [replied-event (gateway/get-event (get-db) referent)
+            reply-to-id (:pubkey replied-event)]
+        (config! reply-to
+                 :user-data reply-to-id
+                 :text (formatters/format-user-id reply-to-id 50))
+        (config! citing
+                 :user-data referent
+                 :text (f-util/abbreviate (util/num32->hex-string referent) 20)
+                 :font (if (nil? replied-event)
+                         (uconfig/get-small-font)
+                         (uconfig/get-small-bold-font))
+                 ))
+      (do (text! reply-to "")
+          (text! citing "")))
+    (if (some? root-id)
+      (let [root-event-exists? (gateway/event-exists? (get-db) root-id)]
+        (config! root-label
+                 :user-data root-id
+                 :text (f-util/abbreviate (util/num32->hex-string root-id) 20)
+                 :font (if root-event-exists?
+                         (uconfig/get-small-bold-font)
+                         (uconfig/get-small-font))))
+      (text! root-label ""))
+    (text! subject-label (formatters/get-subject (:tags event)))
+    (text! relays-label (format "%d %s"
+                                (count relay-names)
+                                (f-util/abbreviate (first relay-names) 40)))))
 
 
 (defn get-user-id-from-subject [subject]
