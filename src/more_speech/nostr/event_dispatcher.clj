@@ -40,7 +40,7 @@
 (defn process-name-event [db {:keys [_id pubkey created-at _kind _tags content _sig] :as event}]
   (try
     (let [profile (json/read-str content)
-          name (get profile "name" "tilt")
+          name (get profile "name")
           about (get profile "about" "")
           picture (get profile "picture" "")
           lud16 (get profile "lud16")
@@ -49,6 +49,10 @@
           website (get profile "website")
           banner (get profile "banner")
           display-name (get profile "display_name")
+          possible-alias (if (empty? display-name)
+                           ""
+                           (str "-" display-name))
+          name (if (empty? name) possible-alias name)
           name (add-suffix-for-duplicate pubkey (fix-name name))
           profile-doc {:name name
                        :about about

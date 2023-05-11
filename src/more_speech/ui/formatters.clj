@@ -25,8 +25,7 @@
            petname (contact-list/get-petname user-id)
            id-string (abbreviate (util/num32->hex-string user-id) id-length)
            profile (gateway/get-profile (get-db) user-id)
-           profile-name (get profile :name id-string)
-           ]
+           profile-name (get profile :name id-string)]
        (cond
          (seq petname)
          (abbreviate petname length)
