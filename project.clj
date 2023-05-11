@@ -13,7 +13,8 @@
                  [com.xtdb/xtdb-core "1.23.0"]
                  [com.xtdb/xtdb-rocksdb "1.23.0"]
                  [org.slf4j/slf4j-nop "1.7.30"]
-                 [clj-http "3.12.3"]]
+                 [clj-http "3.12.3"]
+                 [org.clojure/test.check "1.1.1"]]
   :profiles {:dev {:dependencies [[speclj "3.4.1"]]}
              :uberjar {:aot :all}}
   :repositories {"local" {:url "file:lib" :username "" :password ""}}

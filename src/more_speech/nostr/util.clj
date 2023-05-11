@@ -32,10 +32,10 @@
   "returns a byte-array containing the bytes described
   by the hex-string.  This is the inverse of bytes->hex-string."
   [hex-string]
-    (let [byte-strings (map #(apply str %) (partition 2 hex-string))
-          byte-vector (map #(Integer/parseInt % 16) byte-strings)]
-      (byte-array byte-vector))
-    )
+  (let [byte-strings (map #(apply str %) (partition 2 hex-string))
+        byte-vector (map #(Integer/parseInt % 16) byte-strings)]
+    (byte-array byte-vector))
+  )
 
 (defn hex-string->num
   "returns BigInteger from a hex string"
@@ -70,6 +70,12 @@
   ^bytes [^bytes message]
   (let [digest (MessageDigest/getInstance "SHA-256")]
     (.digest digest message)))
+
+(defn xor-string [pw s]
+  (let [pwd (map int (cycle pw))
+        sc (map int s)
+        cipher-ints (map bit-xor pwd sc)]
+    (apply str (map char cipher-ints))))
 
 (defn xor-bytes [^bytes a ^bytes b]
   (assert (= (alength a) (alength b)) "byte-wise-xor: arguments not same size.")

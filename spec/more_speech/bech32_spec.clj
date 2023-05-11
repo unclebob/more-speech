@@ -1,7 +1,11 @@
 (ns more-speech.bech32-spec
-  (:require [more-speech.bech32 :refer :all]
-            [more-speech.nostr.util :as util]
-            [speclj.core :refer :all]))
+  (:require
+    [clojure.test.check :as tc]
+    [clojure.test.check.generators :as gen]
+    [clojure.test.check.properties :as prop]
+    [more-speech.bech32 :refer :all]
+    [more-speech.nostr.util :as util]
+    [speclj.core :refer :all]))
 
 (describe "bech32"
   (context "charset translations"
@@ -121,6 +125,17 @@
         (should= zeroes
                  (map int
                       (->> zeroes (encode-str "xxxx") (address->str))))))
+
+    (it "encodes random strings"
+      (let [string-gen (gen/vector (gen/elements (range 0 256)))]
+        (should-be
+          :result
+          (tc/quick-check
+            100
+            (prop/for-all
+              [s string-gen]
+              (= s (map int
+                        (->> s (encode-str "xxxx") (address->str)))))))))
     )
 
   (context "Nip-19 TLV"
