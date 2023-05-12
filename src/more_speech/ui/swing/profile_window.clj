@@ -124,30 +124,30 @@
 
 (defn save-profile [name private-key-string about picture nip05 lud16]
   (let [private-key (validate-private-key private-key-string)
-              private-key-string (if (number? private-key)
-                                   (util/hexify private-key)
-                                   (get-mem [:keys :private-key]))
-              public-key (if (number? private-key)
-                           (->> private-key
-                                (util/num->bytes 32)
-                                es/get-pub-key
-                                util/bytes->num)
-                           nil)
-              public-key-string (if (some? public-key)
-                                  (util/hexify public-key)
-                                  (get-mem [:keys :public-key]))]
-          (when (some? public-key)
-            (set-mem [:pubkey] public-key))
-          (set-mem :keys {:private-key private-key-string
-                          :public-key public-key-string
-                          :name name
-                          :about about
-                          :picture picture
-                          :nip05 nip05
-                          :lud16 lud16})
-          (data-storage/write-keys (get-mem :keys))
-          (future (event-composers/compose-and-send-metadata-event)
-                  (protocol/request-profiles-and-contacts-for [public-key]))))
+        private-key-string (if (number? private-key)
+                             (util/hexify private-key)
+                             (get-mem [:keys :private-key]))
+        public-key (if (number? private-key)
+                     (->> private-key
+                          (util/num->bytes 32)
+                          es/get-pub-key
+                          util/bytes->num)
+                     nil)
+        public-key-string (if (some? public-key)
+                            (util/hexify public-key)
+                            (get-mem [:keys :public-key]))]
+    (when (some? public-key)
+      (set-mem [:pubkey] public-key))
+    (set-mem :keys {:private-key private-key-string
+                    :public-key public-key-string
+                    :name name
+                    :about about
+                    :picture picture
+                    :nip05 nip05
+                    :lud16 lud16})
+    (data-storage/write-keys (get-mem :keys))
+    (future (event-composers/compose-and-send-metadata-event)
+            (protocol/request-profiles-and-contacts-for [public-key]))))
 
 (defn validate-and-save-profile [profile-frame]
   (let [get-text (partial get-text-from-frame profile-frame)
@@ -205,6 +205,34 @@
     (left-right-split the-label (horizontal-panel :items [the-field show-box]))))
 
 
+(defn- change-password []
+  (let [dlg (dialog :content
+                    (vertical-panel :items [(flow-panel :items ["Current password" (text :id :current-pw :columns 30)])
+                                            (flow-panel :items ["New password" (text :id :new-pw :columns 30)])
+                                            (flow-panel :items ["New password" (text :id :new-pw2 :columns 30)])])
+                    :option-type :ok-cancel
+                    :success-fn (fn [p] [(text (select (to-root p) [:#current-pw]))
+                                         (text (select (to-root p) [:#new-pw]))
+                                         (text (select (to-root p) [:#new-pw2]))]))
+        [old new new2] (show! (pack! dlg))
+        pw (get-mem [:keys :password])
+        pw (if (empty? pw) "" pw)]
+    (cond
+      (not= old pw)
+      (alert "Wrong password")
+
+      (not= new new2)
+      (alert "New passwords don't match")
+
+      :else
+      (do
+        (alert "password changed.")
+        (set-mem [:keys :password] new)
+        (data-storage/write-keys (get-mem :keys)))
+      )
+    )
+  )
+
 (defn make-profile-frame [_e]
   (let [profile-menu (select (get-mem :frame) [:#profile-menu])
         profile-frame (frame :title "Profile")
@@ -237,7 +265,9 @@
         cancel-button (button :text "Cancel"
                               :listen [:action (partial close-profile-frame profile-menu)
                                        :action (fn [_e] (dispose! profile-frame))])
-        button-panel (horizontal-panel :items [cancel-button ok-button])
+        pw-button (button :text "Change password"
+                          :listen [:action (fn [_e] (change-password))])
+        button-panel (horizontal-panel :items [cancel-button ok-button pw-button])
         profile-panel (vertical-panel :items [name-panel
                                               about-panel
                                               picture-panel

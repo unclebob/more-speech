@@ -191,6 +191,7 @@
                        8 migration-8-user-configuration
                        9 migration-9-contact-lists
                        10 migration-10-XTDB-converstion
+                       11 migration-11-password-for-private-key
                        }))
 
 ;--------------------------------------

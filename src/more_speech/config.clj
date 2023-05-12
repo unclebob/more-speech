@@ -15,7 +15,7 @@
 (def read-contacts false) ;Read contacts from relays at startup.
 (def read-contact-lists-days-ago 0.5)
 
-(def migration-level 10)
+(def migration-level 11)
 (def version "2023-05-03T08:00")
 
 (def kinds-not-to-validate [7])

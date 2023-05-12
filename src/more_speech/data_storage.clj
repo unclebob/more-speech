@@ -39,7 +39,9 @@
                          :password encoded-password)
         keys-string (with-out-str (clojure.pprint/pprint keys))]
     (if (config/is-test-run?)
-      (log-pr 2 `write-keys (dissoc keys :private-key))
+      (log-pr 2 `write-keys (if (empty? password)
+                              (dissoc keys :private-key)
+                              keys))
       (spit @config/keys-filename keys-string))))
 
 (defn write-tabs []
