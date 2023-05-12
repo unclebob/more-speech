@@ -122,6 +122,33 @@
     :else
     (do (alert "LUD-16 Zap address must look like an email address.") false)))
 
+(defn save-profile [name private-key-string about picture nip05 lud16]
+  (let [private-key (validate-private-key private-key-string)
+              private-key-string (if (number? private-key)
+                                   (util/hexify private-key)
+                                   (get-mem [:keys :private-key]))
+              public-key (if (number? private-key)
+                           (->> private-key
+                                (util/num->bytes 32)
+                                es/get-pub-key
+                                util/bytes->num)
+                           nil)
+              public-key-string (if (some? public-key)
+                                  (util/hexify public-key)
+                                  (get-mem [:keys :public-key]))]
+          (when (some? public-key)
+            (set-mem [:pubkey] public-key))
+          (set-mem :keys {:private-key private-key-string
+                          :public-key public-key-string
+                          :name name
+                          :about about
+                          :picture picture
+                          :nip05 nip05
+                          :lud16 lud16})
+          (data-storage/write-keys (get-mem :keys))
+          (future (event-composers/compose-and-send-metadata-event)
+                  (protocol/request-profiles-and-contacts-for [public-key]))))
+
 (defn validate-and-save-profile [profile-frame]
   (let [get-text (partial get-text-from-frame profile-frame)
         name (get-text :#name-field)
@@ -138,32 +165,7 @@
                     (lud16-valid? lud16))
         ]
     (when valid?
-      (let [private-key (validate-private-key private-key)
-            private-key-string (if (number? private-key)
-                                 (util/hexify private-key)
-                                 (get-mem [:keys :private-key]))
-            public-key (if (number? private-key)
-                         (->> private-key
-                              (util/num->bytes 32)
-                              es/get-pub-key
-                              util/bytes->num)
-                         nil)
-            public-key-string (if (some? public-key)
-                                (util/hexify public-key)
-                                (get-mem [:keys :public-key]))]
-        (when (some? public-key)
-          (set-mem [:pubkey] public-key))
-        (set-mem :keys {:private-key private-key-string
-                        :public-key public-key-string
-                        :name name
-                        :about about
-                        :picture picture
-                        :nip05 nip05
-                        :lud16 lud16})
-        (data-storage/write-keys (get-mem :keys))
-        (future (event-composers/compose-and-send-metadata-event)
-                (protocol/request-profiles-and-contacts-for [public-key])))
-
+      (save-profile name private-key about picture nip05 lud16)
       (close-profile-frame (select (get-mem :frame) [:#profile-menu]) nil)
       (dispose! profile-frame))))
 
