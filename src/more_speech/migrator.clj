@@ -1,18 +1,20 @@
 (ns more-speech.migrator
-  (:require [more-speech.logger.default :refer [log-pr]]
-            [clojure.java.io :as io]
-            [clojure.set :as set]
-            [more-speech.config :refer [migration-filename]]
-            [more-speech.config :as config]
-            [more-speech.nostr
-             [util :as util]
-             [elliptic-signature :as ecc]
-             [event-dispatcher :as handlers]]
-            [more-speech.data-storage :as data-storage]
-            [more-speech.user-configuration :as user-configuration]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.util.files :refer :all]
-            [more-speech.initial-contact-list :as initial-contact-list]))
+  (:require
+    [more-speech.bech32 :as bech32]
+    [more-speech.logger.default :refer [log-pr]]
+    [clojure.java.io :as io]
+    [clojure.set :as set]
+    [more-speech.config :refer [migration-filename]]
+    [more-speech.config :as config]
+    [more-speech.nostr
+     [util :as util]
+     [elliptic-signature :as ecc]
+     [event-dispatcher :as handlers]]
+    [more-speech.data-storage :as data-storage]
+    [more-speech.user-configuration :as user-configuration]
+    [more-speech.db.gateway :as gateway]
+    [more-speech.util.files :refer :all]
+    [more-speech.initial-contact-list :as initial-contact-list]))
 
 ;---The Migrations
 
@@ -162,7 +164,19 @@
   (migration-10-load-contacts)
   (migration-10-load-events))
 
+;--- Migration 11 password protect private key
 
+(defn migration-11-password-for-private-key []
+  (let [keys (read-string (slurp @config/keys-filename))
+        private-key (:private-key keys)
+        encoded-private-key (->> private-key
+                                 (util/xor-string "password")
+                                 (bech32/encode-str "encoded"))
+        encoded-keys (assoc keys :private-key encoded-private-key
+                                 :password (bech32/encode-str "pw" "password"))]
+    (spit @config/keys-filename (with-out-str (clojure.pprint/pprint encoded-keys)))
+    )
+  )
 
 
 ;---------- The Migrations List -------

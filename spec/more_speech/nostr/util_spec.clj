@@ -64,4 +64,19 @@
            pw gen-string]
           (= source (->> source (xor-string pw) (xor-string pw)))
           ))))
+
+  (it "can write and read back xord strings"
+    (should-be
+      :result
+      (tc/quick-check
+        100
+        (prop/for-all
+          [source gen-string
+           pw gen-string]
+          (spit "xor-test.txt" (xor-string pw source))
+          (let [text (slurp "xor-test.txt")
+                decoded-source (xor-string pw text)]
+            (= source decoded-source)))))
+    (more-speech.util.files/delete-file "xor-test.txt")
+    )
   )

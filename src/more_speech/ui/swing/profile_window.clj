@@ -177,13 +177,20 @@
                         :size [800 :by 20])]
     (left-right-split the-label the-field)))
 
+(defn- valid-password? []
+  (if (empty? (get-mem [:keys :password]))
+    true
+    (= (get-mem [:keys :password]) (input "Enter password"))))
+
 (defn show-private-key [profile-frame _e]
   (let [private-key-field (select profile-frame [:#private-key-field])
         show-box (select profile-frame [:#show-box])
-        show? (config show-box :selected?)]
-    (config! private-key-field :text (if show?
-                                       (get-mem [:keys :private-key])
-                                       ""))))
+        show? (config show-box :selected?)
+        allowed? (and show? (valid-password?))]
+    (if allowed?
+      (config! private-key-field :text (get-mem [:keys :private-key]))
+      (do (config! private-key-field :text "")
+          (config! show-box :selected? false)))))
 
 (defn make-private-key-panel [profile-frame]
   (let [the-label (label :text "Private key:" :size [150 :by 20])

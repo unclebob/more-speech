@@ -1,5 +1,6 @@
 (ns more-speech.data-storage
   (:require [clojure.string :as string]
+            [more-speech.bech32 :as bech32]
             [more-speech.config :as config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
@@ -24,16 +25,28 @@
             (clojure.pprint/pprint (relays/relays-for-writing))))))
 
 (defn write-keys [keys]
-  (let [keys-string (with-out-str (clojure.pprint/pprint keys))]
+  (let [private-key (:private-key keys)
+        password (:password keys)
+        encoded-password (if (empty? password)
+                           password
+                           (bech32/encode-str "pw" password))
+        private-key (if (empty? password)
+                      private-key
+                      (->> private-key
+                           (util/xor-string password)
+                           (bech32/encode-str "encoded")))
+        keys (assoc keys :private-key private-key
+                         :password encoded-password)
+        keys-string (with-out-str (clojure.pprint/pprint keys))]
     (if (config/is-test-run?)
       (log-pr 2 `write-keys (dissoc keys :private-key))
       (spit @config/keys-filename keys-string))))
 
 (defn write-tabs []
   (log-pr 2 'writing-tabs)
-    (spit @config/tabs-list-filename
-          (with-out-str
-            (clojure.pprint/pprint (get-mem :tabs-list)))))
+  (spit @config/tabs-list-filename
+        (with-out-str
+          (clojure.pprint/pprint (get-mem :tabs-list)))))
 
 (defn write-configuration []
   (log-pr 2 'writing-relays)
@@ -59,21 +72,34 @@
     (read-string (slurp @config/contact-lists-filename))
     {}))
 
-(defn load-configuration []
+(defn read-keys []
   (let [keys (read-string (slurp @config/keys-filename))
         pubkey (util/hex-string->num (:public-key keys))
-        tabs-list (tabs/ensure-tab-list-has-all
+        pw (:password keys)
+        pw (if (empty? pw) nil
+                           (bech32/address->str pw))
+        private-key (:private-key keys)
+        private-key (if (some? pw)
+                      (util/xor-string pw (bech32/address->str private-key))
+                      private-key)
+        ]
+    (set-mem :keys (assoc keys :private-key private-key
+                               :password pw))
+    (set-mem :pubkey pubkey)
+    )
+  )
+
+(defn load-configuration []
+  (let [tabs-list (tabs/ensure-tab-list-has-all
                     (read-string (slurp @config/tabs-list-filename)))
         user-configuration (user-configuration/validate
                              (read-string (slurp @config/user-configuration-filename)))
         profiles (read-profiles)
-        contact-lists (read-contact-lists)
-        ]
+        contact-lists (read-contact-lists)]
+    (read-keys)
     (when (= :in-memory @config/db-type)
       (swap! in-memory/db assoc :contact-lists contact-lists)
       (swap! in-memory/db assoc :profiles profiles))
-    (set-mem :keys keys)
-    (set-mem :pubkey pubkey)
     (set-mem :tabs-list tabs-list)
     (set-mem :user-configuration user-configuration)
     (set-mem :event-history [])
@@ -258,9 +284,9 @@
             (log-pr 1 'ingested n 'contact-lists))
           (recur (rest contacts-in) (conj contacts-out (first contact-list)) (inc n)))))))
 
-  (defn put-events [db events]
-    (log-pr 1 'putting (count events) 'events)
-    (xt/submit-tx db (map #(vector ::xt/put %) events)))
+(defn put-events [db events]
+  (log-pr 1 'putting (count events) 'events)
+  (xt/submit-tx db (map #(vector ::xt/put %) events)))
 
 (defn put-profiles [db profiles]
   (log-pr 1 'putting (count profiles) 'profiles)
@@ -275,19 +301,19 @@
   (log-pr 1 'putting (count contacts) 'contacts)
   (xt/submit-tx db (map #(vector ::xt/put (fix-contact-list %)) contacts)))
 
-  (defn compress []
-    (log-pr 1 'Compressing)
-    (let [now (util/get-now)
-          event-since (- now (* 14 86400))
-          profiles-since (- now (* 90 86400))
-          contacts-since (- now (* 90 86400))
-          prod-db (xtdb/start-xtdb! config/prod-db)
-          temp-db (xtdb/start-xtdb! config/temp-db)]
-      (put-events temp-db (get-events-since prod-db event-since))
-      (put-profiles temp-db (get-profiles-since prod-db profiles-since))
-      (put-contacts temp-db (get-contacts-since prod-db contacts-since))
-      (xt/sync temp-db)
-      (log-pr 1 'renaming config/prod-db (str config/prod-db "-old"))
-      (rename-file config/prod-db (str config/prod-db "-old"))
-      (rename-file config/temp-db config/prod-db)))
+(defn compress []
+  (log-pr 1 'Compressing)
+  (let [now (util/get-now)
+        event-since (- now (* 14 86400))
+        profiles-since (- now (* 90 86400))
+        contacts-since (- now (* 90 86400))
+        prod-db (xtdb/start-xtdb! config/prod-db)
+        temp-db (xtdb/start-xtdb! config/temp-db)]
+    (put-events temp-db (get-events-since prod-db event-since))
+    (put-profiles temp-db (get-profiles-since prod-db profiles-since))
+    (put-contacts temp-db (get-contacts-since prod-db contacts-since))
+    (xt/sync temp-db)
+    (log-pr 1 'renaming config/prod-db (str config/prod-db "-old"))
+    (rename-file config/prod-db (str config/prod-db "-old"))
+    (rename-file config/temp-db config/prod-db)))
 

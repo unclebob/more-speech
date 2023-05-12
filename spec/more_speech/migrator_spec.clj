@@ -1,13 +1,17 @@
 (ns more-speech.migrator-spec
-  (:require [speclj.core :refer :all]
-            [more-speech.migrator :refer :all]
+  (:require [clojure.java.io :as io]
+            [more-speech.bech32 :as bech32]
             [more-speech.config :as config]
-            [clojure.java.io :as io]
-            [more-speech.user-configuration :as user-configuration]
+            [more-speech.data-storage :as data-storage]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
+            [more-speech.mem :as mem]
+            [more-speech.migrator :refer :all]
+            [more-speech.nostr.elliptic-signature :as es]
+            [more-speech.nostr.util :as util]
+            [more-speech.user-configuration :as user-configuration]
             [more-speech.util.files :refer :all]
-            [more-speech.nostr.util :as util]))
+            [speclj.core :refer :all]))
 
 (defn change-to-tmp-files []
   (when (file-exists? "tmp")
@@ -279,9 +283,9 @@
             renamed-dir (str @config/messages-directory ".migrated")]
         (.mkdir (io/file "tmp/messages"))
         (spit path1 [{:id 1 :content "c1"}
-                  {:id 2 :content "c2"}])
+                     {:id 2 :content "c2"}])
         (spit path2 [{:id 3 :content "c3"}
-                  {:id 4 :content "c4"}])
+                     {:id 4 :content "c4"}])
         (migration-10-load-events)
         (should= {:id 1 :content "c1"} (gateway/get-event @db 1))
         (should= {:id 2 :content "c2"} (gateway/get-event @db 2))
@@ -294,5 +298,90 @@
         (should (file-exists? (str renamed-dir f1 ".migrated")))
         (should (file-exists? (str renamed-dir f2 ".migrated")))
         (prn 'got-here)))
+    )
+
+  (context "migration 11 password protect private key"
+    (with db (in-memory/get-db))
+    (before-all (config/set-db! :in-memory))
+    (before (in-memory/clear-db @db)
+            (mem/clear-mem))
+
+    (it "password protects the keys file"
+      (let [bytes-private-key (util/make-private-key)
+            private-key (util/hexify (util/bytes->num bytes-private-key))]
+        (spit @config/keys-filename {:private-key private-key})
+        (migration-11-password-for-private-key)
+        (let [keys (read-string (slurp @config/keys-filename))
+              encrypted-private-key (:private-key keys)
+              decoded-private-key (util/xor-string "password" (bech32/address->str encrypted-private-key))]
+          (should= private-key decoded-private-key)
+          (should= "password" (bech32/address->str (:password keys))))))
+
+    (context "data storage changes"
+      (it "reads the keys with no password"
+        (let [bytes-private-key (util/make-private-key)
+              hex-private-key (util/hexify (util/bytes->num bytes-private-key))
+              bytes-public-key (es/get-pub-key bytes-private-key)
+              public-key (util/bytes->num bytes-public-key)
+              hex-public-key (util/hexify public-key)]
+          (spit @config/keys-filename {:private-key hex-private-key
+                                       :public-key hex-public-key})
+          (data-storage/read-keys)
+          (should= hex-public-key (mem/get-mem [:keys :public-key]))
+          (should= hex-private-key (mem/get-mem [:keys :private-key]))
+          (should= nil (mem/get-mem [:keys :password]))
+          (should= public-key (mem/get-mem :pubkey))))
+
+      (it "reads the keys with a password"
+        (let [bytes-private-key (util/make-private-key)
+              hex-private-key (util/hexify (util/bytes->num bytes-private-key))
+              bytes-public-key (es/get-pub-key bytes-private-key)
+              public-key (util/bytes->num bytes-public-key)
+              hex-public-key (util/hexify public-key)
+              password (bech32/encode-str "pw" "password")
+              encoded-private-key (->> hex-private-key
+                                       (util/xor-string "password")
+                                       (bech32/encode-str "encoded"))
+              ]
+
+          (spit @config/keys-filename {:private-key encoded-private-key
+                                       :public-key hex-public-key
+                                       :password password})
+          (data-storage/read-keys)
+          (should= hex-public-key (mem/get-mem [:keys :public-key]))
+          (should= hex-private-key (mem/get-mem [:keys :private-key]))
+          (should= "password" (mem/get-mem [:keys :password]))
+          (should= public-key (mem/get-mem :pubkey))))
+
+      (it "writes the keys with no password"
+        (let [bytes-private-key (util/make-private-key)
+              hex-private-key (util/hexify (util/bytes->num bytes-private-key))
+              bytes-public-key (es/get-pub-key bytes-private-key)
+              public-key (util/bytes->num bytes-public-key)
+              hex-public-key (util/hexify public-key)]
+          (data-storage/write-keys {:private-key hex-private-key
+                                    :public-key hex-public-key})
+          (should= {:private-key hex-private-key
+                    :public-key hex-public-key
+                    :password nil}
+                   (read-string (slurp @config/keys-filename)))))
+
+      (it "writes the keys with a password"
+        (let [bytes-private-key (util/make-private-key)
+              hex-private-key (util/hexify (util/bytes->num bytes-private-key))
+              bytes-public-key (es/get-pub-key bytes-private-key)
+              public-key (util/bytes->num bytes-public-key)
+              hex-public-key (util/hexify public-key)
+              encoded-private-key (->> hex-private-key
+                                       (util/xor-string "password")
+                                       (bech32/encode-str "encoded"))]
+          (data-storage/write-keys {:private-key hex-private-key
+                                    :public-key hex-public-key
+                                    :password "password"})
+          (should= {:private-key encoded-private-key
+                    :public-key hex-public-key
+                    :password (bech32/encode-str "pw" "password")}
+                   (read-string (slurp @config/keys-filename)))))
+      )
     )
   )

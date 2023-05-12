@@ -25,7 +25,7 @@
       (with-redefs [event-composers/compose-and-send-metadata-event (stub :compose)
                     protocol/request-profiles-and-contacts-for (stub :request)
                     data-storage/write-keys (stub :write-keys)]
-        (let [private-key (rand-int 1000000000)
+        (let [private-key (util/bytes->num (util/make-private-key))
               hex-private-key (util/hexify private-key)
               pubkey (->> private-key (util/num->bytes 32) es/get-pub-key util/bytes->num)
               hex-pubkey (util/hexify pubkey)]
@@ -48,7 +48,7 @@
       (with-redefs [event-composers/compose-and-send-metadata-event (stub :compose)
                     protocol/request-profiles-and-contacts-for (stub :request)
                     data-storage/write-keys (stub :write-keys)]
-        (let [private-key (rand-int 1000000000)
+        (let [private-key (util/bytes->num (util/make-private-key))
               hex-private-key (util/hexify private-key)
               nsec-private-key (bech32/encode "nsec" private-key)
               pubkey (->> private-key (util/num->bytes 32) es/get-pub-key util/bytes->num)
