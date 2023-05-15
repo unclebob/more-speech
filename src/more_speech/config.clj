@@ -22,6 +22,8 @@
 
 (def subscription-id-base "ms")
 
+(def auto-thanks? true)
+
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)
 (def test-relays {"wss://eden.nostr.land" {:read :read-all :write true}

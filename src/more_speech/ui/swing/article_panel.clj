@@ -162,12 +162,23 @@
     (when (some? id)
       (load-article-info id))))
 
+(defn reaction-items [reactions]
+  (loop [reactions reactions
+         items [""]]
+    (if (empty? reactions)
+      items
+      (let [[id content] (first reactions)
+            name (formatters/format-user-id id 50)]
+        (recur (rest reactions) (conj items (str content " " name)))))))
+
+(defn popup-reactions [_e]
+  (reaction-items (:reactions (get-mem [:article-panel :event]))))
+
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
         label-font (uconfig/get-small-font)
         created-time-label (label :id :created-time-label)
-        reactions-popup (popup :enabled? false)
-        reactions-label (label :id :reactions-count :user-data reactions-popup)
+        reactions-label (label :id :reactions-count)
         reply-to-label (label :id :reply-to-label)
         id-label (text :id :id-label :editable? false :font label-font)
         citing-label (text :id :citing-label :editable? false :font label-font)
@@ -186,7 +197,10 @@
           :items [
                   (flow-panel :align :left :items [(bold-label "Author:") author-name-label zap-icon])
                   (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
-                  (flow-panel :align :left :items [(bold-label "Reactions:") reactions-label up-arrow dn-arrow])
+                  (flow-panel :align :left :items [(label :text "Reactions:"
+                                                          :font (uconfig/get-bold-font)
+                                                          :popup popup-reactions)
+                                                   reactions-label up-arrow dn-arrow])
 
                   (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
                   (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
@@ -201,13 +215,6 @@
                                  (move! :to (.getLocationOnScreen e))
                                  show!))
             :mouse-exited (fn [_e] (hide! relays-popup)))
-    (listen reactions-label
-            :mouse-entered (fn [e]
-                             (-> reactions-popup
-                                 (move! :to (.getLocationOnScreen e))
-                                 show!))
-            :mouse-exited (fn [_e] (hide! reactions-popup)))
-
     (listen zap-icon
             :mouse-entered (fn [e]
                              (-> zaps-popup
@@ -257,15 +264,6 @@
         reactions (:reactions event)]
     (some #(= me (first %)) reactions)))
 
-(defn reaction-items [reactions]
-  (loop [reactions reactions
-         items [""]]
-    (if (empty? reactions)
-      items
-      (let [[id content] (first reactions)
-            name (formatters/format-user-id id 50)]
-        (recur (rest reactions) (conj items (str content " " name)))))))
-
 (defn make-article-html [event]
   (make-html-document
     config/editor-pane-stylesheet
@@ -297,13 +295,13 @@
         reacted? (has-my-reaction? event)
         reactions (count (:reactions event))
         reactions-label (select main-frame [:#reactions-count])
-        reactions-popup (config reactions-label :user-data)
         relay-names (map #(re-find config/relay-pattern %) (:relays event))
         zap-items (map format-zap (:zaps event))
         event-id (select main-frame [:#id-label])
         author-name-label (select main-frame [:#author-name-label])
         article-html (make-article-html event)
         new-id? (not= (get-mem :article-window-event-id) selected-id)]
+    (set-mem [:article-panel :event] event)
     (when new-id?
       (protocol/request-profiles-and-contacts-for (:pubkey event)))
     (set-mem :article-window-event-id selected-id)
@@ -324,10 +322,8 @@
       (text! zap-icon "❗⚡ ")                                ;₿ use the bitcoin char?
       (text! zap-icon ""))
     (swing-util/clear-popup relays-popup)
-    (swing-util/clear-popup reactions-popup)
     (swing-util/clear-popup zaps-popup)
     (config! relays-popup :items relay-names)
-    (config! reactions-popup :items (reaction-items (:reactions event)))
     (config! zaps-popup :items zap-items)
     (text! author-name-label
            (formatters/format-user-id (:pubkey event) 50))

@@ -174,11 +174,16 @@
                "???????"
                (format "%7d" (quot (Integer/parseInt amount-str) 1000)))
         ]
-    (when (or (= (get-mem :pubkey) zapper-id)
-              (= (get-mem :pubkey) zappee-id))
-      (spit "private/zap.log"
-            (format "%s %s sats %s->%s %s\n" time-str sats zapper-name zappee-name content)
-            :append true))
+
+    (when-not (config/is-test-run?)
+      (when (and config/auto-thanks? (= zappee-id (get-mem :pubkey)))
+        (prn 'auto-thanks zapper-name)
+        (composers/compose-and-send-text-event nil "Auto Thanks" (format "Thank you @%s!" zapper-name)))
+      (when (or (= (get-mem :pubkey) zapper-id)
+                (= (get-mem :pubkey) zappee-id))
+        (spit "private/zap.log"
+              (format "%s %s sats %s->%s %s\n" time-str sats zapper-name zappee-name content)
+              :append true)))
 
     (when (some? transaction)
       (let [{:keys [id amount comment]} transaction
