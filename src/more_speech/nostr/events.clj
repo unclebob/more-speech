@@ -13,7 +13,9 @@
 (defn to-json [o]
   (json/write-str o :escape-slash false :escape-unicode false))
 
-(defn get-tag [event target]
+(defn get-tag
+  "returns list of tag data matching target."
+  [event target]
   (let [tags (get event :tags [])
         targets (filter #(= target (first %)) tags)]
     (map rest targets)))

@@ -12,7 +12,8 @@
     [more-speech.nostr.events :as events]
     [more-speech.nostr.relays :as relays]
     [more-speech.nostr.util :as util]
-    [more-speech.ui.formatter-util :as formatter-util])
+    [more-speech.ui.formatter-util :as formatter-util]
+    [more-speech.ui.formatters :as formatters])
   (:use (seesaw [core]))
   (:import (java.net URLEncoder)))
 
@@ -157,7 +158,28 @@
 
 (defn process-zap-receipt [event]
   (let [[[receipt-invoice]] (events/get-tag event :bolt11)
-        transaction (get-mem [:pending-zaps receipt-invoice])]
+        transaction (get-mem [:pending-zaps receipt-invoice])
+        desc (json/read-str (ffirst (events/get-tag event :description)))
+        zapper-id (util/unhexify (get desc "pubkey"))
+        zapper-name (formatters/get-best-name zapper-id)
+        zappee-id (util/unhexify (ffirst (events/get-tag event :p)))
+        zappee-name (formatters/get-best-name zappee-id)
+        time (:created-at event)
+        time-str (formatter-util/format-time time)
+        content (get desc "content")
+        desc-tags (get desc "tags")
+        amount-tag (first (filter #(= "amount" (first %)) desc-tags))
+        amount-str (second amount-tag)
+        sats (if (empty? amount-str)
+               "???????"
+               (format "%7d" (quot (Integer/parseInt amount-str) 1000)))
+        ]
+    (when (or (= (get-mem :pubkey) zapper-id)
+              (= (get-mem :pubkey) zappee-id))
+      (spit "private/zap.log"
+            (format "%s %s sats %s->%s %s\n" time-str sats zapper-name zappee-name content)
+            :append true))
+
     (when (some? transaction)
       (let [{:keys [id amount comment]} transaction
             sats (/ amount 1000)]
