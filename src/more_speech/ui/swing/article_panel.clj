@@ -30,6 +30,11 @@
 (defn bold-label [s]
   (label :text s :font (uconfig/get-bold-font)))
 
+(defn popup-label [s popup-f]
+  (label :text s
+         :font (uconfig/get-bold-font)
+         :popup popup-f))
+
 (defn copy-click [e]
   (when (.isPopupTrigger e)
     (let [x (.x (.getPoint e))
@@ -174,6 +179,12 @@
 (defn popup-reactions [_e]
   (reaction-items (:reactions (get-mem [:article-panel :event]))))
 
+(defn trim-relay-name [url]
+  (re-find config/relay-pattern url))
+
+(defn popup-relays [_e]
+  (map trim-relay-name (:relays (get-mem [:article-panel :event]))))
+
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
         label-font (uconfig/get-small-font)
@@ -184,8 +195,7 @@
         citing-label (text :id :citing-label :editable? false :font label-font)
         subject-label (label :id :subject-label :font label-font)
         root-label (text :id :root-label :editable? false :font label-font)
-        relays-popup (popup :enabled? false)
-        relays-label (label :id :relays-label :user-data relays-popup)
+        relays-label (label :id :relays-label)
         up-arrow (label :text " " :id :up-arrow)
         dn-arrow (label :text " " :id :dn-arrow)
         zaps-popup (popup :enabled? false)
@@ -197,24 +207,15 @@
           :items [
                   (flow-panel :align :left :items [(bold-label "Author:") author-name-label zap-icon])
                   (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
-                  (flow-panel :align :left :items [(label :text "Reactions▶:"
-                                                          :font (uconfig/get-bold-font)
-                                                          :popup popup-reactions)
-                                                   reactions-label up-arrow dn-arrow])
+                  (flow-panel :align :left :items [(popup-label "Reactions▶:" popup-reactions) reactions-label up-arrow dn-arrow])
 
                   (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
                   (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
-                  (flow-panel :align :left :items [(bold-label "Relays:") relays-label])
+                  (flow-panel :align :left :items [(popup-label "Relays▶:" popup-relays) relays-label])
 
                   (flow-panel :align :left :items [(bold-label "id:") id-label])
                   (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
                   (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
-    (listen relays-label
-            :mouse-entered (fn [e]
-                             (-> relays-popup
-                                 (move! :to (.getLocationOnScreen e))
-                                 show!))
-            :mouse-exited (fn [_e] (hide! relays-popup)))
     (listen zap-icon
             :mouse-entered (fn [e]
                              (-> zaps-popup
@@ -284,7 +285,6 @@
         citing (select main-frame [:#citing-label])
         root-label (select main-frame [:#root-label])
         relays-label (select main-frame [:#relays-label])
-        relays-popup (config relays-label :user-data)
         article-area (select main-frame [:#article-area])
         subject-label (select main-frame [:#subject-label])
         up-arrow (select main-frame [:#up-arrow])
@@ -295,7 +295,6 @@
         reacted? (has-my-reaction? event)
         reactions (count (:reactions event))
         reactions-label (select main-frame [:#reactions-count])
-        relay-names (map #(re-find config/relay-pattern %) (:relays event))
         zap-items (map format-zap (:zaps event))
         event-id (select main-frame [:#id-label])
         author-name-label (select main-frame [:#author-name-label])
@@ -321,9 +320,7 @@
     (if zapped?
       (text! zap-icon "❗⚡ ")                                ;₿ use the bitcoin char?
       (text! zap-icon ""))
-    (swing-util/clear-popup relays-popup)
     (swing-util/clear-popup zaps-popup)
-    (config! relays-popup :items relay-names)
     (config! zaps-popup :items zap-items)
     (text! author-name-label
            (formatters/format-user-id (:pubkey event) 50))
@@ -359,8 +356,8 @@
       (text! root-label ""))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (format "%d %s"
-                                (count relay-names)
-                                (f-util/abbreviate (first relay-names) 40)))))
+                                (count (:relays event))
+                                (-> event :relays first trim-relay-name (f-util/abbreviate 40))))))
 
 
 (defn get-user-id-from-subject [subject]
@@ -393,10 +390,7 @@
   (let [id (get-user-id-from-subject subject)
         profile (gateway/get-profile (get-db) id)
         p (popup :items [(action :name "Get Info..."
-                                 :handler (partial get-user-info id))
-                         ;(action :name "Trust this author..."
-                         ;        :handler (partial trust-author id))
-                         ])
+                                 :handler (partial get-user-info id))])
         ev (.getInputEvent e)
         [x y] (mouse/location ev)]
     (if (some? profile)
