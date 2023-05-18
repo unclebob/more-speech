@@ -78,10 +78,8 @@
     []
     (let [parent-event-id reply-to-or-nil
           parent-event (gateway/get-event (get-db) parent-event-id)
-          parent-tags (:tags parent-event)
-          people-ids (map second (filter #(= :p (first %)) parent-tags))
           parent-author (:pubkey parent-event)
-          people-ids (conj people-ids (hexify parent-author))
+          people-ids [(hexify parent-author)]
           my-pubkey (get-mem :pubkey)
           people-ids (if (= (:pubkey parent-event) my-pubkey)
                        people-ids

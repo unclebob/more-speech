@@ -160,8 +160,7 @@
           (should= 1 kind)
           (should= [[:e root-id-hex "" "root"]
                     [:e root-child-id-hex "" "reply"]
-                    [:p (hexify root-child-author)]
-                    [:p (hexify root-author)]] (take 4 tags))
+                    [:p (hexify root-child-author)]] (take 3 tags))
           (should= text content)
           (should (do-verify (hex-string->bytes id)
                              public-key

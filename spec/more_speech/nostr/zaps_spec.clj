@@ -201,7 +201,8 @@
   (context "auto-thanks"
     (it "sends thanks for a zap when auto-thanks is :on"
       (with-redefs [composers/compose-and-send-text-event (stub :send)
-                    config/auto-thanks :on]
+                    config/auto-thanks :on
+                    config/auto-thanks-fortune :off]
         (let [zapper-id (rand-int 1000000)]
           (gateway/add-profile @db zapper-id {:name "zapper"})
           (zaps/auto-thanks zapper-id)
@@ -209,7 +210,8 @@
 
     (it "dms thanks for a zap when auto-thanks is :dm"
           (with-redefs [composers/compose-and-send-text-event (stub :send)
-                        config/auto-thanks :dm]
+                        config/auto-thanks :dm
+                        config/auto-thanks-fortune :off]
             (let [zapper-id (rand-int 1000000)]
               (gateway/add-profile @db zapper-id {:name "zapper"})
               (zaps/auto-thanks zapper-id)

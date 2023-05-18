@@ -52,10 +52,9 @@
       (name-exists? (:name (gateway/get-profile (get-db) id)))
       (hexify id)))
 
-(defn lookup-reference [event reference]
+(defn lookup-reference [tags reference]
   (let [ref-string (re-find #"\d+" reference)
-        index (Integer/parseInt ref-string)
-        tags (:tags event)]
+        index (Integer/parseInt ref-string)]
     (if (>= index (count tags))
       reference
       (try
@@ -97,14 +96,18 @@
     replaced-content)
   )
 
-(defn replace-references [event]
-  (let [padded-content (str " " (:content event) " ")
-        references (re-seq config/reference-pattern padded-content)
-        segments (string/split padded-content config/reference-pattern)
-        referents (mapv (partial lookup-reference event) references)
-        referents (conj referents " ")
-        replaced-content (string/trim (apply str (interleave segments referents)))]
-    replaced-content))
+(defn replace-references
+  ([event]
+   (replace-references (:content event) (:tags event)))
+
+  ([content tags]
+   (let [padded-content (str " " content " ")
+         references (re-seq config/reference-pattern padded-content)
+         segments (string/split padded-content config/reference-pattern)
+         referents (mapv (partial lookup-reference tags) references)
+         referents (conj referents " ")
+         replaced-content (string/trim (apply str (interleave segments referents)))]
+     replaced-content)))
 
 (defn get-subject [tags]
   (if (empty? tags)
@@ -155,13 +158,22 @@
                      (abbreviate (str subject "|" header-text) 130))]
        (format format-spec reply-mark reaction-mark name time zap-mark dm-mark content)))))
 
-(defn format-reply [event]
-  (let [content (replace-references event)
+(defn make-cc-list [event]
+  (let [p-tags (events/get-tag event :p)
+        hex-ids (map first p-tags)
+        ids (map util/unhexify hex-ids)
+        names (map get-best-name ids)
+        cc-items (set (map #(format "CC: @%s\n" %) names))]
+    (apply str cc-items)))
+
+(defn format-reply [{:keys [content tags] :as event}]
+  (let [content (replace-references content tags)
         content (prepend> content)
-        header (format ">From: %s at %s on %s\n"
+        header (format "From: %s at %s on %s\n%s"
                        (format-user-id (:pubkey event))
                        (format-time (:created-at event))
                        (first (:relays event))
+                       (make-cc-list event)
                        )
         dm-prefix (if (:dm event)
                     (str "D @" (get-best-name (:pubkey event)) "\n")
