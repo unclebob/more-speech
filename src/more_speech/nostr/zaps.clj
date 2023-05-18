@@ -13,7 +13,8 @@
     [more-speech.nostr.relays :as relays]
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatter-util :as formatter-util]
-    [more-speech.ui.formatters :as formatters])
+    [more-speech.ui.formatters :as formatters]
+    [more-speech.util.fortune-messages :as fortune])
   (:use (seesaw [core]))
   (:import (java.net URLEncoder)))
 
@@ -156,34 +157,53 @@
       (when (not= "cancel" (.getMessage e))
         (alert (str "Cannot zap. " (.getMessage e)))))))
 
+(defn- get-fortune []
+  (condp = config/auto-thanks-fortune
+    :off ""
+    :normal (fortune/get-message)
+    :markov (fortune/get-markov-message)
+    :insane (fortune/get-markov-message :insane)))
+
+(defn auto-thanks [zapper-id]
+  (let [zapper-name (formatters/get-best-name zapper-id)
+        prefix (if (= :dm config/auto-thanks) "D @" "@")
+        message (str "Thank you!\n" (get-fortune))]
+    (composers/compose-and-send-text-event
+      nil "Auto Thanks"
+      (format "%s%s %s" prefix zapper-name message))))
+
+(defn log-zap [zapper-id zappee-id amount-str time content]
+  (let [time-str (formatter-util/format-time time)
+        zappee-name (formatters/get-best-name zappee-id)
+        zapper-name (formatters/get-best-name zapper-id)
+
+        sats (if (empty? amount-str)
+               "???????"
+               (format "%7d" (quot (Integer/parseInt amount-str) 1000)))]
+    (when (or (= (get-mem :pubkey) zapper-id)
+              (= (get-mem :pubkey) zappee-id))
+      (spit "private/zap.log"
+            (format "%s %s sats %s->%s %s\n" time-str sats zapper-name zappee-name content)
+            :append true))))
+
 (defn process-zap-receipt [event]
   (let [[[receipt-invoice]] (events/get-tag event :bolt11)
         transaction (get-mem [:pending-zaps receipt-invoice])
         desc (json/read-str (ffirst (events/get-tag event :description)))
         zapper-id (util/unhexify (get desc "pubkey"))
-        zapper-name (formatters/get-best-name zapper-id)
         zappee-id (util/unhexify (ffirst (events/get-tag event :p)))
-        zappee-name (formatters/get-best-name zappee-id)
         time (:created-at event)
-        time-str (formatter-util/format-time time)
         content (get desc "content")
         desc-tags (get desc "tags")
         amount-tag (first (filter #(= "amount" (first %)) desc-tags))
-        amount-str (second amount-tag)
-        sats (if (empty? amount-str)
-               "???????"
-               (format "%7d" (quot (Integer/parseInt amount-str) 1000)))
-        ]
+        amount-str (second amount-tag)]
 
     (when-not (config/is-test-run?)
-      (when (and config/auto-thanks? (= zappee-id (get-mem :pubkey)))
-        (prn 'auto-thanks zapper-name)
-        (composers/compose-and-send-text-event nil "Auto Thanks" (format "Thank you @%s!" zapper-name)))
-      (when (or (= (get-mem :pubkey) zapper-id)
-                (= (get-mem :pubkey) zappee-id))
-        (spit "private/zap.log"
-              (format "%s %s sats %s->%s %s\n" time-str sats zapper-name zappee-name content)
-              :append true)))
+      (when (= zappee-id (get-mem :pubkey))
+        (when-not (= :off config/auto-thanks)
+          (auto-thanks zapper-id)))
+
+      (log-zap zapper-id zappee-id amount-str time content))
 
     (when (some? transaction)
       (let [{:keys [id amount comment]} transaction

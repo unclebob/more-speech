@@ -117,11 +117,19 @@
       (cond
         (< new-until back-to)
         (do
+          (log-pr 2 'batch-complete
+                  (format-time new-until)
+                  (format-time back-to)
+                  url)
           (update-mem [:active-subscriptions "url"] dissoc id)
           (relay/send relay ["CLOSE" id]))
 
         :else
         (do
+          (log-pr 2 'next-batch
+                  (format-time new-until)
+                  (format-time back-to)
+                  url)
           (update-mem [:active-subscriptions url id]
                       assoc :since new-since :until new-until
                       :max-time 0 :event-counter 0

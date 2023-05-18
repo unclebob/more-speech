@@ -197,7 +197,7 @@
           :items [
                   (flow-panel :align :left :items [(bold-label "Author:") author-name-label zap-icon])
                   (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
-                  (flow-panel :align :left :items [(label :text "Reactions:"
+                  (flow-panel :align :left :items [(label :text "Reactions▶:"
                                                           :font (uconfig/get-bold-font)
                                                           :popup popup-reactions)
                                                    reactions-label up-arrow dn-arrow])

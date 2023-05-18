@@ -6,11 +6,12 @@
   (:require [clojure.core.async :as async]
             [more-speech.config :as config]
             [more-speech.data-storage :as data-storage]
-            [more-speech.logger.default :refer [log-pr log-level]]
+            [more-speech.logger.default :refer [log-level log-pr]]
             [more-speech.mem :refer :all]
             [more-speech.migrator :as migrator]
             [more-speech.nostr.main :as main]
             [more-speech.nostr.util :as util]
+            [more-speech.ui.formatter-util :as formatter-util]
             [more-speech.ui.swing.main-window :as swing])
   (:use (seesaw [core])))
 
@@ -30,8 +31,12 @@
       (reset! log-level 2))
     (when (and (some? arg) (re-matches #"hours:\d+" arg))
       (let [hours (Integer/parseInt (subs arg 6))]
-        (set-mem :request-hours-ago hours))
-      )
+        (set-mem :request-hours-ago hours)))
+    (when (and (some? arg) (re-matches #"dev-hours:\d+" arg))
+      (reset! log-level 2)
+      (let [hours (Integer/parseInt (subs arg 10))]
+        (set-mem :request-hours-ago hours)
+        (log-pr 2 'hours-ago hours)))
     (if (config/is-test-run?)
       (config/set-db! :in-memory)
       (config/set-db! config/production-db))
@@ -52,7 +57,7 @@
             (if (some? (get-mem :request-hours-ago))
               (- (util/get-now) (* 3600 (get-mem :request-hours-ago)))
               latest-old-message-time)
-            _ (log-pr 2 'main 'getting-events)
+            _ (log-pr 2 'main 'getting-events (formatter-util/format-time latest-old-message-time))
             exit-condition (main/start-nostr latest-old-message-time)]
         (log-pr 2 'starting-exit-process)
         (when (not (config/is-test-run?))

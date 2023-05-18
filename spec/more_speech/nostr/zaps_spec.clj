@@ -6,8 +6,10 @@
     [more-speech.db.in-memory :as in-memory]
     [more-speech.mem :refer :all]
     [more-speech.nostr.elliptic-signature :as es]
+    [more-speech.nostr.event-composers :as composers]
     [more-speech.nostr.util :as util]
     [more-speech.nostr.zaps :as zaps]
+    [more-speech.util.fortune-messages :as fortune]
     [speclj.core :refer :all]))
 
 (declare db)
@@ -194,5 +196,33 @@
                         (zaps/make-zap-request wallet-response
                                                event amount comment lnurl))))
       )
+    )
+
+  (context "auto-thanks"
+    (it "sends thanks for a zap when auto-thanks is :on"
+      (with-redefs [composers/compose-and-send-text-event (stub :send)
+                    config/auto-thanks :on]
+        (let [zapper-id (rand-int 1000000)]
+          (gateway/add-profile @db zapper-id {:name "zapper"})
+          (zaps/auto-thanks zapper-id)
+          (should-have-invoked :send {:with [nil "Auto Thanks" "@zapper Thank you!\n"]}))))
+
+    (it "dms thanks for a zap when auto-thanks is :dm"
+          (with-redefs [composers/compose-and-send-text-event (stub :send)
+                        config/auto-thanks :dm]
+            (let [zapper-id (rand-int 1000000)]
+              (gateway/add-profile @db zapper-id {:name "zapper"})
+              (zaps/auto-thanks zapper-id)
+              (should-have-invoked :send {:with [nil "Auto Thanks" "D @zapper Thank you!\n"]}))))
+
+    (it "sends thanks for a zap with a fortune"
+              (with-redefs [composers/compose-and-send-text-event (stub :send)
+                            fortune/get-message (stub :get-message {:return "hi"})
+                            config/auto-thanks :on
+                            config/auto-thanks-fortune :normal]
+                (let [zapper-id (rand-int 1000000)]
+                  (gateway/add-profile @db zapper-id {:name "zapper"})
+                  (zaps/auto-thanks zapper-id)
+                  (should-have-invoked :send {:with [nil "Auto Thanks" "@zapper Thank you!\nhi"]}))))
     )
   )
