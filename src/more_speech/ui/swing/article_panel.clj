@@ -185,6 +185,15 @@
 (defn popup-relays [_e]
   (map trim-relay-name (:relays (get-mem [:article-panel :event]))))
 
+(defn format-zap [[_lnurl zap]]
+  (format "%s sats %d - %s"
+          (formatter-util/format-time (:created-at zap))
+          (:amount zap)
+          (:comment zap)))
+
+(defn popup-zaps [_e]
+  (map format-zap (:zaps (get-mem [:article-panel :event]))))
+
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
         label-font (uconfig/get-small-font)
@@ -198,8 +207,7 @@
         relays-label (label :id :relays-label)
         up-arrow (label :text " " :id :up-arrow)
         dn-arrow (label :text " " :id :dn-arrow)
-        zaps-popup (popup :enabled? false)
-        zap-icon (label :text " " :id :zap-icon :user-data zaps-popup)
+        zap-icon (label :text " " :id :zap-icon :popup popup-zaps)
         grid
         (grid-panel
           :columns 3
@@ -216,12 +224,6 @@
                   (flow-panel :align :left :items [(bold-label "id:") id-label])
                   (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
                   (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
-    (listen zap-icon
-            :mouse-entered (fn [e]
-                             (-> zaps-popup
-                                 (move! :to (.getLocationOnScreen e))
-                                 show!))
-            :mouse-exited (fn [_e] (hide! zaps-popup)))
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
     (listen id-label :mouse-pressed copy-click)
@@ -271,12 +273,6 @@
     (formatters/reformat-article-into-html
       (formatters/replace-references event))))
 
-(defn format-zap [[_lnurl zap]]
-  (format "%s sats %d - %s"
-          (formatter-util/format-time (:created-at zap))
-          (:amount zap)
-          (:comment zap)))
-
 (defn load-article-info [selected-id]
   (let [main-frame (get-mem :frame)
         event (gateway/get-event (get-db) selected-id)
@@ -290,12 +286,10 @@
         up-arrow (select main-frame [:#up-arrow])
         dn-arrow (select main-frame [:#dn-arrow])
         zap-icon (select main-frame [:#zap-icon])
-        zaps-popup (config zap-icon :user-data)
         zapped? (some? (:zaps event))
         reacted? (has-my-reaction? event)
         reactions (count (:reactions event))
         reactions-label (select main-frame [:#reactions-count])
-        zap-items (map format-zap (:zaps event))
         event-id (select main-frame [:#id-label])
         author-name-label (select main-frame [:#author-name-label])
         article-html (make-article-html event)
@@ -320,8 +314,6 @@
     (if zapped?
       (text! zap-icon "❗⚡ ")                                ;₿ use the bitcoin char?
       (text! zap-icon ""))
-    (swing-util/clear-popup zaps-popup)
-    (config! zaps-popup :items zap-items)
     (text! author-name-label
            (formatters/format-user-id (:pubkey event) 50))
     (config! author-name-label :user-data (:pubkey event))
