@@ -194,6 +194,16 @@
 (defn popup-zaps [_e]
   (map format-zap (:zaps (get-mem [:article-panel :event]))))
 
+(defn popup-mentions [_e]
+  (let [event (get-mem [:article-panel :event])
+        p-tags (events/get-tag event :p)
+        hex-ids (map first p-tags)
+        ids (map util/unhexify hex-ids)
+        names (map #(formatters/format-user-id % 50) ids)
+        ]
+    names)
+  )
+
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
         label-font (uconfig/get-small-font)
@@ -215,11 +225,11 @@
           :items [
                   (flow-panel :align :left :items [(bold-label "Author:") author-name-label zap-icon])
                   (flow-panel :align :left :items [(bold-label "Subject:") subject-label])
-                  (flow-panel :align :left :items [(popup-label "Reactions▶:" popup-reactions) reactions-label up-arrow dn-arrow])
+                  (flow-panel :align :left :items [(popup-label "Reactions▶" popup-reactions) reactions-label up-arrow dn-arrow])
 
                   (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
-                  (flow-panel :align :left :items [(bold-label "Reply to:") reply-to-label])
-                  (flow-panel :align :left :items [(popup-label "Relays▶:" popup-relays) relays-label])
+                  (flow-panel :align :left :items [(popup-label "Reply & CC▶" popup-mentions) reply-to-label])
+                  (flow-panel :align :left :items [(popup-label "Relays▶" popup-relays) relays-label])
 
                   (flow-panel :align :left :items [(bold-label "id:") id-label])
                   (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
