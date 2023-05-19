@@ -23,47 +23,44 @@
   (context "zap address"
     (context "zap address is in tag"
       (it "determines lud16 zap address from zap tag"
-        (let [event {:tags [[:zap "zap-address" "lud16"]]}]
-          (should= "zap-address" (zaps/get-zap-address event))))
+        (let [event {:tags [[:zap "me@you.xxx" "lud16"]]}]
+          (should= "https://you.xxx/.well-known/lnurlp/me"
+                   (zaps/get-lnurl event))))
 
-      (it "rejects zap address when there are conflicting zap tags"
-        (let [event {:tags [[:zap "zap-address" "lud16"]
-                            [:zap "zap-address-1" "lud16"]]}]
-          (should-throw Exception "conflicting zaps"
-                        (zaps/get-zap-address event))))
+      (it "passes mistyped address"
+        (let [event {:tags [[:zap "zap-address" "xxx"]]}]
+          (should= "zap-address" (zaps/get-lnurl event))))
 
-      (it "accepts multiple zap tags that don't conflict"
-        (let [event {:tags [[:zap "zap-address-1" "lud16"]
-                            [:zap "zap-address-1" "lud16"]]}]
-          (should= "zap-address-1" (zaps/get-zap-address event))))
-
-      (it "only accepts lud16"
-        (let [event {:tags [[:zap "zap-address" "lud06"]]}]
-          (should-throw Exception "lud06 unimplemented"
-                        (zaps/get-zap-address event))))
-
-      (it "assumes an unspecified address type is lud16"
+      (it "passes untyped address"
         (let [event {:tags [[:zap "zap-address"]]}]
-          (should= "zap-address" (zaps/get-zap-address event))))
+          (should= "zap-address" (zaps/get-lnurl event))))
       )
 
     (context "No zap tag"
       (it "rejects if no profile for author"
         (let [event {:pubkey 1}]
           (should-throw Exception "no zap tag or profile"
-                        (zaps/get-zap-address event))))
+                        (zaps/get-lnurl event))))
 
       (it "rejects if profile has no lud16"
         (let [event {:pubkey 1}]
           (gateway/add-profile @db 1 {:name "somebody"})
-          (should-throw Exception "no lud16 in profile"
-                        (zaps/get-zap-address event))))
+          (should-throw Exception "no zap tag or profile"
+                        (zaps/get-lnurl event))))
 
-      (it "gets zap addr from profile"
+      (it "gets lud16 zap addr from profile"
         (let [event {:pubkey 1}]
           (gateway/add-profile @db 1 {:name "somebody"
-                                      :lud16 "zap-addr"})
-          (should= "zap-addr" (zaps/get-zap-address event))))
+                                      :lud16 "me@you.xxx"})
+          (should= "https://you.xxx/.well-known/lnurlp/me"
+                   (zaps/get-lnurl event))))
+
+      (it "gets lud06 zap addr from profile"
+              (let [event {:pubkey 1}
+                    lnurl (bech32/encode-str "lnurl" "the-lnurl")]
+                (gateway/add-profile @db 1 {:name "somebody"
+                                            :lud06 lnurl})
+                (should= "the-lnurl" (zaps/get-lnurl event))))
       )
 
     (context "lud16 parsing"

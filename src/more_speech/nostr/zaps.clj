@@ -18,43 +18,6 @@
   (:use (seesaw [core]))
   (:import (java.net URLEncoder)))
 
-(defn get-zap-address-from-tag [event]
-  (let [zap-tags (events/get-tag event :zap)
-        [zap-addr lud-type :as zap-tag] (first zap-tags)
-        lud-type (if (some? lud-type) lud-type "lud16")]
-    (cond
-      (empty? zap-tags)
-      nil
-
-      (not= "lud16" lud-type)
-      (throw (Exception. (str lud-type " unimplemented")))
-
-      (not (every? #(= zap-tag %) zap-tags))
-      (throw (Exception. "conflicting zaps"))
-
-      :else
-      zap-addr)))
-
-(defn get-zap-address-from-profile [event]
-  (let [author-id (:pubkey event)
-        profile (gateway/get-profile (get-db) author-id)
-        zap-addr (:lud16 profile)]
-    (cond
-      (nil? profile)
-      (throw (Exception. "no zap tag or profile"))
-
-      (nil? zap-addr)
-      (throw (Exception. "no lud16 in profile"))
-
-      :else
-      zap-addr)))
-
-(defn get-zap-address [event]
-  (let [zap-address (get-zap-address-from-tag event)]
-    (if (some? zap-address)
-      zap-address
-      (get-zap-address-from-profile event))))
-
 (defn parse-lud16 [lud16]
   (let [lud16 (.toLowerCase lud16)
         match (re-matches config/lud16-pattern lud16)]
@@ -66,6 +29,50 @@
 (defn lud16->lnurl [lud16]
   (let [[name domain] (parse-lud16 lud16)]
     (str "https://" domain "/.well-known/lnurlp/" name)))
+
+(defn- decode-lnurl [lnurl]
+  (try
+    (bech32/address->str lnurl)
+    (catch Exception e
+      (log-pr 1 'decode-lnurl (.getMessage e) lnurl))))
+
+(defn get-lnurl-from-tag [event]
+  (let [zap-tags (events/get-tag event :zap)
+        [zap-addr lud-type] (first zap-tags)]
+    (cond
+      (empty? zap-tags)
+      nil
+
+      (= "lud16" lud-type)
+      (lud16->lnurl zap-addr)
+
+      (= "lud06" lud-type)
+      (decode-lnurl zap-addr)
+
+      :else
+      zap-addr)))
+
+(defn get-lnurl-from-profile [event]
+  (let [author-id (:pubkey event)
+        profile (gateway/get-profile (get-db) author-id)
+        lud16 (:lud16 profile)
+        lud06 (:lud06 profile)]
+    (cond
+      (some? lud16)
+      (lud16->lnurl lud16)
+
+      (some? lud06)
+      (decode-lnurl lud06)
+
+      :else
+      (throw (Exception. "no zap tag or profile"))
+     )))
+
+(defn get-lnurl [event]
+  (let [zap-address (get-lnurl-from-tag event)]
+    (if (some? zap-address)
+      zap-address
+      (get-lnurl-from-profile event))))
 
 (defn make-zap-request [wallet-response event amount comment lnurl]
   (let [{:strs [maxSendable minSendable
@@ -118,8 +125,7 @@
 
 (defn zap-author [event _e]
   (try
-    (let [zap-address (get-zap-address event)
-          lnurl (lud16->lnurl zap-address)
+    (let [lnurl (get-lnurl event)
           ln-response (client/get lnurl)
           wallet-response (json/read-str (:body ln-response))
           {:strs [callback status reason]} wallet-response]
