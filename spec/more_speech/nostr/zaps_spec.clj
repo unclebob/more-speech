@@ -12,7 +12,8 @@
     [more-speech.relay :as relay]
     [more-speech.util.fortune-messages :as fortune]
     [more-speech.websocket-relay :as ws-relay]
-    [speclj.core :refer :all]))
+    [speclj.core :refer :all])
+  (:import (ecdhJava SECP256K1)))
 
 (declare db)
 (describe "zaps"
@@ -228,12 +229,13 @@
     )
 
   (context "wallet-connect"
-    (it "sends the info request"
+    (it "executes wallet-connect payment"
       (set-mem [:keys :wallet-connect] "nostrwalletconnect://info-id?relay=wc-relay-url")
       (with-redefs [ws-relay/make (stub :relay-make {:return "some-relay"})
                     relay/open (stub :relay-open {:return "open-relay"})
                     relay/send (stub :relay-send)
-                    relay/close (stub :relay-close)]
+                    relay/close (stub :relay-close)
+                    zaps/pay-invoice (stub :pay-invoice)]
         (let [info-promise (promise)]
           (deliver info-promise "pay_invoice")
           (zaps/zap-by-wallet-connect :some-event info-promise)
@@ -241,8 +243,26 @@
           (should-have-invoked :relay-open {:with ["some-relay"]})
           (should-have-invoked :relay-send {:with ["open-relay" ["REQ" "ms-info" {"kinds" [13194], "authors" ["info-id"]}]]})
           (should-have-invoked :relay-close {:with ["open-relay"]})
+          (should-have-invoked :pay-invoice{:with [:some-event :*]})
           )
         )
       )
+
+    (it "generates wc request"
+      (should= "{\"method\":\"pay_invoice\",\"params\":{\"invoice\":\"invoice\"}}"
+               (zaps/make-wc-json-request "invoice")))
+
+    (it "generates a wc request event"
+      (set-mem [:keys :private-key] "deadbeef")
+      (set-mem :pubkey 1)
+      (let [private-key "feedbeef"
+            wc-id "beeffeed"
+            request "request"
+            [_ event] (zaps/make-wc-request-event wc-id private-key request)]
+        (should= 23194 (:kind event))
+        (should= [[:p wc-id]] (filter #(= :p (first %)) (:tags event)))
+        (should= request (:content event))
+        (should false) ;not encrypted
+        ))
     )
   )

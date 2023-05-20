@@ -127,7 +127,7 @@
                 :cancel-fn (fn [_p] nil))]
     (show! (pack! zap-dialog))))
 
-(defn zap-by-invoice [event]
+(defn get-zap-invoice [event]
   (try
     (let [lnurl (get-lnurl event)
           ln-response (client/get lnurl)
@@ -156,16 +156,19 @@
         (update-mem :pending-zaps assoc invoice {:id (:id event)
                                                  :amount amount
                                                  :comment comment})
-        (util/copy-to-clipboard invoice)
-        (alert (str "Invoice is copied to clipboard.\n"
-                    "Paste it into your wallet and Zap!\n\n"
-                    (formatter-util/abbreviate invoice 20)
-                    (subs invoice (- (count invoice) 5)))))
-      )
+        invoice))
     (catch Exception e
       (log-pr 1 'zap-author (.getMessage e))
       (when (not= "cancel" (.getMessage e))
         (alert (str "Cannot zap. " (.getMessage e)))))))
+
+(defn zap-by-invoice [event]
+  (when-let [invoice (get-zap-invoice event)]
+    (util/copy-to-clipboard invoice)
+    (alert (str "Invoice is copied to clipboard.\n"
+                "Paste it into your wallet and Zap!\n\n"
+                (formatter-util/abbreviate invoice 20)
+                (subs invoice (- (count invoice) 5))))))
 
 (defn get-wc-info [promise relay msg]
   (condp = (first msg)
@@ -181,13 +184,34 @@
   )
 
 (defn wc-close [relay]
-  (prn 'wc-close relay))
+  (log-pr 2 'wc-close (::ws-relay/url relay)))
 
-(defn pay-invoice [event wc-uri])
+(defn make-wc-json-request [invoice]
+  (events/to-json {"method" "pay_invoice"
+                   "params" {"invoice" invoice}}))
+
+(defn make-wc-request-event [wc-pubkey secret request]
+  (let [kind 23194
+        tags [[:p wc-pubkey]]
+        content request
+        body {:kind kind
+              :tags tags
+              :content content}
+        event (composers/body->event body secret)]
+    event))
+
+(defn pay-invoice [event wc-uri]
+  (let [wc-pubkey (:host wc-uri)
+        wc-map  (uri/query-keys wc-uri)
+        secret (get wc-map "secret")
+        invoice (get-zap-invoice event)
+        request (make-wc-json-request invoice)
+        request-event (make-wc-request-event wc-pubkey secret request)]))
 
 (defn zap-by-wallet-connect
   ([event]
-   (zap-by-wallet-connect event (promise)))
+   (zap-by-wallet-connect event (promise))
+   )
 
   ([event info-promise]
    (let [wc (get-mem [:keys :wallet-connect])
@@ -218,7 +242,7 @@
 (defn zap-author [event _e]
   (if (some? (get-mem [:keys :wallet-connect]))
     (zap-by-wallet-connect [event])
-    (zap-by-invoice [event []])))
+    (zap-by-invoice event)))
 
 (defn- get-fortune []
   (condp = config/auto-thanks-fortune

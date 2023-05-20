@@ -17,18 +17,21 @@
   "Adds pubkey, created-at, id, and sig to the partially composed body,
   which must include kind, tags, and content.  The body is put into an
   EVENT wrapper that is ready to send."
-  [body]
-  (let [private-key (util/hex-string->bytes (get-mem [:keys :private-key]))
-        pubkey (get-mem :pubkey)
-        now (util/get-now)
-        body (assoc body :pubkey (util/hexify pubkey)
-                         :created_at now)
-        [id body] (events/make-id-with-pow config/proof-of-work-default body)
-        aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
-        signature (ecc/do-sign id private-key aux-rand)
-        event (assoc body :id (util/bytes->hex-string id)
-                          :sig (util/bytes->hex-string signature))]
-    ["EVENT" event]))
+  ([body]
+   (body->event body (get-mem [:keys :private-key])))
+
+  ([body private-key]
+   (let [private-key (util/hex-string->bytes private-key)
+         pubkey (get-mem :pubkey)
+         now (util/get-now)
+         body (assoc body :pubkey (util/hexify pubkey)
+                          :created_at now)
+         [id body] (events/make-id-with-pow config/proof-of-work-default body)
+         aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))
+         signature (ecc/do-sign id private-key aux-rand)
+         event (assoc body :id (util/bytes->hex-string id)
+                           :sig (util/bytes->hex-string signature))]
+     ["EVENT" event])))
 
 (defn compose-metadata-event []
   (let [key-map (get-mem :keys)
