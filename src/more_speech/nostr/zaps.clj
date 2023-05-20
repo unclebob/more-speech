@@ -12,9 +12,13 @@
     [more-speech.nostr.events :as events]
     [more-speech.nostr.relays :as relays]
     [more-speech.nostr.util :as util]
+    [more-speech.relay :as relay]
     [more-speech.ui.formatter-util :as formatter-util]
     [more-speech.ui.formatters :as formatters]
-    [more-speech.util.fortune-messages :as fortune])
+    [more-speech.util.fortune-messages :as fortune]
+    [more-speech.websocket-relay :as ws-relay]
+    [org.bovinegenius.exploding-fish :as uri]
+    )
   (:use (seesaw [core]))
   (:import (java.net URLEncoder)))
 
@@ -66,7 +70,7 @@
 
       :else
       (throw (Exception. "no zap tag or profile"))
-     )))
+      )))
 
 (defn get-lnurl [event]
   (let [zap-address (get-lnurl-from-tag event)]
@@ -123,7 +127,7 @@
                 :cancel-fn (fn [_p] nil))]
     (show! (pack! zap-dialog))))
 
-(defn zap-author [event _e]
+(defn zap-by-invoice [event]
   (try
     (let [lnurl (get-lnurl event)
           ln-response (client/get lnurl)
@@ -162,6 +166,59 @@
       (log-pr 1 'zap-author (.getMessage e))
       (when (not= "cancel" (.getMessage e))
         (alert (str "Cannot zap. " (.getMessage e)))))))
+
+(defn get-wc-info [promise relay msg]
+  (condp = (first msg)
+    "EOSE" (do
+             (relay/send relay ["CLOSE" "ms-info"]))
+    "EVENT" (do
+              (let [event (nth msg 2)
+                    content (get event "content")]
+                (when (not= -1 (.indexOf ^String content "pay_invoice"))
+                  (deliver promise "pay_invoice"))))
+    (do
+      (log-pr 1 'get-wc 'unexpected (::ws-relay/url relay) msg)))
+  )
+
+(defn wc-close [relay]
+  (prn 'wc-close relay))
+
+(defn pay-invoice [event wc-uri])
+
+(defn zap-by-wallet-connect
+  ([event]
+   (zap-by-wallet-connect event (promise)))
+
+  ([event info-promise]
+   (let [wc (get-mem [:keys :wallet-connect])
+         wc-map (uri/query-map wc)
+         wc-uri (uri/uri wc)
+         wc-pubkey (:host wc-uri)
+         relay-url (get wc-map "relay")
+         relay (ws-relay/make relay-url {:recv (partial get-wc-info info-promise)
+                                         :close wc-close})
+         request ["REQ" "ms-info" {"kinds" [13194] "authors" [wc-pubkey]}]
+         open-relay (relay/open relay)
+         _ (relay/send open-relay request)
+         result (deref info-promise 10000 :timeout)]
+     (relay/close open-relay)
+     (cond
+       (= result :timeout)
+       (log-pr 1 'zap-by-wallet-connect 'info-timeout relay-url)
+
+       (= result "pay_invoice")
+       (pay-invoice event wc-uri)
+
+       :else
+       (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url result)
+       )
+     )
+   ))
+
+(defn zap-author [event _e]
+  (if (some? (get-mem [:keys :wallet-connect]))
+    (zap-by-wallet-connect [event])
+    (zap-by-invoice [event []])))
 
 (defn- get-fortune []
   (condp = config/auto-thanks-fortune

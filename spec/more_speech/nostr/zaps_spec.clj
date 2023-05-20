@@ -9,7 +9,9 @@
     [more-speech.nostr.event-composers :as composers]
     [more-speech.nostr.util :as util]
     [more-speech.nostr.zaps :as zaps]
+    [more-speech.relay :as relay]
     [more-speech.util.fortune-messages :as fortune]
+    [more-speech.websocket-relay :as ws-relay]
     [speclj.core :refer :all]))
 
 (declare db)
@@ -56,11 +58,11 @@
                    (zaps/get-lnurl event))))
 
       (it "gets lud06 zap addr from profile"
-              (let [event {:pubkey 1}
-                    lnurl (bech32/encode-str "lnurl" "the-lnurl")]
-                (gateway/add-profile @db 1 {:name "somebody"
-                                            :lud06 lnurl})
-                (should= "the-lnurl" (zaps/get-lnurl event))))
+        (let [event {:pubkey 1}
+              lnurl (bech32/encode-str "lnurl" "the-lnurl")]
+          (gateway/add-profile @db 1 {:name "somebody"
+                                      :lud06 lnurl})
+          (should= "the-lnurl" (zaps/get-lnurl event))))
       )
 
     (context "lud16 parsing"
@@ -206,22 +208,41 @@
           (should-have-invoked :send {:with [nil "Auto Thanks" "@zapper Thank you!\n"]}))))
 
     (it "dms thanks for a zap when auto-thanks is :dm"
-          (with-redefs [composers/compose-and-send-text-event (stub :send)
-                        config/auto-thanks :dm
-                        config/auto-thanks-fortune :off]
-            (let [zapper-id (rand-int 1000000)]
-              (gateway/add-profile @db zapper-id {:name "zapper"})
-              (zaps/auto-thanks zapper-id)
-              (should-have-invoked :send {:with [nil "Auto Thanks" "D @zapper Thank you!\n"]}))))
+      (with-redefs [composers/compose-and-send-text-event (stub :send)
+                    config/auto-thanks :dm
+                    config/auto-thanks-fortune :off]
+        (let [zapper-id (rand-int 1000000)]
+          (gateway/add-profile @db zapper-id {:name "zapper"})
+          (zaps/auto-thanks zapper-id)
+          (should-have-invoked :send {:with [nil "Auto Thanks" "D @zapper Thank you!\n"]}))))
 
     (it "sends thanks for a zap with a fortune"
-              (with-redefs [composers/compose-and-send-text-event (stub :send)
-                            fortune/get-message (stub :get-message {:return "hi"})
-                            config/auto-thanks :on
-                            config/auto-thanks-fortune :normal]
-                (let [zapper-id (rand-int 1000000)]
-                  (gateway/add-profile @db zapper-id {:name "zapper"})
-                  (zaps/auto-thanks zapper-id)
-                  (should-have-invoked :send {:with [nil "Auto Thanks" "@zapper Thank you!\nhi"]}))))
+      (with-redefs [composers/compose-and-send-text-event (stub :send)
+                    fortune/get-message (stub :get-message {:return "hi"})
+                    config/auto-thanks :on
+                    config/auto-thanks-fortune :normal]
+        (let [zapper-id (rand-int 1000000)]
+          (gateway/add-profile @db zapper-id {:name "zapper"})
+          (zaps/auto-thanks zapper-id)
+          (should-have-invoked :send {:with [nil "Auto Thanks" "@zapper Thank you!\nhi"]}))))
+    )
+
+  (context "wallet-connect"
+    (it "sends the info request"
+      (set-mem [:keys :wallet-connect] "nostrwalletconnect://info-id?relay=wc-relay-url")
+      (with-redefs [ws-relay/make (stub :relay-make {:return "some-relay"})
+                    relay/open (stub :relay-open {:return "open-relay"})
+                    relay/send (stub :relay-send)
+                    relay/close (stub :relay-close)]
+        (let [info-promise (promise)]
+          (deliver info-promise "pay_invoice")
+          (zaps/zap-by-wallet-connect :some-event info-promise)
+          (should-have-invoked :relay-make {:with ["wc-relay-url" :*]})
+          (should-have-invoked :relay-open {:with ["some-relay"]})
+          (should-have-invoked :relay-send {:with ["open-relay" ["REQ" "ms-info" {"kinds" [13194], "authors" ["info-id"]}]]})
+          (should-have-invoked :relay-close {:with ["open-relay"]})
+          )
+        )
+      )
     )
   )

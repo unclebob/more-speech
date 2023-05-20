@@ -323,12 +323,15 @@
               hex-private-key (util/hexify (util/bytes->num bytes-private-key))
               bytes-public-key (es/get-pub-key bytes-private-key)
               public-key (util/bytes->num bytes-public-key)
-              hex-public-key (util/hexify public-key)]
+              hex-public-key (util/hexify public-key)
+              wallet-connect "wallet-connect-string"]
           (spit @config/keys-filename {:private-key hex-private-key
-                                       :public-key hex-public-key})
+                                       :public-key hex-public-key
+                                       :wallet-connect wallet-connect})
           (data-storage/read-keys)
           (should= hex-public-key (mem/get-mem [:keys :public-key]))
           (should= hex-private-key (mem/get-mem [:keys :private-key]))
+          (should= wallet-connect (mem/get-mem [:keys :wallet-connect]))
           (should= nil (mem/get-mem [:keys :password]))
           (should= public-key (mem/get-mem :pubkey))))
 
@@ -342,14 +345,19 @@
               encoded-private-key (->> hex-private-key
                                        (util/xor-string "password")
                                        (bech32/encode-str "encoded"))
-              ]
+              wallet-connect "wallet-connect-string"
+              encoded-wallet-connect (->> wallet-connect
+                                          (util/xor-string "password")
+                                          (bech32/encode-str "encoded"))]
 
           (spit @config/keys-filename {:private-key encoded-private-key
                                        :public-key hex-public-key
-                                       :password password})
+                                       :password password
+                                       :wallet-connect encoded-wallet-connect})
           (data-storage/read-keys)
           (should= hex-public-key (mem/get-mem [:keys :public-key]))
           (should= hex-private-key (mem/get-mem [:keys :private-key]))
+          (should= wallet-connect (mem/get-mem [:keys :wallet-connect]))
           (should= "password" (mem/get-mem [:keys :password]))
           (should= public-key (mem/get-mem :pubkey))))
 
@@ -358,11 +366,14 @@
               hex-private-key (util/hexify (util/bytes->num bytes-private-key))
               bytes-public-key (es/get-pub-key bytes-private-key)
               public-key (util/bytes->num bytes-public-key)
-              hex-public-key (util/hexify public-key)]
+              hex-public-key (util/hexify public-key)
+              wallet-connect "wallet-connect-string"]
           (data-storage/write-keys {:private-key hex-private-key
-                                    :public-key hex-public-key})
+                                    :public-key hex-public-key
+                                    :wallet-connect wallet-connect})
           (should= {:private-key hex-private-key
                     :public-key hex-public-key
+                    :wallet-connect wallet-connect
                     :password nil}
                    (read-string (slurp @config/keys-filename)))))
 
@@ -374,11 +385,17 @@
               hex-public-key (util/hexify public-key)
               encoded-private-key (->> hex-private-key
                                        (util/xor-string "password")
-                                       (bech32/encode-str "encoded"))]
+                                       (bech32/encode-str "encoded"))
+              wallet-connect "wallet-connect-string"
+              encoded-wallet-connect (->> wallet-connect
+                                          (util/xor-string "password")
+                                          (bech32/encode-str "encoded"))]
           (data-storage/write-keys {:private-key hex-private-key
                                     :public-key hex-public-key
+                                    :wallet-connect wallet-connect
                                     :password "password"})
           (should= {:private-key encoded-private-key
+                    :wallet-connect encoded-wallet-connect
                     :public-key hex-public-key
                     :password (bech32/encode-str "pw" "password")}
                    (read-string (slurp @config/keys-filename)))))

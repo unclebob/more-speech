@@ -219,8 +219,8 @@
       :max-time max-time
       :event-counter event-counter)))
 
-(defn handle-relay-message [url message]
-  (let [relay (:connection (get @relays url))
+(defn handle-relay-message [relay message]
+  (let [url (::ws-relay/url relay)
         [type id event] message]
 
     (cond

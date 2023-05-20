@@ -228,8 +228,17 @@
       (do
         (alert "password changed.")
         (set-mem [:keys :password] new)
-        (data-storage/write-keys (get-mem :keys)))
-      )
+        (data-storage/write-keys (get-mem :keys))))))
+
+(defn update-wallet-connect []
+  (let [wc (input "Enter Wallet Connect String"
+                  :value (if (nil? (get-mem [:keys :wallet-connect]))
+                           "-You won't see this string again!-"
+                           "-You've got one. Replace it here.-")
+                  :title (str "Wallet Connect"))]
+    (when (some? wc)
+      (set-mem [:keys :wallet-connect] (if (empty? wc) nil wc))
+      (data-storage/write-keys (get-mem :keys)))
     )
   )
 
@@ -267,7 +276,9 @@
                                        :action (fn [_e] (dispose! profile-frame))])
         pw-button (button :text "Change password"
                           :listen [:action (fn [_e] (change-password))])
-        button-panel (horizontal-panel :items [cancel-button ok-button pw-button])
+        wc-button (button :text "Wallet Connect"
+                          :listen [:action (fn [_e] (update-wallet-connect))])
+        button-panel (horizontal-panel :items [cancel-button ok-button pw-button wc-button])
         profile-panel (vertical-panel :items [name-panel
                                               about-panel
                                               picture-panel

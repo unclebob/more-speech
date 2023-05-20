@@ -26,6 +26,7 @@
 
 (defn write-keys [keys]
   (let [private-key (:private-key keys)
+        wallet-connect (:wallet-connect keys)
         password (:password keys)
         encoded-password (if (empty? password)
                            password
@@ -35,12 +36,20 @@
                       (->> private-key
                            (util/xor-string password)
                            (bech32/encode-str "encoded")))
+        wallet-connect (if (some? wallet-connect)
+                         (if (empty? password)
+                              wallet-connect
+                              (->> wallet-connect
+                                   (util/xor-string password)
+                                   (bech32/encode-str "encoded")))
+                         nil)
         keys (assoc keys :private-key private-key
-                         :password encoded-password)
+                         :password encoded-password
+                         :wallet-connect wallet-connect)
         keys-string (with-out-str (clojure.pprint/pprint keys))]
     (if (config/is-test-run?)
       (log-pr 2 `write-keys (if (empty? password)
-                              (dissoc keys :private-key)
+                              (dissoc keys :private-key :wallet-connect)
                               keys))
       (spit @config/keys-filename keys-string))))
 
@@ -84,9 +93,15 @@
         private-key (if (some? pw)
                       (util/xor-string pw (bech32/address->str private-key))
                       private-key)
-        ]
+        wallet-connect (:wallet-connect keys)
+        wallet-connect (if (some? wallet-connect)
+                         (if (some? pw)
+                              (util/xor-string pw (bech32/address->str wallet-connect))
+                              wallet-connect)
+                         nil)]
     (set-mem :keys (assoc keys :private-key private-key
-                               :password pw))
+                               :password pw
+                               :wallet-connect wallet-connect))
     (set-mem :pubkey pubkey)
     )
   )

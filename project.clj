@@ -14,6 +14,7 @@
                  [com.xtdb/xtdb-rocksdb "1.23.1"]
                  [org.slf4j/slf4j-nop "1.7.30"] ;1.7.30 works.
                  [clj-http "3.12.3"]
+                 [org.bovinegenius/exploding-fish "0.3.6"]
                  [org.clojure/test.check "1.1.1"]]
   :profiles {:dev {:dependencies [[speclj "3.4.3"]]}
              :uberjar {:aot :all}}
