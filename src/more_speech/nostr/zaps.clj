@@ -20,7 +20,8 @@
     [org.bovinegenius.exploding-fish :as uri]
     )
   (:use (seesaw [core]))
-  (:import (java.net URLEncoder)))
+  (:import (ecdhJava SECP256K1)
+           (java.net URLEncoder)))
 
 (defn parse-lud16 [lud16]
   (let [lud16 (.toLowerCase lud16)
@@ -190,23 +191,27 @@
   (events/to-json {"method" "pay_invoice"
                    "params" {"invoice" invoice}}))
 
-(defn make-wc-request-event [wc-pubkey secret request]
+(defn make-wc-request-event [wc-pubkey-hex secret-hex request]
   (let [kind 23194
-        tags [[:p wc-pubkey]]
+        tags [[:p wc-pubkey-hex]]
         content request
+        recipient-key (util/hex-string->num wc-pubkey-hex)
+        sender-key (util/hex-string->num secret-hex)
+        shared-secret (SECP256K1/calculateKeyAgreement sender-key recipient-key)
+        encrypted-content (SECP256K1/encrypt shared-secret content)
         body {:kind kind
               :tags tags
-              :content content}
-        event (composers/body->event body secret)]
+              :content encrypted-content}
+        event (composers/body->event body secret-hex)]
     event))
 
 (defn pay-invoice [event wc-uri]
-  (let [wc-pubkey (:host wc-uri)
-        wc-map  (uri/query-keys wc-uri)
-        secret (get wc-map "secret")
+  (let [wc-pubkey-hex (:host wc-uri)
+        wc-map (uri/query-keys wc-uri)
+        secret-hex (get wc-map "secret")
         invoice (get-zap-invoice event)
         request (make-wc-json-request invoice)
-        request-event (make-wc-request-event wc-pubkey secret request)]))
+        request-event (make-wc-request-event wc-pubkey-hex secret-hex request)]))
 
 (defn zap-by-wallet-connect
   ([event]

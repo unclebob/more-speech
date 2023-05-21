@@ -238,7 +238,7 @@
               recipient-private-key (util/make-private-key)
               sender-public-key (get-pub-key sender-private-key)
               recipient-public-key (get-pub-key recipient-private-key)
-              _ (reset! (get-mem) {:keys {:private-key (bytes->hex-string sender-private-key)}})
+              _ (set-mem [:keys :private-key] (bytes->hex-string sender-private-key))
               tags [[:p (bytes->hex-string recipient-public-key)]]
               content "D #[0] hi."
               inbound-shared-secret (SECP256K1/calculateKeyAgreement
