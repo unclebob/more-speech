@@ -18,13 +18,14 @@
   which must include kind, tags, and content.  The body is put into an
   EVENT wrapper that is ready to send."
   ([body]
-   (body->event body (get-mem [:keys :private-key])))
+   (body->event body
+                (get-mem [:keys :private-key])
+                (get-mem [:keys :public-key])))
 
-  ([body private-key]
+  ([body private-key public-key]
    (let [private-key (util/hex-string->bytes private-key)
-         pubkey (get-mem :pubkey)
          now (util/get-now)
-         body (assoc body :pubkey (util/hexify pubkey)
+         body (assoc body :pubkey public-key
                           :created_at now)
          [id body] (events/make-id-with-pow config/proof-of-work-default body)
          aux-rand (util/num->bytes 32 (biginteger (System/currentTimeMillis)))

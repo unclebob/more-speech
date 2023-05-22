@@ -8,6 +8,7 @@
     [more-speech.db.gateway :as gateway]
     [more-speech.logger.default :refer [log-pr]]
     [more-speech.mem :refer :all]
+    [more-speech.nostr.elliptic-signature :as es]
     [more-speech.nostr.event-composers :as composers]
     [more-speech.nostr.events :as events]
     [more-speech.nostr.relays :as relays]
@@ -176,10 +177,16 @@
     "EOSE" (do
              (relay/send relay ["CLOSE" "ms-info"]))
     "EVENT" (do
+              (prn 'get-wc-info 'EVENT (::ws-relay/url relay) msg)
               (let [event (nth msg 2)
                     content (get event "content")]
                 (when (not= -1 (.indexOf ^String content "pay_invoice"))
                   (deliver promise "pay_invoice"))))
+    "OK" (do
+           (prn 'get-wc-info (::ws-relay/url relay) msg)
+           (when-not (nth msg 2)
+             (log-pr 1 'get-wc-info 'zap-request-failed (::ws-relay/url relay) msg)))
+
     (do
       (log-pr 1 'get-wc 'unexpected (::ws-relay/url relay) msg)))
   )
@@ -191,10 +198,13 @@
   (events/to-json {"method" "pay_invoice"
                    "params" {"invoice" invoice}}))
 
-(defn make-wc-request-event [wc-pubkey-hex secret-hex request]
+(defn compose-wc-request-event [wc-pubkey-hex secret-hex request]
   (let [kind 23194
         tags [[:p wc-pubkey-hex]]
         content request
+        secret-key-bytes (util/hex-string->bytes secret-hex)
+        secret-pubkey-bytes (es/get-pub-key secret-key-bytes)
+        secret-pubkey-hex (util/bytes->hex-string secret-pubkey-bytes)
         recipient-key (util/hex-string->num wc-pubkey-hex)
         sender-key (util/hex-string->num secret-hex)
         shared-secret (SECP256K1/calculateKeyAgreement sender-key recipient-key)
@@ -202,16 +212,20 @@
         body {:kind kind
               :tags tags
               :content encrypted-content}
-        event (composers/body->event body secret-hex)]
+        event (composers/body->event body
+                                     secret-hex
+                                     secret-pubkey-hex
+                                     )]
     event))
 
-(defn pay-invoice [event wc-uri]
-  (let [wc-pubkey-hex (:host wc-uri)
-        wc-map (uri/query-keys wc-uri)
+(defn get-wc-request-event [event wc]
+  (let [wc-map (uri/query-map wc)
+        wc-uri (uri/uri wc)
+        wc-pubkey-hex (:host wc-uri)
         secret-hex (get wc-map "secret")
         invoice (get-zap-invoice event)
-        request (make-wc-json-request invoice)
-        request-event (make-wc-request-event wc-pubkey-hex secret-hex request)]))
+        request (make-wc-json-request invoice)]
+    (compose-wc-request-event wc-pubkey-hex secret-hex request)))
 
 (defn zap-by-wallet-connect
   ([event]
@@ -230,23 +244,29 @@
          open-relay (relay/open relay)
          _ (relay/send open-relay request)
          result (deref info-promise 10000 :timeout)]
-     (relay/close open-relay)
+
      (cond
        (= result :timeout)
-       (log-pr 1 'zap-by-wallet-connect 'info-timeout relay-url)
+       (do
+         (log-pr 1 'zap-by-wallet-connect 'info-timeout relay-url)
+         (relay/close open-relay))
 
        (= result "pay_invoice")
-       (pay-invoice event wc-uri)
+       (do
+         (relay/send open-relay (get-wc-request-event event wc))
+         (Thread/sleep 2000)
+         (relay/close open-relay))
 
        :else
-       (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url result)
+       (do (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url result)
+           (relay/close open-relay))
        )
      )
    ))
 
 (defn zap-author [event _e]
   (if (some? (get-mem [:keys :wallet-connect]))
-    (zap-by-wallet-connect [event])
+    (zap-by-wallet-connect event)
     (zap-by-invoice event)))
 
 (defn- get-fortune []
@@ -307,3 +327,6 @@
                                       :amount sats
                                       :comment comment})
         (update-mem :pending-zaps dissoc receipt-invoice)))))
+
+(defn process-zap-response [event]
+  (prn 'zap-response event))
