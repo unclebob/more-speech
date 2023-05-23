@@ -293,6 +293,7 @@
 
            :else
            (do (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url info-event)
+               (alert (str "Zap failed.  No info-event from: " relay-url))
                (relay/close open-relay))))))))
 
 (defn zap-author [event _e]
