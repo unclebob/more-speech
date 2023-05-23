@@ -184,29 +184,6 @@
   (or (= (:kind event) 1)
       (= (:kind event) 4)))
 
-(defn process-tag [tag]
-  (when (and (seq tag) (seq (first tag)))
-    (let [tag-type (first tag)
-          tag-type (if (clojure.string/blank? tag-type) "blank" tag-type)
-          tag-args (rest tag)
-          tag-type (.replace tag-type \: \-)]
-      (concat [(keyword tag-type)] tag-args))))
-
-(defn process-tags [tags]
-  (remove nil? (map process-tag tags)))
-
-(defn translate-event [event]
-  (let [id (unhexify (get event "id"))
-        pubkey (unhexify (get event "pubkey"))
-        sig (unhexify (get event "sig"))]
-    {:id id
-     :pubkey pubkey
-     :created-at (get event "created_at")
-     :kind (get event "kind")
-     :content (get event "content")
-     :sig sig
-     :tags (process-tags (get event "tags"))}))
-
 (defn count-event [url]
   (let [relay (re-find config/relay-pattern url)]
     (update-mem :websocket-backlog dec)

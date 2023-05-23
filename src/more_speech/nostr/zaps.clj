@@ -1,7 +1,9 @@
 (ns more-speech.nostr.zaps
   (:require
     [clj-http.client :as client]
+    [clojure.core.async :as async]
     [clojure.data.json :as json]
+    [clojure.string :as string]
     [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
     [more-speech.config :refer [get-db]]
@@ -172,18 +174,14 @@
                 (formatter-util/abbreviate invoice 20)
                 (subs invoice (- (count invoice) 5))))))
 
-(defn get-wc-info [promise relay msg]
+(defn get-wc-info [event-chan relay msg]
   (condp = (first msg)
     "EOSE" (do
-             (relay/send relay ["CLOSE" "ms-info"]))
+             (relay/send relay ["CLOSE" (second msg)]))
     "EVENT" (do
-              (prn 'get-wc-info 'EVENT (::ws-relay/url relay) msg)
-              (let [event (nth msg 2)
-                    content (get event "content")]
-                (when (not= -1 (.indexOf ^String content "pay_invoice"))
-                  (deliver promise "pay_invoice"))))
+              (let [event (nth msg 2)]
+                (async/>!! event-chan (util/translate-event event))))
     "OK" (do
-           (prn 'get-wc-info (::ws-relay/url relay) msg)
            (when-not (nth msg 2)
              (log-pr 1 'get-wc-info 'zap-request-failed (::ws-relay/url relay) msg)))
 
@@ -229,36 +227,56 @@
 
 (defn zap-by-wallet-connect
   ([event]
-   (zap-by-wallet-connect event (promise))
-   )
+   (zap-by-wallet-connect event (async/timeout 60000)))
 
-  ([event info-promise]
+  ([event event-chan]
    (let [wc (get-mem [:keys :wallet-connect])
          wc-map (uri/query-map wc)
          wc-uri (uri/uri wc)
-         wc-pubkey (:host wc-uri)
+         wc-pubkey-hex (:host wc-uri)
+         wc-pubkey (util/hex-string->num wc-pubkey-hex)
          relay-url (get wc-map "relay")
-         relay (ws-relay/make relay-url {:recv (partial get-wc-info info-promise)
+         secret-hex (get wc-map "secret")
+         secret-bytes (util/hex-string->bytes secret-hex)
+         secret-pubkey-bytes (es/get-pub-key secret-bytes)
+         secret-pubkey-hex (util/bytes->hex-string secret-pubkey-bytes)
+         secret (util/hex-string->num secret-hex)
+         relay (ws-relay/make relay-url {:recv (partial get-wc-info event-chan)
                                          :close wc-close})
-         request ["REQ" "ms-info" {"kinds" [13194] "authors" [wc-pubkey]}]
+         request ["REQ" "ms-info" {"kinds" [13194] "authors" [wc-pubkey-hex]}]
          open-relay (relay/open relay)
          _ (relay/send open-relay request)
-         result (deref info-promise 10000 :timeout)]
+         info-event (async/<!! event-chan)]
 
      (cond
-       (= result :timeout)
+       (nil? info-event)
        (do
          (log-pr 1 'zap-by-wallet-connect 'info-timeout relay-url)
          (relay/close open-relay))
 
-       (= result "pay_invoice")
+       (not (neg? (string/index-of (:content info-event) "pay_invoice")))
        (do
+         (relay/send open-relay ["REQ" "ms-resp" {"kinds" [23195] "authors" [wc-pubkey-hex]}])
          (relay/send open-relay (get-wc-request-event event wc))
-         (Thread/sleep 2000)
+         (loop [response-event (async/<!! event-chan)]
+           (cond
+             (= 23195 (:kind response-event))
+             (let [content (:content response-event)
+                   ptag (ffirst (events/get-tag response-event :p))]
+               (if (= ptag secret-pubkey-hex)
+                 (let [shared-secret (SECP256K1/calculateKeyAgreement secret wc-pubkey)
+                       decrypted-content (SECP256K1/decrypt shared-secret content)]
+                   (prn 'decrypted-content decrypted-content))
+                 (recur (async/<!! event-chan)))
+               )
+
+             :else
+             (log-pr 1 'zap-by-wallet-connect 'uknown-event relay-url response-event)
+             ))
          (relay/close open-relay))
 
        :else
-       (do (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url result)
+       (do (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url info-event)
            (relay/close open-relay))
        )
      )
