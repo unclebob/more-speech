@@ -265,8 +265,19 @@
                    ptag (ffirst (events/get-tag response-event :p))]
                (if (= ptag secret-pubkey-hex)
                  (let [shared-secret (SECP256K1/calculateKeyAgreement secret wc-pubkey)
-                       decrypted-content (SECP256K1/decrypt shared-secret content)]
-                   (prn 'decrypted-content decrypted-content))
+                       decrypted-content (SECP256K1/decrypt shared-secret content)
+                       response (json/read-str decrypted-content)
+                       result-type (get response "result_type")
+                       error (get response "error")]
+                   (if (= "pay_invoice" result-type)
+                     (when-not (nil? error)
+                       (let [code (get error "code")
+                             message (get error "message")]
+                         (log-pr 2 'zap-wallet-connect 'response-error response)
+                         (alert (str "Zap failed: " code " " message))))
+                     (do
+                       (log-pr 2 'zap-wallet-connect 'invalid-result-type response)
+                       (alert (str "Questionable response from wallet:" relay-url)))))
                  (recur (async/<!! event-chan)))
                )
 
