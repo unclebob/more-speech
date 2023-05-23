@@ -1,10 +1,12 @@
 (ns more-speech.nostr.event-handlers-spec
-  (:require [speclj.core :refer :all]
-            [more-speech.nostr.event-dispatcher :as handlers]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
-            [more-speech.config :as config]
-            [more-speech.mem :refer :all]))
+  (:require
+    [more-speech.nostr.util :as util]
+    [speclj.core :refer :all]
+    [more-speech.nostr.event-dispatcher :as handlers]
+    [more-speech.db.gateway :as gateway]
+    [more-speech.db.in-memory :as in-memory]
+    [more-speech.config :as config]
+    [more-speech.mem :refer :all]))
 
 (declare db)
 (describe "event-handlers"
@@ -52,7 +54,7 @@
         (with-redefs
           [handlers/handle-text-event (stub :handle-text-event)
            handlers/process-event (stub :process-event)
-           handlers/translate-event (stub :translate-event {:return event})
+           util/translate-event (stub :translate-event {:return event})
            handlers/decrypt-dm-event (stub :decrypt-dm-event {:return event})
            handlers/compute-id (stub :compute-id {:return 1})]
           (set-mem [:processed-event-ids] {})
@@ -68,7 +70,7 @@
             (with-redefs
               [handlers/handle-text-event (stub :handle-text-event)
                handlers/process-event (stub :process-event)
-               handlers/translate-event (stub :translate-event {:return event})
+               util/translate-event (stub :translate-event {:return event})
                handlers/decrypt-dm-event (stub :decrypt-dm-event {:return event})
                handlers/compute-id (stub :compute-id {:return 1})]
               (set-mem [:processed-event-ids] {1 #{:first-url}})

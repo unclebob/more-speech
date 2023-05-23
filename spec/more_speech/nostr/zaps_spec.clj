@@ -1,5 +1,6 @@
 (ns more-speech.nostr.zaps-spec
   (:require
+    [clojure.core.async :as async]
     [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
     [more-speech.db.gateway :as gateway]
@@ -12,7 +13,6 @@
     [more-speech.relay :as relay]
     [more-speech.util.fortune-messages :as fortune]
     [more-speech.websocket-relay :as ws-relay]
-    [org.bovinegenius.exploding-fish :as uri]
     [speclj.core :refer :all])
   (:import (ecdhJava SECP256K1)))
 
@@ -111,6 +111,7 @@
                 my-pubkey (util/bytes->num (es/get-pub-key (util/num->bytes 32 my-privkey)))
                 _ (set-mem :pubkey my-pubkey)
                 _ (set-mem [:keys :private-key] (util/hexify my-privkey))
+                _ (set-mem [:keys :public-key] (util/hexify my-pubkey))
                 _ (reset! relays {"relay-r1" {:read :read-all}
                                   "relay-nr" {:read :read-none}
                                   "relay-r2" {:read :read-all}})
@@ -231,50 +232,51 @@
 
   (context "wallet-connect"
     (it "executes wallet-connect payment"
-      (set-mem [:keys :wallet-connect] "nostrwalletconnect://info-id?relay=wc-relay-url")
-      (with-redefs [ws-relay/make (stub :relay-make {:return "some-relay"})
-                    relay/open (stub :relay-open {:return "open-relay"})
-                    relay/send (stub :relay-send)
-                    relay/close (stub :relay-close)
-                    zaps/get-wc-request-event (stub :request-event {:return "request-event"})]
-        (let [info-promise (promise)]
-          (deliver info-promise "pay_invoice")
-          (zaps/zap-by-wallet-connect "event-to-zap" info-promise)
-          (should-have-invoked :relay-make {:with ["wc-relay-url" :*]})
-          (should-have-invoked :relay-open {:with ["some-relay"]})
-          (should-have-invoked :relay-send {:with ["open-relay" ["REQ" "ms-info" {"kinds" [13194], "authors" ["info-id"]}]]})
-          (should-have-invoked :request-event {:with ["event-to-zap" :*]})
-          (should-have-invoked :relay-send {:with ["open-relay" "request-event"]})
-          (should-have-invoked :relay-close {:with ["open-relay"]})
+      (let [event-index (atom -1)
+            events [{:content "pay_invoice"} {:kind 23195 :content "{\"result_type\": \"pay_invoice\"}"}]]
+        (set-mem [:keys :wallet-connect] "nostrwalletconnect://beef?relay=wc-relay-url&secret=dead")
+        (with-redefs [ws-relay/make (stub :relay-make {:return "some-relay"})
+                      relay/open (stub :relay-open {:return "open-relay"})
+                      relay/send (stub :relay-send)
+                      relay/close (stub :relay-close)
+                      zaps/get-wc-request-event (stub :request-event {:return "request-event"})
+                      async/<!! (stub :read-chan {:invoke (fn [_x] (get events (swap! event-index inc)))})]
+          (let [event-chan :some-channel]
+            (zaps/zap-by-wallet-connect "event-to-zap" event-chan)
+            (should-have-invoked :relay-make {:with ["wc-relay-url" :*]})
+            (should-have-invoked :relay-open {:with ["some-relay"]})
+            (should-have-invoked :relay-send {:with ["open-relay" ["REQ" "ms-info" {"kinds" [13194], "authors" ["beef"]}]]})
+            (should-have-invoked :request-event {:with ["event-to-zap" :*]})
+            (should-have-invoked :relay-send {:with ["open-relay" "request-event"]})
+            (should-have-invoked :relay-close {:with ["open-relay"]})
+            )
           )
         )
-      )
 
-    (it "generates wc request"
-      (should= "{\"method\":\"pay_invoice\",\"params\":{\"invoice\":\"invoice\"}}"
-               (zaps/make-wc-json-request "invoice")))
+      (it "generates wc request"
+        (should= "{\"method\":\"pay_invoice\",\"params\":{\"invoice\":\"invoice\"}}"
+                 (zaps/make-wc-json-request "invoice")))
 
-    (it "composes a wc request event"
-      (with-redefs [config/proof-of-work-default 0]
-        (let [sender-private-key-bytes (util/make-private-key)
-              sender-private-key (util/bytes->num sender-private-key-bytes)
-              sender-private-key-hex (util/hexify sender-private-key)
-              sender-public-key-bytes (es/get-pub-key sender-private-key-bytes)
-              sender-public-key (util/bytes->num sender-public-key-bytes)
-              recipient-private-key-bytes (util/make-private-key)
-              recipient-private-key (util/bytes->num recipient-private-key-bytes)
-              recipient-public-key-bytes (es/get-pub-key recipient-private-key-bytes)
-              recipient-public-key (util/bytes->num recipient-public-key-bytes)
-              recipient-public-key-hex (util/hexify recipient-public-key)
-              inbound-shared-secret (SECP256K1/calculateKeyAgreement
-                                      recipient-private-key
-                                      sender-public-key)
-              request "request"
-              _ (set-mem :pubkey 1)
-              [_ event] (zaps/compose-wc-request-event recipient-public-key-hex sender-private-key-hex request)]
-          (should= 23194 (:kind event))
-          (should= [[:p recipient-public-key-hex]] (filter #(= :p (first %)) (:tags event)))
-          (should= request (SECP256K1/decrypt inbound-shared-secret (:content event)))
-          )))
+      (it "composes a wc request event"
+        (with-redefs [config/proof-of-work-default 0]
+          (let [sender-private-key-bytes (util/make-private-key)
+                sender-private-key (util/bytes->num sender-private-key-bytes)
+                sender-private-key-hex (util/hexify sender-private-key)
+                sender-public-key-bytes (es/get-pub-key sender-private-key-bytes)
+                sender-public-key (util/bytes->num sender-public-key-bytes)
+                recipient-private-key-bytes (util/make-private-key)
+                recipient-private-key (util/bytes->num recipient-private-key-bytes)
+                recipient-public-key-bytes (es/get-pub-key recipient-private-key-bytes)
+                recipient-public-key (util/bytes->num recipient-public-key-bytes)
+                recipient-public-key-hex (util/hexify recipient-public-key)
+                inbound-shared-secret (SECP256K1/calculateKeyAgreement
+                                        recipient-private-key
+                                        sender-public-key)
+                request "request"
+                _ (set-mem :pubkey 1)
+                [_ event] (zaps/compose-wc-request-event recipient-public-key-hex sender-private-key-hex request)]
+            (should= 23194 (:kind event))
+            (should= [[:p recipient-public-key-hex]] (filter #(= :p (first %)) (:tags event)))
+            (should= request (SECP256K1/decrypt inbound-shared-secret (:content event)))))))
     )
   )
