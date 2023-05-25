@@ -82,7 +82,7 @@
         :else npub))
     (catch Exception e
       (log-pr 2 'get-author-name (.getMessage e))
-      npub)))
+      (str "<" npub "invalid>"))))
 
 (defn replace-nostr-references [s]
   (let [padded-content (str " " s " ")

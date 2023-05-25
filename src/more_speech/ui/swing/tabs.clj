@@ -84,7 +84,7 @@
         tab-label (label :text tab-name)
         _ (listen tab-label :mouse-pressed tab-menu)
         header-tree (make-header-tree tab-name)
-        scrollable-header-tree (scrollable header-tree)
+        scrollable-header-tree (scrollable header-tree :hscroll :never)
         search-bar (make-search-bar tab-name)
         tab-window (top-bottom-split search-bar scrollable-header-tree)
         ]
@@ -155,6 +155,7 @@
         child (DefaultMutableTreeNode. event-id)]
     (.insertNodeInto model child root insertion-point)
     (.makeVisible tree (TreePath. (.getPath child)))
+    ;(.scrollPathToVisible tree (.getSelectionPath tree))
     (update-mem [:node-map event-id] conj child)))
 
 (defn add-event-to-tab [tab event]

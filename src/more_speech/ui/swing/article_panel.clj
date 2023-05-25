@@ -109,9 +109,9 @@
                                           (fn [_e]
                                             (trust id)
                                             (dispose! profile-frame)
-                                            (future (show-user-profile id))))
-            (pack! profile-frame)
-            (show! profile-frame))))
+                                            (future (show-user-profile id)))))
+    (pack! profile-frame)
+    (show! profile-frame)))
 
 (defn show-user-profile [id]
   (when-let [profile (gateway/get-profile (get-db) id)]

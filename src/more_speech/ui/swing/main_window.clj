@@ -81,7 +81,8 @@
 (defn repaint-main-window []
   (let [frame (get-mem :frame)]
     (when (some? frame)
-      (.repaint frame))))
+      (invoke-later (repaint! frame)))
+    ))
 
 (defn setup-main-timer []
   (let [main-timer (Timer. "main timer")
