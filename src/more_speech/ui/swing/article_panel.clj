@@ -53,7 +53,6 @@
   (if (.isPopupTrigger e)
     (copy-click e)
     (let [id (config e :user-data)]
-      (protocol/request-note id)
       (swing-util/select-event id))))
 
 (defn- trust [id]
@@ -228,7 +227,7 @@
                   (flow-panel :align :left :items [(popup-label "Reactions▶" popup-reactions) reactions-label up-arrow dn-arrow])
 
                   (flow-panel :align :left :items [(bold-label "Created at:") created-time-label])
-                  (flow-panel :align :left :items [(popup-label "Reply & CC▶" popup-mentions) reply-to-label])
+                  (flow-panel :align :left :items [(popup-label "To: & CC:▶" popup-mentions) reply-to-label])
                   (flow-panel :align :left :items [(popup-label "Relays▶" popup-relays) relays-label])
 
                   (flow-panel :align :left :items [(bold-label "id:") id-label])
@@ -287,6 +286,10 @@
   (let [main-frame (get-mem :frame)
         event (gateway/get-event (get-db) selected-id)
         [root-id _ referent] (events/get-references event)
+        replied-event (if (some? referent)
+                        (gateway/get-event (get-db) referent)
+                        nil)
+        root-event-exists? (gateway/event-exists? (get-db) root-id)
         reply-to (select main-frame [:#reply-to-label])
         citing (select main-frame [:#citing-label])
         root-label (select main-frame [:#root-label])
@@ -303,7 +306,16 @@
         event-id (select main-frame [:#id-label])
         author-name-label (select main-frame [:#author-name-label])
         article-html (make-article-html event)
-        new-id? (not= (get-mem :article-window-event-id) selected-id)]
+        new-id? (not= (get-mem :article-window-event-id) selected-id)
+        notes-to-request []
+        notes-to-request (if root-event-exists?
+                           notes-to-request
+                           (conj notes-to-request root-id))
+        notes-to-request (if (some? replied-event)
+                           notes-to-request
+                           (conj notes-to-request referent))]
+    (when-not (empty? notes-to-request)
+      (protocol/request-notes notes-to-request))
     (set-mem [:article-panel :event] event)
     (when new-id?
       (protocol/request-profiles-and-contacts-for (:pubkey event)))
@@ -333,8 +345,7 @@
              :user-data (:id event)
              :text (f-util/abbreviate (util/num32->hex-string (:id event)) 20))
     (if (some? referent)
-      (let [replied-event (gateway/get-event (get-db) referent)
-            reply-to-id (:pubkey replied-event)]
+      (let [reply-to-id (:pubkey replied-event)]
         (config! reply-to
                  :user-data reply-to-id
                  :text (formatters/format-user-id reply-to-id 50))
@@ -348,13 +359,12 @@
       (do (text! reply-to "")
           (text! citing "")))
     (if (some? root-id)
-      (let [root-event-exists? (gateway/event-exists? (get-db) root-id)]
-        (config! root-label
-                 :user-data root-id
-                 :text (f-util/abbreviate (util/num32->hex-string root-id) 20)
-                 :font (if root-event-exists?
-                         (uconfig/get-small-bold-font)
-                         (uconfig/get-small-font))))
+      (config! root-label
+               :user-data root-id
+               :text (f-util/abbreviate (util/num32->hex-string root-id) 20)
+               :font (if root-event-exists?
+                       (uconfig/get-small-bold-font)
+                       (uconfig/get-small-font)))
       (text! root-label ""))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (format "%d %s"

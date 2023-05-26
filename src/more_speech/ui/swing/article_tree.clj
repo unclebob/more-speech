@@ -93,8 +93,9 @@
         (do
           (tabs/add-event-to-tab (first tabs) event)
           (recur (rest tabs)))))
-    (add-references event)
-    (let [event-id (bigint (:id event))]
-      (resolve-any-orphans event-id))))
+    ;(add-references event)
+    ;(let [event-id (bigint (:id event))]
+    ;  (resolve-any-orphans event-id))
+    ))
 
 
