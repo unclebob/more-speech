@@ -6,8 +6,12 @@
 (defn format-time [time]
   (let [time (* time 1000)
         date (Date. (long time))]
-    (.format (SimpleDateFormat. "MM/dd/yy HH:mm:ss") date))
-  )
+    (.format (SimpleDateFormat. "MM/dd/yy HH:mm:ss") date)))
+
+(defn format-short-time [time]
+  (let [time (* time 1000)
+        date (Date. (long time))]
+    (.format (SimpleDateFormat. "MM/dd HH:mm") date)))
 
 (defn make-date [date-string]
   (let [date (.parse (SimpleDateFormat. "MM/dd/yyyy") date-string)]

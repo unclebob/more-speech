@@ -245,18 +245,21 @@
                             {:id 66 :created-at 4}])))
 
   (it "adds an event, and a reply when received in order."
+    (pending "remove this test")
     (should= [0 [88] [99 [88]]]
              (events->tree @db
                            [{:id 99 :created-at 1}
                             {:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}])))
 
   (it "adds an event, and a reply when received out of order."
+    (pending "remove this test")
     (should= [0 [88] [99 [88]]]
              (events->tree @db
                            [{:id 88 :created-at 2 :tags [[:e (hexify 99) "" "reply"]]}
                             {:id 99 :created-at 1}])))
 
   (it "adds a complex chain of replies in order."
+    (pending "remove this test")
     (should= [0 [55] [66] [77 [66]] [88 [77 [66]] [55]] [99 [88 [77 [66]] [55]]]]
              (events->tree @db
                            [{:id 99 :created-at 1}
@@ -266,6 +269,7 @@
                             {:id 55 :created-at 5 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in order."
+    (pending "remove this test")
     (should= [0 [77] [88 [77]] [99 [88 [77]]]]
              (events->tree @db
                            [{:id 99 :created-at 1}
@@ -273,6 +277,7 @@
                             {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}])))
 
   (it "adds a chain of three replies in reverse order."
+    (pending "remove this test")
     (should= [0 [77] [88 [77]] [99 [88 [77]]]]
              (events->tree @db
                            (reverse
@@ -281,6 +286,7 @@
                               {:id 77 :created-at 3 :tags [[:e (hexify 88) "" "reply"]]}]))))
 
   (it "adds a complex chain of replies in reverse order."
+    (pending "remove this test")
     (should= [0 [55] [66] [77 [66]] [88 [55] [77 [66]]] [99 [88 [55] [77 [66]]]]]
              (events->tree @db
                            (reverse

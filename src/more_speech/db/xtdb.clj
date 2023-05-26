@@ -83,7 +83,7 @@
   (delete-entity db :profile id))
 
 (defmethod gateway/event-exists? ::type [db id]
-  (some? (gateway/get-event db id)))
+  (some? (gateway/get-event db (bigint id))))
 
 (defmethod gateway/add-event ::type [db event]
   (let [id (:id event)

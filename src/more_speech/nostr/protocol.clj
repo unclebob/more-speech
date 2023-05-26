@@ -28,17 +28,20 @@
       (let [relay (:connection (get @relays url))]
         (when (some? relay)
           (set-mem [:active-subscriptions url id] {:eose :close})
-          (relay/send relay request))))))
+          (relay/send relay request)
+          (future (do (Thread/sleep 2000)
+                      (relay/send relay ["CLOSE" id]))))))))
 
 (defn- make-request-id []
   (let [r (rand-int 1000000)]
     (str "ms-request-" r)))
 
 (defn request-notes [ids]
-  (let [req-id (make-request-id)
-        hex-ids (map util/hexify ids)
-        request ["REQ" req-id {"kinds" [1] "ids" hex-ids}]]
-    (send-request request)))
+  (when-not (empty? ids)
+    (let [req-id (make-request-id)
+          hex-ids (map util/hexify ids)
+          request ["REQ" req-id {"kinds" [1] "ids" hex-ids "until" (util/get-now)}]]
+      (send-request request))))
 
 (defn request-note [id]
   (let [req-id (make-request-id)

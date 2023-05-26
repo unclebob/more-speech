@@ -30,10 +30,15 @@
 (defn bold-label [s]
   (label :text s :font (uconfig/get-bold-font)))
 
-(defn popup-label [s popup-f]
+(defn popup-label
+  ([s popup-f]
+   (popup-label s popup-f :nil))
+
+  ([s popup-f id]
   (label :text s
          :font (uconfig/get-bold-font)
-         :popup popup-f))
+         :id id
+         :popup popup-f)))
 
 (defn copy-click [e]
   (when (.isPopupTrigger e)
@@ -200,8 +205,18 @@
         ids (map util/unhexify hex-ids)
         names (map #(formatters/format-user-id % 50) ids)
         ]
-    names)
-  )
+    names))
+
+(defn select-reply [id _e]
+  (swing-util/select-event id))
+
+(defn popup-replies [_e]
+  (let [event (get-mem [:article-panel :event])
+        reply-ids (:references event)
+        replies (map #(gateway/get-event (get-db) %) reply-ids)
+        names (map #(formatters/format-header % :menu-item) replies)
+        actions (map #(action :name %1 :handler (partial select-reply %2)) names reply-ids)]
+    actions))
 
 (defn make-article-info-panel []
   (let [author-name-label (label :id :author-name-label)
@@ -210,9 +225,9 @@
         reactions-label (label :id :reactions-count)
         reply-to-label (label :id :reply-to-label)
         id-label (text :id :id-label :editable? false :font label-font)
-        citing-label (text :id :citing-label :editable? false :font label-font)
+        citing-label (label :id :citing-label :font label-font)
         subject-label (label :id :subject-label :font label-font)
-        root-label (text :id :root-label :editable? false :font label-font)
+        root-label (label :id :root-label :font label-font)
         relays-label (label :id :relays-label)
         up-arrow (label :text " " :id :up-arrow)
         dn-arrow (label :text " " :id :dn-arrow)
@@ -231,8 +246,8 @@
                   (flow-panel :align :left :items [(popup-label "Relays▶" popup-relays) relays-label])
 
                   (flow-panel :align :left :items [(bold-label "id:") id-label])
-                  (flow-panel :align :left :items [(bold-label "Citing:") citing-label])
-                  (flow-panel :align :left :items [(bold-label "Root:") root-label])])]
+                  (flow-panel :align :left :items [citing-label " " root-label])
+                  (flow-panel :align :left :items [(popup-label "Replies▶" popup-replies :replies-label)])])]
     (listen citing-label :mouse-pressed id-click)
     (listen root-label :mouse-pressed id-click)
     (listen id-label :mouse-pressed copy-click)
@@ -289,7 +304,9 @@
         replied-event (if (some? referent)
                         (gateway/get-event (get-db) referent)
                         nil)
-        root-event-exists? (gateway/event-exists? (get-db) root-id)
+        root-event-exists? (if (some? root-id)
+                             (gateway/event-exists? (get-db) root-id)
+                             nil)
         reply-to (select main-frame [:#reply-to-label])
         citing (select main-frame [:#citing-label])
         root-label (select main-frame [:#root-label])
@@ -299,6 +316,7 @@
         up-arrow (select main-frame [:#up-arrow])
         dn-arrow (select main-frame [:#dn-arrow])
         zap-icon (select main-frame [:#zap-icon])
+        replies-label (select main-frame [:#replies-label])
         zapped? (some? (:zaps event))
         reacted? (has-my-reaction? event)
         reactions (count (:reactions event))
@@ -307,13 +325,8 @@
         author-name-label (select main-frame [:#author-name-label])
         article-html (make-article-html event)
         new-id? (not= (get-mem :article-window-event-id) selected-id)
-        notes-to-request []
-        notes-to-request (if root-event-exists?
-                           notes-to-request
-                           (conj notes-to-request root-id))
-        notes-to-request (if (some? replied-event)
-                           notes-to-request
-                           (conj notes-to-request referent))]
+        notes-to-request (remove nil? [(if root-event-exists? nil root-id)
+                                       (if (some? replied-event) nil referent)])]
     (when-not (empty? notes-to-request)
       (protocol/request-notes notes-to-request))
     (set-mem [:article-panel :event] event)
@@ -351,7 +364,7 @@
                  :text (formatters/format-user-id reply-to-id 50))
         (config! citing
                  :user-data referent
-                 :text (f-util/abbreviate (util/num32->hex-string referent) 20)
+                 :text (if (nil? replied-event) "[]" "[Citing]")
                  :font (if (nil? replied-event)
                          (uconfig/get-small-font)
                          (uconfig/get-small-bold-font))
@@ -361,11 +374,17 @@
     (if (some? root-id)
       (config! root-label
                :user-data root-id
-               :text (f-util/abbreviate (util/num32->hex-string root-id) 20)
+               :text (cond
+                       (= root-id referent) ""
+                       root-event-exists? "[Root]"
+                       :else "[]")
                :font (if root-event-exists?
                        (uconfig/get-small-bold-font)
                        (uconfig/get-small-font)))
       (text! root-label ""))
+    (if (empty? (:references event))
+      (text! replies-label "")
+      (text! replies-label "Replies▶"))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (format "%d %s"
                                 (count (:relays event))

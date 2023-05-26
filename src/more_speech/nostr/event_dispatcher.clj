@@ -68,17 +68,23 @@
           old-profile (gateway/get-profile db pubkey)
           old-date (get old-profile :created-at)]
       (when (or (nil? old-date)
-                 (>= created-at old-date))
+                (>= created-at old-date))
         (gateway/add-profile db pubkey profile-doc)))
     (catch Exception e
       (log-pr 1 'json-exception-process-name-event-ignored (.getMessage e))
       (log-pr 1 event))))
 
 (defn add-cross-reference [db event]
-  (let [[_ _ referent] (events/get-references event)]
-    (when (and (some? referent)
-               (gateway/event-exists? db referent))
-      (gateway/add-reference-to-event db referent (:id event)))))
+  (let [[_ _ referent] (events/get-references event)
+        id (:id event)]
+    (when (some? referent)
+      (if (gateway/event-exists? db referent)
+        (gateway/add-reference-to-event db referent id)
+        (update-mem [:orphaned-replies referent] conj id)))
+    (let [orphaned-replies (get-mem [:orphaned-replies id])]
+      (doseq [orphan orphaned-replies]
+        (gateway/add-reference-to-event db id orphan))
+      (update-mem :orphaned-replies dissoc id))))
 
 (defn add-event [db event urls]
   (let [id (:id event)

@@ -136,28 +136,29 @@
   ([event]
    (format-header event :long))
 
-  ([{:keys [pubkey created-at content tags zaps] :as event} opt]
+  ([{:keys [pubkey created-at tags zaps] :as event} opt]
    (try
      (if (nil? event)
        "nil"
-       (let [format-spec (if (= opt :long)
-                           "%s%s %20s %s %s%s%s\n"
-                           "%s%s %s %s %s%s%s")
-             content (replace-references event)
+       (let [content (replace-references event)
              content (replace-nostr-references content)
              name (format-user-id pubkey)
              time (format-time created-at)
-             subject (get-subject tags)
+             short-time (format-short-time created-at)
+             subject (or (get-subject tags) "")
              [reply-id _ _] (events/get-references event)
              reply-mark (if (some? reply-id) "^" " ")
              dm-mark (if (= 4 (:kind event)) (make-dm-mark event) "")
              zap-mark (if (some? zaps) "❗⚡ " "")
              reaction-mark (make-reaction-mark event)
              header-text (-> content (string/replace \newline \~) (abbreviate 130))
-             content (if (empty? subject)
+             subject-content (if (empty? subject)
                        header-text
                        (abbreviate (str subject "|" header-text) 130))]
-         (format format-spec reply-mark reaction-mark name time zap-mark dm-mark content)))
+         (condp = opt
+           :long (format "%s%s %20s %s %s%s%s\n" reply-mark reaction-mark name time zap-mark dm-mark subject-content)
+           :short (format "%s%s %s %s %s%s%s" reply-mark reaction-mark name time zap-mark dm-mark subject-content)
+           :menu-item (format "%-20.20s %s %10.10s|%-30.30s" name short-time subject content))))
      (catch Exception e
        (log-pr 1 'format-header 'Exception (.getMessage e))))))
 
