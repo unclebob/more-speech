@@ -22,7 +22,7 @@
 
 (def subscription-id-base "ms")
 
-(def auto-thanks :dm) ;{:dm :note :off}
+(def auto-thanks :off) ;{:dm :note :off}
 (def auto-thanks-fortune :normal) ;{:off :normal :markov :insane}
 
 (def test-run? (atom false))

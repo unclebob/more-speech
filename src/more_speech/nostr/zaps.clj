@@ -353,6 +353,7 @@
       (let [{:keys [id amount comment]} transaction
             sats (/ amount 1000)]
         (log-pr 2 'got-zap-receipt (util/hexify id) sats 'sats comment)
+        (set-mem :refresh-main-window true)
         (gateway/add-zap-to-event (get-db)
                                   id {:lnurl receipt-invoice
                                       :created-at (util/get-now)

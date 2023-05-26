@@ -38,6 +38,7 @@
        (recur pubkey (str name (inc (rand-int max))) (* 10 max))))))
 
 (defn process-name-event [db {:keys [_id pubkey created-at _kind _tags content _sig] :as event}]
+  (set-mem :refresh-main-window true)
   (try
     (let [profile (json/read-str content)
           name (get profile "name")
@@ -111,6 +112,7 @@
           target-id (unhexify (second last-e-tag))
           reactor (:pubkey event)]
       (when (gateway/event-exists? db target-id)
+        (set-mem :refresh-main-window true)
         (gateway/add-reaction db target-id reactor content)))
     (catch Exception _e))
   )

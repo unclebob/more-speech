@@ -13,8 +13,8 @@
             [more-speech.ui.swing.relay-manager :as relay-manager]
             [more-speech.ui.swing.stats-window :as stats-window]
             [more-speech.ui.swing.tabs :as tabs]
-            [more-speech.ui.swing.users-window :as users-window]
-            [more-speech.ui.swing.tabs-window :as tabs-window])
+            [more-speech.ui.swing.tabs-window :as tabs-window]
+            [more-speech.ui.swing.users-window :as users-window])
   (:use (seesaw [core]))
   (:import (java.util Timer TimerTask)))
 
@@ -43,8 +43,8 @@
                                                 :handler profile-window/make-profile-frame)
                                 :id :profile-menu)
         tabs-item (menu-item :action (action :name "Tabs..."
-                                                :handler tabs-window/make-tabs-window)
-                                :id :tabs-menu)
+                                             :handler tabs-window/make-tabs-window)
+                             :id :tabs-menu)
         manage-menu (menu :text "Manage" :items [relays-item stats-item users-item profile-item tabs-item])
         menu-bar (menubar :items [manage-menu])]
     menu-bar))
@@ -81,8 +81,10 @@
 (defn repaint-main-window []
   (let [frame (get-mem :frame)]
     (when (some? frame)
-      (invoke-later (repaint! frame)))
-    ))
+      (when (get-mem :refresh-main-window)
+        (set-mem :refresh-main-window false)
+        (invoke-later (repaint! frame))
+        ))))
 
 (defn setup-main-timer []
   (let [main-timer (Timer. "main timer")
@@ -97,7 +99,7 @@
                prune-tabs-task
                (long prune-tabs-frequency)
                (long prune-tabs-frequency))
-    (.schedule main-timer repaint-task 1000 1000)
+    (.schedule main-timer repaint-task 3000 3000)
     (.schedule main-timer reload-article-task 1000 1000)))
 
 (defn setup-main-window []

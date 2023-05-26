@@ -27,6 +27,7 @@
     [pubkey contacts]))
 
 (defn process-contact-list [db event]
+  (set-mem :refresh-main-window true)
   (let [[pubkey contacts] (unpack-contact-list-event event)]
     (when (seq contacts)
       (gateway/add-contacts db pubkey contacts))))
