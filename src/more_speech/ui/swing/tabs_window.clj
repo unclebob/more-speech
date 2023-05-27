@@ -25,7 +25,7 @@
   (let [id (:value item)
         event (gateway/get-event (config/get-db) id)
         rendered-text (if (some? event)
-                        (formatters/format-header event :short)
+                        (formatters/format-header event :menu-item)
                         (formatters/format-user-id id 70 40))
         pad (apply str (repeat 100 " "))]
     (config! widget
@@ -57,26 +57,48 @@
                                                 (remove-id-from listbox tab-name key id)))])]
         (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))))
 
+(defn- make-selected-area [tab-desc]
+  (let [tab-name (:name tab-desc)
+        selected-ids (:selected tab-desc)
+        selected-listbox (listbox :model selected-ids :renderer render-item)
+        selected-area (flow-panel :items [(label "Selected") (scrollable selected-listbox)])]
+    (set-mem [:tabs-window tab-name :selected] selected-ids)
+    (listen selected-listbox :mouse-pressed (partial listbox-click selected-listbox tab-name :selected))
+    selected-area))
+
+(defn- make-blocked-area [tab-desc]
+  (let [tab-name (:name tab-desc)
+        blocked-ids (:blocked tab-desc)
+        blocked-listbox (listbox :model blocked-ids :renderer render-item)
+        blocked-area (flow-panel :items [(label "Blocked") (scrollable blocked-listbox)])]
+    (set-mem [:tabs-window tab-name :blocked] blocked-ids)
+    (listen blocked-listbox :mouse-pressed (partial listbox-click blocked-listbox tab-name :blocked))
+    blocked-area)
+  )
+
+(defn- regex-field-key [tab-desc key-event]
+  (let [regex-field (.getComponent key-event)
+        c (.getKeyChar key-event)]
+    (when (= \newline c)
+      (prn 'regex-field-key 'add-regex (text regex-field))))
+  )
+
+(defn- make-regex-area [tab-desc]
+  (let [regex-field (text :editable? true :columns 40
+                          :listen [:key-pressed (partial regex-field-key tab-desc)])
+        regex-area (flow-panel :items ["Selection pattern:" regex-field])]
+    regex-area))
+
 (defn make-tab [tab-desc]
   (let [tab-name (:name tab-desc)
         tab-label (label :text tab-name)
-        selected-ids (:selected tab-desc)
-        _ (set-mem [:tabs-window tab-name :selected] selected-ids)
-        blocked-ids (:blocked tab-desc)
-        _ (set-mem [:tabs-window tab-name :blocked] blocked-ids)
-        all-ids (concat selected-ids blocked-ids)
-        _ (protocol/request-profiles-and-contacts-for all-ids)
-        _ (protocol/request-notes all-ids)
-        selected-items selected-ids
-        blocked-items blocked-ids
-        selected-listbox (listbox :model selected-items :renderer render-item)
-        blocked-listbox (listbox :model blocked-items :renderer render-item)
-        selected-area (flow-panel :items [(label "Selected") (scrollable selected-listbox)])
-        blocked-area (flow-panel :items [(label "Blocked") (scrollable blocked-listbox)])
-        tab-window (vertical-panel :items [selected-area blocked-area])]
-    (listen selected-listbox :mouse-pressed (partial listbox-click selected-listbox tab-name :selected))
-    (listen blocked-listbox :mouse-pressed (partial listbox-click blocked-listbox tab-name :blocked))
-
+        all-ids (concat (:selected tab-desc) (:blocked tab-desc))
+        tab-window (vertical-panel
+                     :items [(make-selected-area tab-desc)
+                             (make-regex-area tab-desc)
+                             (make-blocked-area tab-desc)])]
+    (protocol/request-profiles-and-contacts-for all-ids)
+    (protocol/request-notes all-ids)
     {:title tab-label
      :content tab-window}))
 
@@ -95,9 +117,8 @@
         tabs-frame (frame :title "Tabs Manager")
         tabs-window-timer (Timer. "Tabs window timer")
         tabs-window-repaint-task (proxy [TimerTask] []
-                                   (run [] repaint-tabs-window tabs-frame))
-        tab-panel (tabbed-panel :tabs (make-tabs) :id :tab-panel)
-        ]
+                                   (run [] (repaint-tabs-window tabs-frame)))
+        tab-panel (tabbed-panel :tabs (make-tabs) :id :tab-panel)]
     (config! tabs-frame :content tab-panel)
     (listen tabs-frame :window-closing (partial close-tabs-frame tabs-menu tabs-window-timer))
     (.schedule tabs-window-timer tabs-window-repaint-task 1000 1000)
