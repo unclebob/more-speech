@@ -47,7 +47,7 @@
           node (.getComponent e)
           id (config node :user-data)
           hex-id (util/hexify id)
-          note-id (bech32/encode "note" id)
+          note-id (str "nostr:" (bech32/encode "note" id))
           p (popup :items [(action :name (str "Copy " (subs hex-id 0 10) "...")
                                    :handler (partial copy-to-clipboard hex-id))
                            (action :name (str "Copy " (subs note-id 0 10) "...")

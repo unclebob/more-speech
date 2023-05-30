@@ -99,8 +99,7 @@
       (update-mem [:tabs-window tab-name :selected] conj regex)
       (config! (get-mem [:tabs-window tab-name :selected-listbox])
                :model (get-mem [:tabs-window tab-name :selected]))
-      (swing-util/add-filter-to-tab tab-name :selected regex)
-      (prn 'regex-field-key 'add-regex tab-name regex)))
+      (swing-util/add-filter-to-tab tab-name :selected regex)))
   )
 
 (defn- make-regex-area [tab-desc]

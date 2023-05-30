@@ -134,8 +134,8 @@
           ptags (filter #(= :p (first %)) tags)
           ptags (filter valid-ptag? ptags)
           pubkey-citings (map #(util/hex-string->num (second %)) ptags)
-          content (:content event)
-          subject (ffirst (events/get-tag event :subject))]
+          content (or (:content event) "")
+          subject (or (ffirst (events/get-tag event :subject)) "")]
       (and
         (or
           (empty? (:selected filters))
