@@ -13,23 +13,34 @@
            (java.util Timer TimerTask)))
 
 (defn close-tabs-frame [menu timer _e]
-  (when-not (config/is-test-run?)
-    (data-storage/write-tabs))
+  (data-storage/write-tabs)
+  (set-mem :tabs-window nil)
   (.cancel timer)
   (config! menu :enabled? true))
 
 (defn repaint-tabs-window [frame]
   (.repaint frame))
 
-(defn render-item [widget item]
-  (let [id (:value item)
-        event (gateway/get-event (config/get-db) id)
+(defn- render-id [widget id]
+  (let [event (gateway/get-event (config/get-db) id)
         rendered-text (if (some? event)
                         (formatters/format-header event :menu-item)
                         (formatters/format-user-id id 70 40))
         pad (apply str (repeat 100 " "))]
     (config! widget
              :text (subs (str rendered-text pad) 0 100))))
+
+(defn- render-regex [widget regex]
+  (config! widget :text (str "match:" regex)))
+
+(defn render-item [widget item]
+  (let [item-value (:value item)]
+    (cond
+      (number? item-value)
+      (render-id widget item-value)
+
+      (string? item-value)
+      (render-regex widget item-value))))
 
 (defn remove-id-from [listbox tab-name key id]
   (let [ids (remove #(= id %) (get-mem [:tabs-window tab-name key]))]
@@ -59,10 +70,12 @@
 
 (defn- make-selected-area [tab-desc]
   (let [tab-name (:name tab-desc)
-        selected-ids (:selected tab-desc)
-        selected-listbox (listbox :model selected-ids :renderer render-item)
+        selected-filters (filter #(or (number? %) (string? %))
+                                 (:selected tab-desc))
+        selected-listbox (listbox :model selected-filters :renderer render-item)
         selected-area (flow-panel :items [(label "Selected") (scrollable selected-listbox)])]
-    (set-mem [:tabs-window tab-name :selected] selected-ids)
+    (set-mem [:tabs-window tab-name :selected] selected-filters)
+    (set-mem [:tabs-window tab-name :selected-listbox] selected-listbox)
     (listen selected-listbox :mouse-pressed (partial listbox-click selected-listbox tab-name :selected))
     selected-area))
 
@@ -77,10 +90,17 @@
   )
 
 (defn- regex-field-key [tab-desc key-event]
-  (let [regex-field (.getComponent key-event)
-        c (.getKeyChar key-event)]
+  (let [tab-name (:name tab-desc)
+        regex-field (.getComponent key-event)
+        c (.getKeyChar key-event)
+        regex (text regex-field)]
     (when (= \newline c)
-      (prn 'regex-field-key 'add-regex (text regex-field))))
+      (text! regex-field "")
+      (update-mem [:tabs-window tab-name :selected] conj regex)
+      (config! (get-mem [:tabs-window tab-name :selected-listbox])
+               :model (get-mem [:tabs-window tab-name :selected]))
+      (swing-util/add-filter-to-tab tab-name :selected regex)
+      (prn 'regex-field-key 'add-regex tab-name regex)))
   )
 
 (defn- make-regex-area [tab-desc]
@@ -92,13 +112,13 @@
 (defn make-tab [tab-desc]
   (let [tab-name (:name tab-desc)
         tab-label (label :text tab-name)
-        all-ids (concat (:selected tab-desc) (:blocked tab-desc))
+        all-ids (filter number? (concat (:selected tab-desc) (:blocked tab-desc)))
         tab-window (vertical-panel
                      :items [(make-selected-area tab-desc)
                              (make-regex-area tab-desc)
                              (make-blocked-area tab-desc)])]
-    (protocol/request-profiles-and-contacts-for all-ids)
-    (protocol/request-notes all-ids)
+    (set-mem [:tabs-window :all-ids]
+             (concat (get-mem [:tabs-window :all-ids]) all-ids))
     {:title tab-label
      :content tab-window}))
 
@@ -106,10 +126,14 @@
   (loop [tabs-list (remove #(= "all" (:name %)) (get-mem :tabs-list))
          header-tree-tabs []]
     (if (empty? tabs-list)
-      header-tree-tabs
+      (let [all-ids (get-mem [:tabs-window :all-ids])]
+        (protocol/request-profiles-and-contacts-for all-ids)
+        (protocol/request-notes all-ids)
+        header-tree-tabs)
       (let [tab-data (make-tab (first tabs-list))]
         (recur (rest tabs-list)
-               (conj header-tree-tabs tab-data))))))
+               (conj header-tree-tabs tab-data)))))
+  )
 
 (defn make-tabs-window [_e]
   (let [tabs-menu (select (get-mem :frame) [:#tabs-menu])

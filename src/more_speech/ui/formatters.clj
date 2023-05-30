@@ -215,7 +215,7 @@
   (str "<a href=\"" (str type "://" subject) "\">" link-text "</a>"))
 
 (defn img-ify [seg]
-  (str "<a href=\"" seg "\"><img src=\"" seg "\"></a><br>" (linkify seg)))
+  (str "<a href=\"" seg "\"><img src=\"" seg "\" width=\"600\"></a><br>" (linkify seg)))
 
 (defn combine-patterns
   "patterns are a list of [:name pattern]"

@@ -38,10 +38,10 @@
                            (bech32/encode-str "encoded")))
         wallet-connect (if (some? wallet-connect)
                          (if (empty? password)
-                              wallet-connect
-                              (->> wallet-connect
-                                   (util/xor-string password)
-                                   (bech32/encode-str "encoded")))
+                           wallet-connect
+                           (->> wallet-connect
+                                (util/xor-string password)
+                                (bech32/encode-str "encoded")))
                          nil)
         keys (assoc keys :private-key private-key
                          :password encoded-password
@@ -55,9 +55,12 @@
 
 (defn write-tabs []
   (log-pr 2 'writing-tabs)
-  (spit @config/tabs-list-filename
-        (with-out-str
-          (clojure.pprint/pprint (get-mem :tabs-list)))))
+  (if-not (config/is-test-run?)
+    (spit @config/tabs-list-filename
+          (with-out-str
+            (clojure.pprint/pprint (get-mem :tabs-list))))
+    (prn 'not-written (with-out-str
+                        (clojure.pprint/pprint (get-mem :tabs-list))))))
 
 (defn write-configuration []
   (log-pr 2 'writing-relays)
@@ -96,8 +99,8 @@
         wallet-connect (:wallet-connect keys)
         wallet-connect (if (some? wallet-connect)
                          (if (some? pw)
-                              (util/xor-string pw (bech32/address->str wallet-connect))
-                              wallet-connect)
+                           (util/xor-string pw (bech32/address->str wallet-connect))
+                           wallet-connect)
                          nil)]
     (set-mem :keys (assoc keys :private-key private-key
                                :password pw

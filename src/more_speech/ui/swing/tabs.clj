@@ -126,20 +126,26 @@
 
 (defn should-add-event? [filters event]
   (try
-    (let [selected (:selected filters)
+    (let [selected-ids (filter number? (:selected filters))
+          selected-regexs (map re-pattern (filter string? (:selected filters)))
           blocked (:blocked filters)
           [root _mentions _referent] (events/get-references event)
           tags (:tags event)
           ptags (filter #(= :p (first %)) tags)
           ptags (filter valid-ptag? ptags)
-          pubkey-citings (map #(util/hex-string->num (second %)) ptags)]
+          pubkey-citings (map #(util/hex-string->num (second %)) ptags)
+          content (:content event)
+          subject (ffirst (events/get-tag event :subject))]
       (and
         (or
-          (empty? selected)
-          (some #(= % (:pubkey event)) selected)
-          (some #(= % (:id event)) selected)
-          (some #(= % root) selected)
-          (not-empty (set/intersection (set pubkey-citings) (set selected))))
+          (empty? (:selected filters))
+          (some #(= % (:pubkey event)) selected-ids)
+          (some #(= % (:id event)) selected-ids)
+          (some #(= % root) selected-ids)
+          (not-empty (set/intersection (set pubkey-citings) (set selected-ids)))
+          (some #(re-find % content) selected-regexs)
+          (some #(re-find % subject) selected-regexs)
+          )
         (not
           (or
             (some #(= % (:pubkey event)) blocked)
@@ -167,7 +173,7 @@
 
 (defn add-author-to-tab [public-key tab-name _e]
   (when-let [tab-name (if-new-tab tab-name)]
-    (swing-util/add-id-to-tab tab-name :selected public-key)
+    (swing-util/add-filter-to-tab tab-name :selected public-key)
     (let [now (util/get-now)
           since (- now 86400)
           tab (swing-util/get-tab-by-name tab-name)
@@ -179,12 +185,12 @@
 
 (defn block-author-from-tab [public-key tab-name _e]
   (when-let [tab-name (if-new-tab tab-name)]
-    (swing-util/add-id-to-tab tab-name :blocked public-key)))
+    (swing-util/add-filter-to-tab tab-name :blocked public-key)))
 
 (defn add-article-to-tab [event-id tab-name _e]
   (when-let [tab-name (if-new-tab tab-name)]
     (let [root-of-thread (events/get-root-of-thread event-id)]
-      (swing-util/add-id-to-tab tab-name :selected root-of-thread)
+      (swing-util/add-filter-to-tab tab-name :selected root-of-thread)
       (let [now (util/get-now)
             since (- now 86400)
             tab (swing-util/get-tab-by-name tab-name)
@@ -197,7 +203,7 @@
 
 (defn block-article-from-tab [event-id tab-name _e]
   (when-let [tab-name (if-new-tab tab-name)]
-    (swing-util/add-id-to-tab tab-name :blocked event-id)))
+    (swing-util/add-filter-to-tab tab-name :blocked event-id)))
 
 (defn delete-tab [tab-label _e]
   (let [tab-name (config tab-label :text)
@@ -215,6 +221,10 @@
       (let [tab-desc (swing-util/add-tab-to-tabs-list new-tab-name)
             tab-data (make-tab tab-desc)]
         (add-tab-to-tab-panel tab-data)))))
+
+(defn add-pattern-to-tab [tab-name _e]
+  (let [pattern (input "pattern:")]
+    (swing-util/add-filter-to-tab tab-name :selected pattern)))
 
 (defn change-tab-name [tab-label _e]
   (let [tab-name (config tab-label :text)
@@ -297,6 +307,9 @@
                                  :enabled? (not isAll?))
                          (action :name "New tab..."
                                  :handler new-tab
+                                 :enabled? true)
+                         (action :name "Add pattern..."
+                                 :handler (partial add-pattern-to-tab tab-name)
                                  :enabled? true)])]
     (if (.isPopupTrigger e)
       (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))

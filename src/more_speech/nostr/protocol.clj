@@ -48,7 +48,7 @@
         request ["REQ" req-id {"kinds" [1] "ids" [(util/hexify id)]}]]
     (send-request request)))
 
-(defn request-profiles-and-contacts-for [authors]
+(defn request-kinds-for [kinds authors]
   (when (some? authors)
     (let [authors (if (coll? authors) authors [authors])
           hexified-authors (map util/hexify authors)
@@ -57,9 +57,13 @@
                             (map #(subs % 0 10) (take 1000 (shuffle hexified-authors))))
           r (rand-int 1000000)
           request ["REQ" (str "ms-request-" r)
-                   {"kinds" [0 3]
+                   {"kinds" kinds
                     "authors" trimmed-authors}]]
       (send-request request))))
+
+(defn request-profiles-and-contacts-for [ids]
+  (request-kinds-for [0 3] ids)
+  )
 
 (defn request-batch [url id back-to filter]
   (let [relay (get-in @relays [url :connection])

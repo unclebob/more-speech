@@ -64,7 +64,7 @@
 
 (defn add-tab-to-tabs-list [tab-name]
   (let [tabs-list (get-mem :tabs-list)
-        tab-desc {:name tab-name :selected [] :blocked []}
+        tab-desc {:name tab-name :selected [:empty] :blocked []}
         new-tabs-list (conj tabs-list tab-desc)]
     (set-mem :tabs-list new-tabs-list)
     tab-desc))
@@ -87,7 +87,7 @@
              (conj new-tabs-list (first tabs-list))))))
 
 
-(defn add-id-to-tab [tab-name key id]
+(defn add-filter-to-tab [tab-name key id]
   (loop [tabs-list (get-mem :tabs-list)
          new-tabs-list []]
     (cond

@@ -61,14 +61,14 @@
       (set-mem :tabs-list [{:name "some-name"}])
       (add-tab-to-tabs-list "new-name")
       (should= [{:name "some-name"}
-                {:name "new-name" :selected [] :blocked []}]
+                {:name "new-name" :selected [:empty] :blocked []}]
                (get-mem :tabs-list)))
     )
 
   (context "select-id-in-tab"
     (it "adds-a-tab"
       (set-mem :tabs-list [{:name "tab"} {:name "another"}])
-      (add-id-to-tab "tab" :selected 1)
+      (add-filter-to-tab "tab" :selected 1)
       (should= [{:name "tab" :selected [1]}
                 {:name "another"}]
                (get-mem :tabs-list))))
@@ -123,8 +123,22 @@
             filter {:selected [1 2 3 4]
                     :blocked [2 10]}
             filter-results (map #(boolean (should-add-event? filter %)) events)]
-        (should= [true false true false] filter-results))
-      )
+        (should= [true false true false] filter-results)))
+
+    (it "allows notes whose contents match a string"
+      (let [filter {:selected ["alpha" "match" "beta"] :blocked []}
+            event {:content "match"}]
+        (should (should-add-event? filter event))))
+
+    (it "does not select notes whose contents do ont match a string"
+      (let [filter {:selected ["alpha" "nope" "beta"] :blocked []}
+            event {:content "match"}]
+        (should-not (should-add-event? filter event))))
+
+    (it "allows notes whose subjects match a string"
+      (let [filter {:selected ["alpha" "match" "beta"] :blocked []}
+            event {:content "no" :tags [[:subject "match"]]}]
+        (should (should-add-event? filter event))))
     )
 
   (context "selecting nodes"
@@ -163,7 +177,7 @@
 
   (it "adds an an unrooted article id to a tab"
     (gateway/add-event @db {:id 1 :tags []})
-    (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
+    (with-redefs [swing-util/add-filter-to-tab (stub :add-id-to-tab)
                   swing-util/relaunch (stub :relaunch)
                   swing-util/select-tab (stub :select-tab)
                   add-event-to-tab (stub :add-event-to-tab)]
@@ -176,7 +190,7 @@
     (let [root-id 100
           event {:id 1 :tags [[:e (util/hexify root-id) "" "root"]]}]
       (gateway/add-event @db event)
-      (with-redefs [swing-util/add-id-to-tab (stub :add-id-to-tab)
+      (with-redefs [swing-util/add-filter-to-tab (stub :add-id-to-tab)
                     add-event-to-tab (stub :add-event-to-tab)
                     swing-util/select-tab (stub :select-tab)]
         (add-article-to-tab 1 "tab" nil)
