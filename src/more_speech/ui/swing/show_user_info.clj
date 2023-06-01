@@ -1,14 +1,16 @@
 (ns more-speech.ui.swing.show-user-info
   (:require
     [more-speech.config :as config]
-    [more-speech.db.gateway :as gateway]
     [more-speech.config :refer [get-db]]
+    [more-speech.db.gateway :as gateway]
+    [more-speech.mem :as mem]
     [more-speech.nostr.contact-list :as contact-list]
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatter-util :as formatter-util]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.html-util :as html-util]
+    [more-speech.ui.swing.tabs :as tabs]
     [more-speech.ui.swing.user-info-interface :as html-interface])
   (:use (seesaw [border] [core])))
 
@@ -27,6 +29,31 @@
 (defn- untrust [id]
   (when (= :success (trust-updater/verify-untrust id))
     (trust-updater/untrust-and-send id)))
+
+(defn- make-profile-menubar [frame id]
+  (let [trusted? (some? (contact-list/get-petname id))
+        tab-names (vec (remove #(= "all" %) (map :name (mem/get-mem :tabs-list))))
+        tab-names (conj tab-names "<new-tab>")
+        add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab id %)) tab-names)
+        trust-item (menu-item
+                     :action (action
+                               :name (if trusted?
+                                       "Untrust user..."
+                                       "Trust user...")
+                               :handler (fn [_e]
+                                          (future
+                                            (if trusted?
+                                              (untrust id)
+                                              (trust id))
+                                            (dispose! frame)
+                                            (html-interface/show-user-profile id)))))
+        add-user-to-tab-item (menu
+                               :text "Add user to tab..."
+                               :items add-author-actions)
+        actions-menu (menu :text "Actions"
+                           :items [trust-item
+                                   add-user-to-tab-item])]
+    (menubar :items [actions-menu])))
 
 (defn show-profile [id profile]
   (let [created-at (:created-at profile)
@@ -52,21 +79,11 @@
                        :editable? false
                        :id :article-area
                        :text html-doc)
-        trust-button (button :text (if (some? petname) "Untrust" "Trust"))
-        button-panel (flow-panel :items [trust-button])
-        profile-panel (vertical-panel :items [button-panel (scrollable profile-pane)])
+        profile-panel (vertical-panel :items [(scrollable profile-pane)])
         profile-frame (frame :title (str "User Profile for " (:name profile))
                              :content profile-panel)]
+    (config! profile-frame :menubar (make-profile-menubar profile-frame id))
     (listen profile-pane :hyperlink html-util/open-link)
-    (listen trust-button :mouse-pressed (if (some? petname)
-                                          (fn [_e]
-                                            (untrust id)
-                                            (dispose! profile-frame)
-                                            (future (html-interface/show-user-profile id)))
-                                          (fn [_e]
-                                            (trust id)
-                                            (dispose! profile-frame)
-                                            (future (html-interface/show-user-profile id)))))
     (pack! profile-frame)
     (show! profile-frame)))
 
