@@ -1,5 +1,6 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
+            [more-speech.ui.swing.show-user-info] ;break cycle.
             [more-speech.config :as config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
             [more-speech.logger.default :refer [log-pr]]
@@ -9,6 +10,7 @@
             [more-speech.ui.formatter-util :as formatter-util]
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.article-tree :as article-tree]
+            [more-speech.ui.swing.html-util :as html-util]
             [more-speech.ui.swing.profile-window :as profile-window]
             [more-speech.ui.swing.relay-manager :as relay-manager]
             [more-speech.ui.swing.stats-window :as stats-window]
@@ -57,7 +59,7 @@
         _ (set-mem :frame main-frame)
         _ (log-pr 2 'make-main-window 'making-article-area)
         article-area (article-panel/make-article-area)
-        _ (listen article-area :hyperlink article-panel/open-link)
+        _ (listen article-area :hyperlink html-util/open-link)
         header-tab-panel (tabbed-panel :tabs (tabs/make-tabs) :id :header-tab-panel)
         article-panel (border-panel :north (article-panel/make-article-info-panel)
                                     :center (scrollable article-area)

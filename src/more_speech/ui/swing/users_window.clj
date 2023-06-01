@@ -12,8 +12,8 @@
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatters :as formatters]
-    [more-speech.ui.swing.article-panel :as article-panel]
-    [more-speech.ui.swing.tabs :as tabs])
+    [more-speech.ui.swing.tabs :as tabs]
+    [more-speech.ui.swing.user-info-interface :as user-info-interface])
   (:use (seesaw [core]))
   (:import (java.awt Point)
            (java.util Timer TimerTask)))
@@ -166,7 +166,7 @@
         add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab user-id %)) tab-names)]
     (protocol/request-profiles-and-contacts-for user-id)
     (when (.isPopupTrigger e)
-      (let [p (popup :items [(action :name "Get Info..." :handler (fn [_e] (article-panel/show-user-profile user-id)))
+      (let [p (popup :items [(action :name "Get Info..." :handler (fn [_e] (user-info-interface/show-user-profile user-id)))
                              (menu :text "Add author to tab" :items add-author-actions)])]
         (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))))
 

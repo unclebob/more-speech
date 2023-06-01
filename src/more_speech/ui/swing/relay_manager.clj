@@ -6,7 +6,7 @@
     [more-speech.nostr.protocol :as protocol]
     [more-speech.nostr.relays :as relays]
     [more-speech.nostr.util :as util]
-    [more-speech.ui.swing.article-panel :as article-panel])
+    [more-speech.ui.swing.html-util :as html-util])
   (:use (seesaw [core]))
   (:import (java.awt Point)
            (java.util Timer TimerTask)))
@@ -83,7 +83,7 @@
           info-frame (frame :title (str "Relay info for " (relays/get-domain-name url))
                             :content (scrollable info-pane)
                             :size [500 :by 600])]
-      (listen info-pane :hyperlink article-panel/open-link)
+      (listen info-pane :hyperlink html-util/open-link)
       (pack! info-frame)
       (show! info-frame))))
 

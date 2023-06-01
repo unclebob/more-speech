@@ -1,31 +1,25 @@
 (ns more-speech.ui.swing.article-panel
-  (:require [clojure.java.browse :as browse]
-            [clojure.string :as string]
-            [more-speech.bech32 :as bech32]
-            [more-speech.config :refer [get-db]]
-            [more-speech.config :as config]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.logger.default :refer [log-pr]]
-            [more-speech.mem :refer :all]
-            [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.nostr.event-composers :as composers]
-            [more-speech.nostr.events :as events]
-            [more-speech.nostr.protocol :as protocol]
-            [more-speech.nostr.trust-updater :as trust-updater]
-            [more-speech.nostr.util :as util]
-            [more-speech.nostr.zaps :as zaps]
-            [more-speech.ui.formatter-util :as formatter-util]
-            [more-speech.ui.formatter-util :as f-util]
-            [more-speech.ui.formatters :as formatters]
-            [more-speech.ui.swing.article-panel-util :as article-panel-util]
-            [more-speech.ui.swing.edit-window :as edit-window]
-            [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
-            [more-speech.user-configuration :as uconfig]
-            [seesaw.mouse :as mouse])
-  (:use (seesaw [border] [core]))
-  (:import (javax.swing.event HyperlinkEvent$EventType)))
-
-(declare open-link)
+  (:require
+    [more-speech.bech32 :as bech32]
+    [more-speech.config :refer [get-db]]
+    [more-speech.config :as config]
+    [more-speech.db.gateway :as gateway]
+    [more-speech.mem :refer :all]
+    [more-speech.nostr.event-composers :as composers]
+    [more-speech.nostr.events :as events]
+    [more-speech.nostr.protocol :as protocol]
+    [more-speech.nostr.util :as util]
+    [more-speech.nostr.zaps :as zaps]
+    [more-speech.ui.formatter-util :as formatter-util]
+    [more-speech.ui.formatter-util :as f-util]
+    [more-speech.ui.formatters :as formatters]
+    [more-speech.ui.swing.article-panel-util :as article-panel-util]
+    [more-speech.ui.swing.edit-window :as edit-window]
+    [more-speech.ui.swing.user-info-interface :as html-interface]
+    [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
+    [more-speech.user-configuration :as uconfig]
+    )
+  (:use (seesaw [border] [core])))
 
 (defn bold-label [s]
   (label :text s :font (uconfig/get-bold-font)))
@@ -35,10 +29,10 @@
    (popup-label s popup-f :nil))
 
   ([s popup-f id]
-  (label :text s
-         :font (uconfig/get-bold-font)
-         :id id
-         :popup popup-f)))
+   (label :text s
+          :font (uconfig/get-bold-font)
+          :id id
+          :popup popup-f)))
 
 (defn copy-click [e]
   (when (.isPopupTrigger e)
@@ -50,7 +44,7 @@
           note-id (str "nostr:" (bech32/encode "note" id))
           p (popup :items [(action :name (str "Copy " (subs hex-id 0 10) "...")
                                    :handler (partial copy-to-clipboard hex-id))
-                           (action :name (str "Copy " (subs note-id 0 10) "...")
+                           (action :name (str "Copy " (subs note-id 0 16) "...")
                                    :handler (partial copy-to-clipboard note-id))])]
       (.show p (to-widget e) x y))))
 
@@ -59,67 +53,6 @@
     (copy-click e)
     (let [id (config e :user-data)]
       (swing-util/select-event id))))
-
-(defn- trust [id]
-  (let [petname (trust-updater/ask-for-petname id)]
-    (when (some? petname)
-      (trust-updater/entrust-and-send id petname))))
-
-(defn- untrust [id]
-  (when (= :success (trust-updater/verify-untrust id))
-    (trust-updater/untrust-and-send id)))
-
-(defn make-html-document [style body]
-  (str "<head>" style "</head>"
-       "<body>" body "</body>"))
-
-(declare show-user-profile)
-
-(defn show-profile [id profile]
-  (let [created-at (:created-at profile)
-        petname (contact-list/get-petname id)
-        html-doc (make-html-document
-                   config/editor-pane-stylesheet
-                   (str "<h2> Name:</h2>" (:name profile)
-                        "<h2> Petname:</h2>" petname
-                        "<h2> Pubkey:</h2>" (util/hexify id)
-                        "<h2> About: </h2>" (:about profile)
-                        "<h2> Display name: </h2>" (:display-name profile)
-                        "<h2> Banner: </h2>" (:banner profile)
-                        "<h2> Website: </h2>" (:website profile)
-                        "<h2> Zap Addr: </h2>" (:lud16 profile) " " (:lud06 profile)
-                        "<h2> Identifier: </h2>" (:nip05 profile)
-                        "<h2> As of: </h2>" (if (nil? created-at) "?" (formatter-util/format-time created-at))
-                        "<p><img src=\"" (:picture profile) "\" width=\"350\">"
-                        "<p>" (formatters/linkify (:picture profile))
-                        "<p>" (apply str (keys profile)))
-                   )
-        profile-pane (editor-pane
-                       :content-type "text/html"
-                       :editable? false
-                       :id :article-area
-                       :text html-doc)
-        trust-button (button :text (if (some? petname) "Untrust" "Trust"))
-        button-panel (flow-panel :items [trust-button])
-        profile-panel (vertical-panel :items [button-panel (scrollable profile-pane)])
-        profile-frame (frame :title (str "User Profile for " (:name profile))
-                             :content profile-panel)]
-    (listen profile-pane :hyperlink open-link)
-    (listen trust-button :mouse-pressed (if (some? petname)
-                                          (fn [_e]
-                                            (untrust id)
-                                            (dispose! profile-frame)
-                                            (future (show-user-profile id)))
-                                          (fn [_e]
-                                            (trust id)
-                                            (dispose! profile-frame)
-                                            (future (show-user-profile id)))))
-    (pack! profile-frame)
-    (show! profile-frame)))
-
-(defn show-user-profile [id]
-  (when-let [profile (gateway/get-profile (get-db) id)]
-    (show-profile id profile)))
 
 (defn user-name-click [type frame e]
   (let [x (.x (.getPoint e))
@@ -136,8 +69,9 @@
                      (action :name (str "Copy " (subs npub 0 10) "...")
                              :handler (partial copy-to-clipboard npub))]
         popup-items (if (some? profile)
-                      (conj popup-items (action :name "Get info..."
-                                                :handler (fn [_e] (show-user-profile pubkey))))
+                      (conj popup-items
+                            (action :name "Get info..."
+                                    :handler (fn [_e] (html-interface/show-user-profile pubkey))))
                       popup-items)
         popup-items (if (and (= type :author)
                              (some? profile))
@@ -291,6 +225,10 @@
         reactions (:reactions event)]
     (some #(= me (first %)) reactions)))
 
+(defn- make-html-document [style body]
+  (str "<head>" style "</head>"
+       "<body>" body "</body>"))
+
 (defn make-article-html [event]
   (make-html-document
     config/editor-pane-stylesheet
@@ -389,86 +327,3 @@
     (text! relays-label (format "%d %s"
                                 (count (:relays event))
                                 (-> event :relays first trim-relay-name (f-util/abbreviate 40))))))
-
-
-(defn get-user-id-from-subject [subject]
-  (try
-    (cond
-      (.startsWith subject "@")
-      (composers/find-user-id (subs subject 1))
-
-      (or (.startsWith subject "npub1")
-          (.startsWith subject "nprofile1"))
-      (bech32/address->number subject)
-
-      :else
-      (do
-        (let [petname-id (contact-list/get-pubkey-from-petname subject)]
-          (if (some? petname-id)
-            petname-id
-            (gateway/get-id-from-username (get-db) subject)))
-        ))
-    (catch Exception _e
-      nil)))
-
-(defn get-user-info [id _e]
-  (show-user-profile id))
-
-(defn trust-author [id _e]
-  (trust-updater/trust-this-author id))
-
-(defn pop-up-name-menu [e subject]
-  (let [id (get-user-id-from-subject subject)
-        profile (gateway/get-profile (get-db) id)
-        p (popup :items [(action :name "Get Info..."
-                                 :handler (partial get-user-info id))])
-        ev (.getInputEvent e)
-        [x y] (mouse/location ev)]
-    (if (some? profile)
-      (.show p (to-widget e) x y)
-      (protocol/request-profiles-and-contacts-for id))))
-
-;---Declared
-(defn open-link [e]
-  (when (= HyperlinkEvent$EventType/ACTIVATED (.getEventType e))
-    (when-let [url (str (.getURL e))]
-      (let [[type subject] (string/split (.getDescription e) #"\:\/\/")]
-        (cond
-          (or (= type "http") (= type "https"))
-          (try
-            (browse/browse-url url)
-            (catch Exception ex
-              (log-pr 1 'open-link url (.getMessage ex))
-              (log-pr 1 ex)))
-
-          (= type "ms-idreference")
-          (let [id (util/unhexify subject)]
-            (protocol/request-note id)
-            (protocol/request-profiles-and-contacts-for id)
-            (swing-util/select-event id))
-
-          (= type "ms-notereference")
-          (try
-            (let [id (bech32/address->number subject)]
-              (protocol/request-note id)
-              (swing-util/select-event id))
-            (catch Exception ex
-              (log-pr 1 'open-link url (.getMessage ex))))
-
-          (= type "ms-neventreference")
-          (try
-            (let [tlv (bech32/address->tlv subject)
-                  hex-id (:special tlv)
-                  id (util/unhexify hex-id)]
-              (protocol/request-note id)
-              (swing-util/select-event id))
-            (catch Exception e
-              (log-pr 1 'open-link url (.getMessage e))))
-
-          (= type "ms-namereference")
-          (pop-up-name-menu e subject)
-
-          :else
-          (do (log-pr 1 'open-link url 'type type 'subject subject)
-              (log-pr 1 (.getDescription e)))
-          )))))

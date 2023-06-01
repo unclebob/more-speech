@@ -6,7 +6,7 @@
     [more-speech.mem :refer :all]
     [more-speech.nostr.protocol :as protocol]
     [more-speech.ui.formatters :as formatters]
-    [more-speech.ui.swing.article-panel :as article-panel]
+    [more-speech.ui.swing.user-info-interface :as html-interface]
     [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [core]))
   (:import (java.awt Point)
@@ -56,7 +56,7 @@
         select-string (if event? "Select" "Get Info...")
         enabled? (or event? user?)
         handler (if user?
-                  (fn [_e] (article-panel/show-user-profile id))
+                  (fn [_e] (html-interface/show-user-profile id))
                   (fn [_e] (swing-util/select-event id)))]
     (when (.isPopupTrigger e)
       (let [p (popup :items [(action :name select-string
