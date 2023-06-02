@@ -4,8 +4,8 @@
             [more-speech.db.in-memory :as in-memory]
             [more-speech.mem :refer :all]
             [more-speech.nostr.util :as util]
+            [more-speech.ui.swing.main-window :as main-window]
             [more-speech.ui.swing.article-panel :as article-panel]
-            [more-speech.ui.swing.article-tree :as article-tree]
             [more-speech.ui.swing.tabs :refer :all]
             [more-speech.ui.swing.util :refer :all]
             [more-speech.ui.swing.util :as swing-util]
@@ -216,7 +216,7 @@
 (defn add-events [db event-list]
   (doseq [event event-list]
     (gateway/add-event db event)
-    (article-tree/add-event event)))
+    (main-window/add-event event)))
 
 (defn events->tree [db event-list]
   (with-redefs [render-event (stub :render-event)]
@@ -257,37 +257,6 @@
                             {:id 88 :created-at 2}
                             {:id 77 :created-at 3}
                             {:id 66 :created-at 4}])))
-  )
-
-(describe "copy-node copies a node and all its children"
-  (it "copies one node"
-    (let [node (DefaultMutableTreeNode. 1)
-          copied-node (article-tree/copy-node node)]
-      (should= [1] (depict-node copied-node))))
-
-  (it "copies a node with one child"
-    (let [node (DefaultMutableTreeNode. 1)
-          child (DefaultMutableTreeNode. 2)
-          _ (.add node child)
-          copied-node (article-tree/copy-node node)]
-      (should= [1 [2]] (depict-node copied-node))))
-
-  (it "copies a node with two children"
-    (let [node (DefaultMutableTreeNode. 1)
-          _ (.add node (DefaultMutableTreeNode. 2))
-          _ (.add node (DefaultMutableTreeNode. 3))
-          copied-node (article-tree/copy-node node)]
-      (should= [1 [2] [3]] (depict-node copied-node))))
-
-  (it "copies a node with two children and grandchildren"
-    (let [node (DefaultMutableTreeNode. 1)
-          child1 (DefaultMutableTreeNode. 2)
-          _ (.add node child1)
-          child2 (DefaultMutableTreeNode. 3)
-          _ (.add node child2)
-          _ (.add child2 (DefaultMutableTreeNode. 4))
-          copied-node (article-tree/copy-node node)]
-      (should= [1 [2] [3 [4]]] (depict-node copied-node))))
   )
 
 (describe "Pruning tabs"

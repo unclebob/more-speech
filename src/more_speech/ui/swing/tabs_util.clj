@@ -1,4 +1,4 @@
-(ns more-speech.ui.swing.article-tree-util
+(ns more-speech.ui.swing.tabs-util
   (:use [seesaw core])
   (:require [more-speech.mem :refer :all]
             [more-speech.db.gateway :as gateway]
@@ -21,9 +21,7 @@
                           (Collections/binarySearch children dummy-node comparator))]
     (if (neg? insertion-point)
       (- (inc insertion-point))                             ;undo weird 'not-found' math of binarySearch
-      insertion-point)
-    )
-  )
+      insertion-point)))
 
 (defn search-for-node [root matcher]
   (loop [children (enumeration-seq (.children root))]
@@ -43,19 +41,6 @@
 
 (defn find-header-node [root id]
   (search-for-node root #(= (bigint id) (bigint %))))
-
-(defn find-top-level-node [root id]
-  (loop [children (enumeration-seq (.children root))]
-    (let [child (first children)]
-      (cond
-        (empty? children)
-        nil
-
-        (= id (.getUserObject child))
-        child
-
-        :else
-        (recur (rest children))))))
 
 (defn select-tree-node [tree node]
   (let [tree-path (TreePath. (.getPath ^DefaultMutableTreeNode node))]

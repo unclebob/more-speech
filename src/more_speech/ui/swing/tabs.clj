@@ -13,7 +13,7 @@
     [more-speech.nostr.zaps :as zaps]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.article-panel :as article-panel]
-    [more-speech.ui.swing.article-tree-util :as at-util]
+    [more-speech.ui.swing.tabs-util :as at-util]
     [more-speech.ui.swing.edit-window :as edit-window]
     [more-speech.ui.swing.util :as swing-util]
     [more-speech.user-configuration :as uconfig])

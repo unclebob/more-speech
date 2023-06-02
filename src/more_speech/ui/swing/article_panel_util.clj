@@ -2,7 +2,7 @@
   (:use [seesaw core])
   (:require [more-speech.mem :refer :all]
             [more-speech.ui.swing.util :as util]
-            [more-speech.ui.swing.article-tree-util :as at-util]))
+            [more-speech.ui.swing.tabs-util :as at-util]))
 
 (defn display-event [tab-index event-id]
   (let [tabs-list (get-mem :tabs-list)

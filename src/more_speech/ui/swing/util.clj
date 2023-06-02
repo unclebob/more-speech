@@ -5,7 +5,7 @@
             [more-speech.mem :refer :all]
             [more-speech.nostr.event-dispatcher :as event-handlers]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.article-tree-util :as at-util])
+            [more-speech.ui.swing.tabs-util :as at-util])
   (:use (seesaw [core])))
 
 (defn clear-popup [popup]

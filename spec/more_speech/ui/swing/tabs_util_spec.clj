@@ -1,8 +1,6 @@
-(ns more-speech.ui.swing.article-tree-spec
+(ns more-speech.ui.swing.tabs-util-spec
   (:require [speclj.core :refer :all]
-            [more-speech.ui.swing.article-tree :refer :all]
-            [more-speech.ui.swing.article-tree-util :refer :all]
-            [more-speech.nostr.util :as util :refer [hexify]]
+            [more-speech.ui.swing.tabs-util :refer :all]
             [more-speech.mem :refer :all]
             [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
@@ -102,83 +100,6 @@
       )
     )
 
-  (context "adding references to tree nodes"
-    (it "adds no node reference if the event has no references"
-      (let [id 1N
-            _ (set-mem :node-map {id []})
-            event {:id id :tags []}]
-        (add-references event)
-        (should= [] (get-mem [:node-map id])))
-      )
-
-    (it "adds a node reference, and a tree element if the event has a reference to an existing event"
-      (let [parent-id 2N
-            id 1N
-            parent-node (DefaultMutableTreeNode. parent-id)
-            node-map {parent-id [parent-node]
-                      id []}
-            _ (set-mem :node-map node-map)
-            event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
-            _ (add-references event)
-            nodes (get-mem [:node-map id])]
-        (should= 1 (count nodes))
-        (should= id (.getUserObject (first nodes)))
-        (should= 1 (.getChildCount parent-node))
-        (should= id (.getUserObject ^DefaultMutableTreeNode (.getChildAt parent-node 0)))
-        )
-      )
-
-    (it "adds a orphan if the event has a reference to an event that doesn't exist"
-      (let [parent-id 2N
-            id 1N
-            node-map {id []}
-            _ (set-mem :node-map node-map)
-            event {:id id :tags [[:e (util/num32->hex-string parent-id)]]}
-            _ (add-references event)
-            nodes (get-mem [:node-map id])]
-        (should= 0 (count nodes))
-        (should= {parent-id #{1N}} (get-mem :orphaned-references))
-        )
-      )
-    )
-
-  (context "resolving orphaned references"
-    (it "has nothing to do if the event is not an orphan"
-      (let [event-id 1N
-            node-map {}
-            orphaned-references {}
-            _ (set-mem :node-map node-map)
-            _ (set-mem :orphaned-references orphaned-references)]
-        (resolve-any-orphans event-id)
-        (should= {} (get-mem :node-map))
-        (should= {} (get-mem :orphaned-references)))
-      )
-
-    (it "resolves a parent event with a single orphan"
-      (let [parent-id 1N
-            orphan-id 2N
-            parent-node (DefaultMutableTreeNode. parent-id)
-            original-orphan-node (DefaultMutableTreeNode. orphan-id)
-            node-map {orphan-id [original-orphan-node]
-                      parent-id [parent-node]}
-            orphaned-references {parent-id #{orphan-id}}
-            _ (set-mem :node-map node-map)
-            _ (set-mem :orphaned-references orphaned-references)
-            _ (resolve-any-orphans parent-id)
-            orphan-nodes (get-mem [:node-map orphan-id])
-            new-orphan-node (second orphan-nodes)
-            ]
-        (should= 2 (count orphan-nodes))
-        (should= 1 (.getChildCount parent-node))
-        (should= orphan-id (-> parent-node
-                               ^DefaultMutableTreeNode (.getChildAt 0)
-                               .getUserObject))
-        (should= orphan-id (.getUserObject new-orphan-node))
-        (should= #{} (get-mem [:orphaned-references parent-id]))
-        )
-      )
-    )
-
   (context "finding nodes"
     (it "finds nothing in an empty tree"
       (let [root (DefaultMutableTreeNode.)
@@ -246,30 +167,5 @@
             found-node (find-header-node root 4)]
         (should-be-nil found-node)))
     )
-
-  (context "avoiding duplicate children in a node"
-    (it "does not find a child in an empty node"
-      (let [node (DefaultMutableTreeNode. nil)]
-        (should-not (node-contains? node 1))))
-
-    (it "finds first child"
-      (let [node (DefaultMutableTreeNode. nil)
-            child (DefaultMutableTreeNode. 1)
-            _ (.add node child)]
-        (should (node-contains? node 1))
-        (should-not (node-contains? node 2))))
-
-    (it "finds children from beginning to end"
-      (let [node (DefaultMutableTreeNode. nil)
-            child1 (DefaultMutableTreeNode. 1)
-            child2 (DefaultMutableTreeNode. 2)
-            child3 (DefaultMutableTreeNode. 3)
-            _ (.add node child1)
-            _ (.add node child2)
-            _ (.add node child3)]
-        (should (node-contains? node 1))
-        (should (node-contains? node 2))
-        (should (node-contains? node 3))
-        (should-not (node-contains? node 4)))))
   )
 

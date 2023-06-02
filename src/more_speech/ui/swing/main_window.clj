@@ -1,7 +1,6 @@
 (ns more-speech.ui.swing.main-window
   (:require [clojure.core.async :as async]
-            [more-speech.ui.swing.show-user-info] ;break cycle.
-            [more-speech.config :as config :refer [get-db]]
+            [more-speech.config :as config :refer [get-db]] ;break cycle.
             [more-speech.db.gateway :as gateway]
             [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
@@ -9,10 +8,10 @@
             [more-speech.nostr.util :as util]
             [more-speech.ui.formatter-util :as formatter-util]
             [more-speech.ui.swing.article-panel :as article-panel]
-            [more-speech.ui.swing.article-tree :as article-tree]
             [more-speech.ui.swing.html-util :as html-util]
             [more-speech.ui.swing.profile-window :as profile-window]
             [more-speech.ui.swing.relay-manager :as relay-manager]
+            [more-speech.ui.swing.show-user-info]
             [more-speech.ui.swing.stats-window :as stats-window]
             [more-speech.ui.swing.tabs :as tabs]
             [more-speech.ui.swing.tabs-window :as tabs-window]
@@ -20,12 +19,21 @@
   (:use (seesaw [core]))
   (:import (java.util Timer TimerTask)))
 
+(defn add-event [event]
+  (when (empty? (get-mem [:node-map (:id event)]))
+    (loop [tabs (get-mem :tabs-list)]
+      (if (empty? tabs)
+        nil
+        (do
+          (tabs/add-event-to-tab (first tabs) event)
+          (recur (rest tabs)))))))
+
 (defrecord seesawHandler []
   handlers/event-handler
   (handle-text-event [_handler event]
-    (invoke-later (article-tree/add-event event)))
+    (invoke-later (add-event event)))
   (immediate-add-text-event [_handler event]
-    (article-tree/add-event event)))
+    (add-event event)))
 
 (defn make-profile-line [id]
   (let [profile (gateway/get-profile (get-db) id)

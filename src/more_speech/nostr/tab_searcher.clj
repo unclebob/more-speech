@@ -8,7 +8,7 @@
             [more-speech.bech32 :as bech32]
             [more-speech.db.gateway :as gateway]
             [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.ui.swing.article-tree-util :as at-util]
+            [more-speech.ui.swing.tabs-util :as at-util]
             [more-speech.config :as config]))
 
 (defn get-subject [event]
