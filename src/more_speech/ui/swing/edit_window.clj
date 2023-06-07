@@ -31,9 +31,8 @@
      (when (or (not reply?)
                (and reply? (some? event)))
        (when reply?
-         (let [subject (formatters/get-subject (:tags event))
-               prefix (if (empty? subject) "" "Re: ")]
-           (text! subject-text (str prefix subject))))
+         (let [subject (formatters/get-subject (:tags event))]
+           (text! subject-text subject)))
        (listen send-button :action
                (fn [_]
                  (let [message (text edit-area)

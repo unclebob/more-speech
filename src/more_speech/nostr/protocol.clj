@@ -368,9 +368,10 @@
       (check-open url))))
 
 (defn connect-to-relays []
-  (doseq [url (keys @relays)]
-    (let [relay (make-relay url)]
-      (connect-to-relay relay)))
+  (let [futures (for [url (keys @relays)]
+                  (let [relay (make-relay url)]
+                    (future (connect-to-relay relay))))]
+    (doseq [f futures] (deref f)))
   (log-pr 2 'relay-connection-attempts-complete))
 
 (defn request-contact-lists-from-relays []

@@ -134,9 +134,12 @@
 
 (defn format-header
   ([event]
-   (format-header event :long))
+   (format-header event :long {}))
 
-  ([{:keys [pubkey created-at tags zaps] :as event} opt]
+  ([event opt]
+   (format-header event opt {}))
+
+  ([{:keys [pubkey created-at tags zaps] :as event} opt args]
    (try
      (if (nil? event)
        "nil"
@@ -158,7 +161,21 @@
          (condp = opt
            :long (format "%s%s %20s %s %s%s%s\n" reply-mark reaction-mark name time zap-mark dm-mark subject-content)
            :short (format "%s%s %s %s %s%s%s" reply-mark reaction-mark name time zap-mark dm-mark subject-content)
-           :menu-item (format "%-20.20s %s %10.10s|%-30.30s" name short-time subject content))))
+           :menu-item (format "%-20.20s %s %10.10s|%-30.30s" name short-time subject content)
+
+           :tree-header
+           (let [read-mark (if (:read? args) " " "<span style=\"font-size:5px\">🔵</span>&nbsp&nbsp")
+                 trimmed-content (-> content
+                                     (string/replace \newline \space)
+                                     (wrap-and-trim 100 2))
+                 escaped-name (escape-html name)
+                 escaped-dm-mark (escape-html dm-mark)
+                 reaction-mark (if (some? (:reactions event)) (str "🤙" reaction-mark) "")]
+             (format "<html>%s<span style=\"font-size:11px\"><b>%-20.20s %s %s %s%s <i>%s</i></b></span><br>%s<hr></html>"
+                     read-mark escaped-name reaction-mark short-time
+                     zap-mark escaped-dm-mark subject
+                     trimmed-content))
+           )))
      (catch Exception e
        (log-pr 1 'format-header 'Exception (.getMessage e))))))
 

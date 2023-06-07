@@ -13,10 +13,9 @@
     [more-speech.nostr.zaps :as zaps]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.article-panel :as article-panel]
-    [more-speech.ui.swing.tabs-util :as at-util]
     [more-speech.ui.swing.edit-window :as edit-window]
-    [more-speech.ui.swing.util :as swing-util]
-    [more-speech.user-configuration :as uconfig])
+    [more-speech.ui.swing.tabs-util :as at-util]
+    [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [color] [core] [font] [tree]))
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
 
@@ -30,10 +29,9 @@
           event-id (if (number? event-id) event-id 0)       ;dummy event-idi
           event (gateway/get-event (get-db) event-id)
           read? (:read event)
-          font (if read? (uconfig/get-default-font) (uconfig/get-bold-font))
           color (if (= (:kind event) 4) :blue :black)]
-      (config! widget :font font :foreground color)
-      (text! widget (formatters/format-header event)))))
+      (config! widget :foreground color)
+      (text! widget (formatters/format-header event :tree-header {:read? read?})))))
 
 (defn select-article
   [tab-index selected-node]
@@ -52,7 +50,9 @@
   (let [tab-index (swing-util/get-tab-index tab-name)
         header-tree (tree :renderer render-event
                           :root-visible? false
-                          :expands-selected-paths? true
+                          :shows-root-handles? false
+                          :expands-selected-paths? false
+                          :row-height 60
                           :model (DefaultTreeModel. (DefaultMutableTreeNode. 0)))
         renderer (.getCellRenderer header-tree)
         _ (.setBackgroundSelectionColor renderer (color :azure))]

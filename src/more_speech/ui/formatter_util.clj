@@ -1,5 +1,6 @@
 (ns more-speech.ui.formatter-util
-  (:require [clojure.string :as string])
+  (:require [clojure.string :as string]
+            [more-speech.config :as config])
   (:import (java.text SimpleDateFormat)
            (java.util Date)))
 
@@ -27,3 +28,18 @@
   (let [lines (string/split-lines text)
         lines (map #(str ">" %) lines)]
     (string/join "\n" lines)))
+
+(defn wrap-and-trim [s n l]
+  (cond
+    (zero? l) ""
+
+    (< (count s) n) s
+
+    :else
+    (let [point (.lastIndexOf s " " n)
+          point (if (< point 1) n point)]
+      (str (subs s 0 point)
+           "<br>"
+           (wrap-and-trim (subs s point) n (dec l))))))
+
+(defn escape-html [s] (string/escape s config/html-escapes))

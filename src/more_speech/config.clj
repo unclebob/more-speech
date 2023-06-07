@@ -1,7 +1,8 @@
 (ns more-speech.config
-  (:require [more-speech.mem :refer :all]
-            [more-speech.db.in-memory :as in-memory]
-            [more-speech.db.xtdb :as xtdb]))
+  (:require
+    [more-speech.db.in-memory :as in-memory]
+    [more-speech.db.xtdb :as xtdb]
+    [more-speech.mem :refer :all]))
 
 (def default-font "COURIER-PLAIN-14")
 (def bold-font "COURIER-BOLD-14")
@@ -10,9 +11,9 @@
 
 (def article-width 120)
 
-(def days-to-read 6/24) ;how far back in time to load old messages from the database.
+(def days-to-read 6/24)                                     ;how far back in time to load old messages from the database.
 (def days-to-read-messages-that-have-been-read 7)
-(def read-contacts false) ;Read contacts from relays at startup.
+(def read-contacts false)                                   ;Read contacts from relays at startup.
 (def read-contact-lists-days-ago 0.5)
 
 (def migration-level 11)
@@ -22,8 +23,8 @@
 
 (def subscription-id-base "ms")
 
-(def auto-thanks :off) ;{:dm :note :off}
-(def auto-thanks-fortune :normal) ;{:off :normal :markov :insane}
+(def auto-thanks :off)                                      ;{:dm :note :off}
+(def auto-thanks-fortune :normal)                           ;{:off :normal :markov :insane}
 
 (def test-run? (atom false))
 (defn is-test-run? [] @test-run?)
@@ -47,12 +48,12 @@
 ;---configuration files
 (def private-directory (atom "private"))
 (def migration-filename (atom "private/migration"))
-(def nicknames-filename (atom "private/nicknames")) ;grandfathered.
+(def nicknames-filename (atom "private/nicknames"))         ;grandfathered.
 (def profiles-filename (atom "private/profiles"))
 (def keys-filename (atom "private/keys"))
 (def relays-filename (atom "private/relays"))
 (def read-event-ids-filename (atom "private/read-event-ids"))
-(def tabs-filename (atom "private/tabs")) ;grandfathered.
+(def tabs-filename (atom "private/tabs"))                   ;grandfathered.
 (def tabs-list-filename (atom "private/tabs-list"))
 (def messages-directory (atom "private/messages"))
 (def messages-filename (atom "private/messages/message-file"))
@@ -92,6 +93,8 @@
 (def hex-key-pattern #"[0-9a-f]{64}")
 (def user-name-chars #"[\w\-]+")
 (def reference-pattern #"\#\[\d+\]")
+
+(def html-escapes {\< "&lt;" \> "&gt;"})
 
 (def production-db :xtdb)
 (def db-type (atom nil))
