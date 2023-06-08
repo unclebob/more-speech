@@ -173,22 +173,34 @@
 (defn- repaint-user-window [frame]
   (.repaint frame))
 
-(defn make-users-frame [_e]
-  (let [users-menu (select (get-mem :frame) [:#users-menu])
-        users-frame (frame :title "Users")
-        trusted-users-listbox (listbox :id :trusted-users-listbox
-                                       :font config/default-font
-                                       :renderer render-listbox-item)
-        trusted-users-panel (vertical-panel
-                              :items [(label "Trusted")
-                                      (scrollable trusted-users-listbox :size [500 :by 800])])
-        trust-button (button :text "<-Trust"
+(defn- make-trusted-users-listbox []
+  (let [trusted-users-listbox
+        (listbox :id :trusted-users-listbox
+                 :font config/default-font
+                 :renderer render-listbox-item
+                 :model (get-mem [:user-window :trusted-user-items]))]
+    (listen trusted-users-listbox :mouse-pressed (partial listbox-click trusted-users-listbox))
+    trusted-users-listbox))
+
+(defn- make-trusted-users-panel []
+  (vertical-panel
+    :items [(label "Trusted")
+            (scrollable (make-trusted-users-listbox) :size [500 :by 800])]))
+
+(defn make-operations-panel [users-frame]
+  (let [trust-button (button :text "<-Trust"
                              :listen [:action (partial trust-selection users-frame)])
         untrust-button (button :text "Untrust->"
                                :listen [:action (partial untrust-selection users-frame)])
         reload-button (button :text "Reload"
                               :listen [:action (fn [_e] (reload-user-window-data users-frame))])
-        selection-group (button-group)
+        operations-panel (vertical-panel :items [trust-button
+                                                 untrust-button
+                                                 reload-button])]
+    operations-panel))
+
+(defn- make-selection-panel [users-frame]
+  (let [selection-group (button-group)
         web-of-trust-button (radio :text "Web of trust"
                                    :group selection-group
                                    :selected? false
@@ -198,7 +210,6 @@
                              :group selection-group
                              :selected? true
                              :listen [:action (partial select-recent-users users-frame)])
-
         selected-listbox (listbox :id :selected-users
                                   :font config/default-font
                                   :renderer render-listbox-item)
@@ -206,25 +217,27 @@
                                                 :size [500 :by 800])
         selection-panel (vertical-panel :items [web-of-trust-button
                                                 recent-button
-                                                scrollable-selected-listbox])
+                                                scrollable-selected-listbox])]
+    (config! selected-listbox :model (get-mem [:user-window :recent-user-items]))
+    (listen selected-listbox :mouse-pressed (partial listbox-click selected-listbox))
+    selection-panel))
 
-
+(defn make-users-frame [_e]
+  (load-user-window-data)
+  (let [users-menu (select (get-mem :frame) [:#users-menu])
+        users-frame (frame :title "Users")
+        trusted-users-panel (make-trusted-users-panel)
+        operations-panel (make-operations-panel users-frame)
+        selection-panel (make-selection-panel users-frame)
         users-panel (horizontal-panel :items [trusted-users-panel
-                                              (vertical-panel :items [trust-button
-                                                                      untrust-button
-                                                                      reload-button])
+                                              operations-panel
                                               selection-panel])
         user-window-timer (Timer. "User window timer")
         user-window-repaint-task (proxy [TimerTask] []
                                    (run [] (repaint-user-window users-frame)))]
     (set-mem [:user-window :selection-group] :recent-user-items)
-    (load-user-window-data)
-    (config! trusted-users-listbox :model (get-mem [:user-window :trusted-user-items]))
-    (config! selected-listbox :model (get-mem [:user-window :recent-user-items]))
     (config! users-frame :content users-panel)
     (listen users-frame :window-closing (partial close-users-frame users-menu user-window-timer))
-    (listen trusted-users-listbox :mouse-pressed (partial listbox-click trusted-users-listbox))
-    (listen selected-listbox :mouse-pressed (partial listbox-click selected-listbox))
     (config! users-menu :enabled? false)
     (.schedule user-window-timer user-window-repaint-task 1000 1000)
     (pack! users-frame)

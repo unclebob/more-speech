@@ -15,6 +15,7 @@
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.article-panel-util :as article-panel-util]
     [more-speech.ui.swing.edit-window :as edit-window]
+    [more-speech.ui.swing.html-util :as html-util]
     [more-speech.ui.swing.user-info-interface :as html-interface]
     [more-speech.ui.swing.util :as swing-util :refer [copy-to-clipboard]]
     [more-speech.user-configuration :as uconfig]
@@ -194,11 +195,13 @@
                   :center grid)))
 
 (defn make-article-area []
-  (editor-pane
-    :content-type "text/html"
-    :editable? false
-    :id :article-area
-    :text config/editor-pane-stylesheet))
+  (let [editor-pane (editor-pane
+                      :content-type "text/html"
+                      :editable? false
+                      :id :article-area
+                      :text config/editor-pane-stylesheet)]
+    (listen editor-pane :hyperlink html-util/open-link)
+    editor-pane))
 
 (defn go-back [_e]
   (article-panel-util/go-back-by 1))
