@@ -60,8 +60,7 @@
             _ (log-pr 2 'main 'getting-events (formatter-util/format-time latest-old-message-time))
             exit-condition (main/start-nostr latest-old-message-time)]
         (log-pr 2 'starting-exit-process)
-        (when (not (config/is-test-run?))
-          (data-storage/write-configuration))
+        (data-storage/write-configuration)
         (if (= exit-condition :relaunch)
           (do
             (invoke-now (.dispose (get-mem :frame)))

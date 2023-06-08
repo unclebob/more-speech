@@ -19,10 +19,12 @@
            (java.util Date Locale TimeZone)))
 
 (defn write-relays []
-  (when (not (config/is-test-run?))
-    (spit @config/relays-filename
-          (with-out-str
-            (clojure.pprint/pprint (relays/relays-for-writing))))))
+  (log-pr 2 'writing-relays)
+  (let [relay-output (with-out-str
+                       (clojure.pprint/pprint (relays/relays-for-writing)))]
+    (if (not (config/is-test-run?))
+      (spit @config/relays-filename relay-output)
+      (log-pr 2 'relays-not-written relay-output))))
 
 (defn write-keys [keys]
   (let [private-key (:private-key keys)
@@ -48,29 +50,31 @@
                          :wallet-connect wallet-connect)
         keys-string (with-out-str (clojure.pprint/pprint keys))]
     (if (config/is-test-run?)
-      (log-pr 2 `write-keys (if (empty? password)
-                              (dissoc keys :private-key :wallet-connect)
-                              keys))
+      (log-pr 2 'keys-not-written
+              (if (empty? password)
+                (dissoc keys :private-key :wallet-connect)
+                keys))
       (spit @config/keys-filename keys-string))))
 
 (defn write-tabs []
   (log-pr 2 'writing-tabs)
-  (if-not (config/is-test-run?)
-    (spit @config/tabs-list-filename
-          (with-out-str
-            (clojure.pprint/pprint (get-mem :tabs-list))))
-    (prn 'not-written (with-out-str
-                        (clojure.pprint/pprint (get-mem :tabs-list))))))
+  (let [tabs-output (with-out-str (clojure.pprint/pprint (get-mem :tabs-list)))]
+    (if-not (config/is-test-run?)
+      (spit @config/tabs-list-filename tabs-output)
+      (log-pr 2 'tabs-not-written tabs-output))))
+
+(defn write-user-configuration []
+  (log-pr 2 'writing-user-configuration)
+  (let [user-config-output (with-out-str
+                (clojure.pprint/pprint (user-configuration/get-config)))]
+    (if-not (config/is-test-run?)
+      (spit @config/user-configuration-filename user-config-output)
+      (log-pr 2 'user-config-not-written user-config-output))))
 
 (defn write-configuration []
-  (log-pr 2 'writing-relays)
   (write-relays)
   (write-tabs)
-
-  (log-pr 2 'writing-user-configuration)
-  (spit @config/user-configuration-filename
-        (with-out-str
-          (clojure.pprint/pprint (user-configuration/get-config))))
+  (write-user-configuration)
   (log-pr 2 'configuration-written)
   )
 
@@ -162,8 +166,7 @@
         date (Date. (long time))
         date-format (SimpleDateFormat. "ddMMMyy" Locale/US)]
     (.setTimeZone date-format (TimeZone/getTimeZone "UTC"))
-    (str day "-" (.format date-format date))
-    ))
+    (str day "-" (.format date-format date))))
 
 (defn write-messages-by-day
   ([]
