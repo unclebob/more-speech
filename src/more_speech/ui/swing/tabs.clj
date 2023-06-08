@@ -14,7 +14,7 @@
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.article-panel :as article-panel]
     [more-speech.ui.swing.edit-window :as edit-window]
-    [more-speech.ui.swing.tabs-util :as at-util]
+    [more-speech.ui.swing.tabs-util :as tabs-util]
     [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [color] [core] [font] [tree]))
   (:import (javax.swing.tree DefaultMutableTreeNode DefaultTreeModel TreePath)))
@@ -157,7 +157,7 @@
 (defn add-event-to-tab-tree [tree event-id]
   (let [model (config tree :model)
         root (.getRoot model)
-        insertion-point (at-util/find-chronological-insertion-point root event-id)
+        insertion-point (tabs-util/find-chronological-insertion-point root event-id)
         child (DefaultMutableTreeNode. event-id)]
     (.insertNodeInto model child root insertion-point)
     (.makeVisible tree (TreePath. (.getPath child)))

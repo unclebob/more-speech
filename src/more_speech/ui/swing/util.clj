@@ -5,7 +5,7 @@
             [more-speech.mem :refer :all]
             [more-speech.nostr.event-dispatcher :as event-handlers]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.tabs-util :as at-util])
+            [more-speech.ui.swing.tabs-util :as tabs-util])
   (:use (seesaw [core])))
 
 (defn clear-popup [popup]
@@ -127,7 +127,7 @@
     (if (some? tree)
       (let [model (config tree :model)
             root-node (.getRoot model)]
-        (at-util/find-header-node root-node id))
+        (tabs-util/find-header-node root-node id))
       nil)
     ))
 
@@ -140,7 +140,7 @@
         tree (get-mem [:tab-tree-map tab-name])
         node (get-node tab-name id)]
     (if (some? node)
-      (at-util/select-tree-node tree node)
+      (tabs-util/select-tree-node tree node)
       (loop [tabs (get-mem :tabs-list)]
         (if (empty? tabs)
           nil
@@ -148,9 +148,9 @@
                 tree (get-mem [:tab-tree-map tab-name])
                 model (config tree :model)
                 root-node (.getRoot model)
-                node (at-util/find-header-node root-node id)]
+                node (tabs-util/find-header-node root-node id)]
             (if (some? node)
               (do
                 (select-tab tab-name)
-                (at-util/select-tree-node tree node))
+                (tabs-util/select-tree-node tree node))
               (recur (rest tabs)))))))))

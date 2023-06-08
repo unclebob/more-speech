@@ -8,7 +8,7 @@
             [more-speech.bech32 :as bech32]
             [more-speech.db.gateway :as gateway]
             [more-speech.nostr.contact-list :as contact-list]
-            [more-speech.ui.swing.tabs-util :as at-util]
+            [more-speech.ui.swing.tabs-util :as tabs-util]
             [more-speech.config :as config]))
 
 (defn get-subject [event]
@@ -112,8 +112,8 @@
               tree (get-mem [:tab-tree-map tab-name])
               model (config tree :model)
               root-node (.getRoot model)
-              node (at-util/find-header-node root-node event-id)]
-          (at-util/select-tree-node tree node))))))
+              node (tabs-util/find-header-node root-node event-id)]
+          (tabs-util/select-tree-node tree node))))))
 
 (defn select-next [tab-name _e]
   (update-position-and-select tab-name inc-n))

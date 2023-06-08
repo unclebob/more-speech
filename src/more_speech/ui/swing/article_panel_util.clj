@@ -2,7 +2,7 @@
   (:use [seesaw core])
   (:require [more-speech.mem :refer :all]
             [more-speech.ui.swing.util :as util]
-            [more-speech.ui.swing.tabs-util :as at-util]))
+            [more-speech.ui.swing.tabs-util :as tabs-util]))
 
 (defn display-event [tab-index event-id]
   (let [tabs-list (get-mem :tabs-list)
@@ -12,10 +12,10 @@
     (when (some? tree)
       (let [model (config tree :model)
             root-node (.getRoot model)
-            node (at-util/find-header-node root-node event-id)]
+            node (tabs-util/find-header-node root-node event-id)]
         (when (some? node)
           (util/select-tab tab-index)
-          (at-util/select-tree-node tree node))))))
+          (tabs-util/select-tree-node tree node))))))
 
 (defn adjust-back-count [n]
   (let [event-history (get-mem :event-history)
