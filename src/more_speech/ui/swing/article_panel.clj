@@ -189,7 +189,9 @@
     (listen dn-arrow :mouse-pressed dn-click)
     (listen author-name-label :mouse-pressed (partial user-name-click :author grid))
     (listen reply-to-label :mouse-pressed (partial user-name-click :reply-to grid))
-    grid))
+    (border-panel :west (label :text "<html><img src=\"http://cleancoder.com/images/cleancodelogo.png\" width=\"100\" height=\"100\"></html>"
+                               :id :avatar-id)
+                  :center grid)))
 
 (defn make-article-area []
   (editor-pane
@@ -238,6 +240,8 @@
 (defn load-article-info [selected-id]
   (let [main-frame (get-mem :frame)
         event (gateway/get-event (get-db) selected-id)
+        author (:pubkey event)
+        profile (gateway/get-profile (get-db) author)
         [root-id _ referent] (events/get-references event)
         replied-event (if (some? referent)
                         (gateway/get-event (get-db) referent)
@@ -265,11 +269,12 @@
         new-id? (not= (get-mem :article-window-event-id) selected-id)
         notes-to-request (remove nil? [(if root-event-exists? nil root-id)
                                        (if (some? replied-event) nil referent)])]
-    (when-not (empty? notes-to-request)
-      (protocol/request-notes notes-to-request))
+
     (set-mem [:article-panel :event] event)
     (when new-id?
-      (protocol/request-profiles-and-contacts-for (:pubkey event)))
+      (protocol/request-profiles-and-contacts-for [author])
+      (when-not (empty? notes-to-request)
+        (protocol/request-notes notes-to-request)))
     (set-mem :article-window-event-id selected-id)
     (when (or new-id?
               (not= (get-mem :article-html) article-html))
@@ -288,8 +293,8 @@
       (text! zap-icon "❗⚡ ")                                ;₿ use the bitcoin char?
       (text! zap-icon ""))
     (text! author-name-label
-           (formatters/format-user-id (:pubkey event) 50))
-    (config! author-name-label :user-data (:pubkey event))
+           (formatters/format-user-id author 50))
+    (config! author-name-label :user-data author)
     (text! (select main-frame [:#created-time-label])
            (f-util/format-time (:created-at event)))
     (config! event-id
@@ -323,6 +328,13 @@
     (if (empty? (:references event))
       (text! replies-label "")
       (text! replies-label "Replies▶"))
+
+
+    (let [avatar-label (select main-frame [:#avatar-id])]
+      (future (config! avatar-label
+                       :text (if (some? (:picture profile))
+                               (format "<html><img src=\"%s\" width=\"100\" height=\"100\"></html>" (:picture profile))
+                               "<html><img src=\"http://cleancoder.com/images/cleancodelogo.png\" width=\"100\" height=\"100\"></html>"))))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (format "%d %s"
                                 (count (:relays event))

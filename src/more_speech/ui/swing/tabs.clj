@@ -52,7 +52,7 @@
                           :root-visible? false
                           :shows-root-handles? false
                           :expands-selected-paths? false
-                          :row-height 60
+                          :row-height 65
                           :model (DefaultTreeModel. (DefaultMutableTreeNode. 0)))
         renderer (.getCellRenderer header-tree)
         _ (.setBackgroundSelectionColor renderer (color :azure))]
