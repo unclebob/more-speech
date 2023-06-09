@@ -87,57 +87,79 @@
       (pack! info-frame)
       (show! info-frame))))
 
-(defn make-relay-element
-  ([url]
-   (let [relay (get @relays url)
-         relay-name url
-         relay-info (:relay-info relay)
-         paid? (get-in relay-info ["limitation" "payment_required"])
-         paid-mark (if paid? "$" " ")
-         connection-mark (str paid-mark (if (is-connected? url) "✓" "X"))
-         write-status (str (:write relay))
-         read-status (str (:read relay))]
-     (make-relay-element url relay-name connection-mark read-status write-status)))
+(defn- make-name-field [{:keys [url relay-name]}]
+  (let [name-field (text :text relay-name :size [name-width :by element-height]
+                         :font :monospaced :editable? true :multi-line? true :wrap-lines? true
+                         :id :relay-name)]
+    (listen name-field :key-pressed (partial key-pressed-in-name url))
+    (listen name-field :mouse-pressed (partial mouse-pressed-in-name url))
+    name-field))
 
-  ([url relay-name connection-mark read-status write-status]
-   (let [dummy? (= relay-name :dummy)
-         relay-name (if dummy? "<add-relay>" relay-name)
-         name-field (text :text relay-name :size [name-width :by element-height]
-                          :font :monospaced :editable? true :multi-line? true :wrap-lines? true
-                          :id :relay-name)
-         connection-label-id (if dummy? nil (make-relay-element-id "connection-" relay-name))
-         connection-label (label :text connection-mark :size [20 :by field-height]
-                                 :id connection-label-id)
-         read-label (text :text read-status :editable? false :size [100 :by field-height])
-         write-label (text :text write-status :size [50 :by field-height])
-         info-button (label :text "ℹ"
-                            :foreground :red
-                            :size [10 :by field-height]
-                            :user-data url)
-         relay-event-counter-id (if dummy? nil (make-relay-element-id "events-" relay-name))
-         events-label (label :text "" :size [60 :by field-height] :id relay-event-counter-id)
-         notice-label-id (if dummy? nil (make-relay-element-id "notice-" relay-name))
-         notice-label (label :text (get-mem [:relay-notice url])
-                             :size [info-width :by field-height]
-                             :id notice-label-id
-                             :halign :left)
-         status-bar-items [connection-label read-label write-label]
-         status-bar-items (if (some? url) (concat status-bar-items [info-button events-label])
-                                          (concat status-bar-items [events-label]))
-         status-bar (horizontal-panel :size [info-width :by field-height]
-                                      :border 0
-                                      :items status-bar-items)
-         info-area (border-panel :north status-bar :south notice-label :drag-enabled? false :border 0)
-         element (left-right-split name-field info-area
-                                   :size [manager-width :by element-height]
-                                   :drag-enabled? false
-                                   :border (seesaw.border/line-border))]
-     (listen read-label :mouse-pressed (partial read-click url))
-     (listen write-label :mouse-pressed (partial write-click url))
-     (listen name-field :key-pressed (partial key-pressed-in-name url))
-     (listen name-field :mouse-pressed (partial mouse-pressed-in-name url))
-     (listen info-button :mouse-pressed (partial show-relay-info url))
-     element)))
+(defn- make-connection-label [{:keys [dummy? relay-name connection-mark]}]
+  (let [connection-label-id (if dummy? nil (make-relay-element-id "connection-" relay-name))
+        connection-label (label :text connection-mark :size [20 :by field-height]
+                                :id connection-label-id)]
+    connection-label))
+
+(defn- make-status-bar [{:keys [url relay-name dummy? read-status write-status] :as line-item-descriptor}]
+  (let [connection-label (make-connection-label line-item-descriptor)
+        read-label (text :text read-status :editable? false :size [100 :by field-height])
+        write-label (text :text write-status :size [50 :by field-height])
+        info-button (label :text "ℹ"
+                           :foreground :red
+                           :size [10 :by field-height]
+                           :user-data url)
+        relay-event-counter-id (if dummy? nil (make-relay-element-id "events-" relay-name))
+        events-label (label :text "" :size [60 :by field-height] :id relay-event-counter-id)
+        status-bar-items [connection-label read-label write-label]
+        status-bar-items (if (some? url) (concat status-bar-items [info-button events-label])
+                                         (concat status-bar-items [events-label]))
+        status-bar (horizontal-panel :size [info-width :by field-height]
+                                     :border 0
+                                     :items status-bar-items)]
+    (listen read-label :mouse-pressed (partial read-click url))
+    (listen write-label :mouse-pressed (partial write-click url))
+    (listen info-button :mouse-pressed (partial show-relay-info url))
+    status-bar))
+
+(defn- make-notice-label [{:keys [url dummy? relay-name]}]
+  (let [notice-label-id (if dummy? nil (make-relay-element-id "notice-" relay-name))
+        notice-label (label :text (get-mem [:relay-notice url])
+                            :size [info-width :by field-height]
+                            :id notice-label-id
+                            :halign :left)]
+    notice-label))
+
+(defn- complete-line-item-descriptor [{:keys [relay-name] :as partial-descriptor}]
+  (let [dummy? (= relay-name :dummy)
+        relay-name (if dummy? "<add-relay>" relay-name)
+        line-item-descriptor (assoc partial-descriptor
+                               :dummy? dummy? :relay-name relay-name)]
+    line-item-descriptor))
+
+(defn make-described-relay-line-item [partial-descriptor]
+  (let [line-item-descriptor (complete-line-item-descriptor partial-descriptor)
+        name-field (make-name-field line-item-descriptor)
+        status-bar (make-status-bar line-item-descriptor)
+        notice-label (make-notice-label line-item-descriptor)
+        info-area (border-panel :north status-bar :south notice-label :drag-enabled? false :border 0)
+        line-item (left-right-split name-field info-area
+                                    :size [manager-width :by element-height]
+                                    :drag-enabled? false
+                                    :border (seesaw.border/line-border))]
+    line-item))
+
+(defn make-relay-line-item
+  [url]
+  (let [relay (get @relays url)
+        relay-info (:relay-info relay)
+        paid? (get-in relay-info ["limitation" "payment_required"])
+        paid-mark (if paid? "$" " ")]
+    (make-described-relay-line-item {:url url
+                                     :relay-name url
+                                     :connection-mark (str paid-mark (if (is-connected? url) "✓" "X"))
+                                     :read-status (str (:read relay))
+                                     :write-status (str (:write relay))})))
 
 (defn valid-relay-url? [url]
   (let [prefix (re-find config/relay-pattern url)]
@@ -145,46 +167,48 @@
          (some? prefix)
          (.startsWith url prefix))))
 
-(defn make-add-relay-element []
-  (let [add-relay-element (make-relay-element nil :dummy "X" ":read-none" "false")]
-    (config! (select add-relay-element [:#relay-name])
+(defn make-add-relay-line-item []
+  (let [add-relay-line-item (make-described-relay-line-item {:relay-name :dummy
+                                                             :connection-mark "X"
+                                                             :read-status ":read-none"
+                                                             :write-status "false"})]
+    (config! (select add-relay-line-item [:#relay-name])
              :foreground :darkgrey)
-    add-relay-element))
+    add-relay-line-item))
 
-(defn get-all-relay-elements []
+(defn get-all-relay-line-items []
   (let [relay-frame (get-mem :relay-manager-frame)
         relay-list (select relay-frame [:#relay-list])
-        relay-elements (config relay-list :items)]
-    relay-elements)
+        relay-line-items (config relay-list :items)]
+    relay-line-items)
   )
 
-(defn replace-element-in-manager-frame [new-url old-url]
+(defn replace-line-item-in-manager-frame [new-url old-url]
   (let [relay-frame (get-mem :relay-manager-frame)
-        relay-list (select relay-frame [:#relay-list])
-        relay-elements (config relay-list :items)]
-    (loop [elements relay-elements
-           pruned-elements []]
-      (if (empty? elements)
+        relay-list (select relay-frame [:#relay-list])]
+    (loop [relay-line-items (config relay-list :items)
+           pruned-line-items []]
+      (if (empty? relay-line-items)
         (do
           (if (nil? old-url)
-            (config! relay-list :items (concat [(make-add-relay-element)] pruned-elements))
-            (config! relay-list :items pruned-elements)))
-        (let [element (first elements)
-              name-field (select element [:#relay-name])
+            (config! relay-list :items (concat [(make-add-relay-line-item)] pruned-line-items))
+            (config! relay-list :items pruned-line-items)))
+        (let [line-item (first relay-line-items)
+              name-field (select line-item [:#relay-name])
               name (config name-field :text)]
           (cond
             (empty? name)
-            (recur (rest elements) pruned-elements)
+            (recur (rest relay-line-items) pruned-line-items)
 
             (= name new-url)
-            (recur (rest elements) (conj pruned-elements (make-relay-element new-url)))
+            (recur (rest relay-line-items) (conj pruned-line-items (make-relay-line-item new-url)))
 
             :else
-            (recur (rest elements) (conj pruned-elements element))))))))
+            (recur (rest relay-line-items) (conj pruned-line-items line-item))))))))
 
 (defn delete-url [url]
   (swap! relays dissoc url)
-  (replace-element-in-manager-frame nil url))
+  (replace-line-item-in-manager-frame nil url))
 
 (defn commit-valid-url [new-url old-url]
   (if (some? old-url)
@@ -192,7 +216,7 @@
     (swap! relays assoc new-url {:read :read-none :write false}))
   (when (some? old-url)
     (swap! relays dissoc old-url))
-  (replace-element-in-manager-frame new-url old-url))
+  (replace-line-item-in-manager-frame new-url old-url))
 
 (defn revert-field [field old-url]
   (config! field :text old-url)
@@ -244,11 +268,11 @@
           all-relay-urls (set (keys @relays))
           active-urls (sort (filter protocol/is-active-url? all-relay-urls))
           inactive-urls (sort (remove protocol/is-active-url? all-relay-urls))
-          connected-elements (map make-relay-element active-urls)
-          unconnected-elements (map make-relay-element inactive-urls)
-          new-element (make-add-relay-element)
-          all-elements (concat [new-element] connected-elements unconnected-elements)
-          relay-list (vertical-panel :items all-elements :id :relay-list)
+          connected-line-items (map make-relay-line-item active-urls)
+          unconnected-line-items (map make-relay-line-item inactive-urls)
+          add-relay-line-item (make-add-relay-line-item)
+          all-line-items (concat [add-relay-line-item] connected-line-items unconnected-line-items)
+          relay-list (vertical-panel :items all-line-items :id :relay-list)
           relay-box (scrollable relay-list)
           relays-menu (select (get-mem :frame) [:#relays-menu])
           relay-manager-timer (Timer. "Relay manager timer")
