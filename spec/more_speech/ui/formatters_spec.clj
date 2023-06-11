@@ -196,7 +196,7 @@
           event {:pubkey 1 :created-at created-at
                  :relays relays :tags tags :content "Hello #[0]."}]
       (should=
-        "From: (user-1) at 07/05/22 00:00:00 on relay-1\nCC: @user-1\n>---------------\n>Hello @user-1."
+        "From: (user-1) at 07/05/22 00:00:00 on relay-1\nCC: @user-1\n> ---------------\n> Hello @user-1."
         (format-reply event))))
 
   (it "formats a reply to a DM"
@@ -206,7 +206,7 @@
           event {:pubkey 1 :created-at created-at :dm true
                  :relays relays :tags tags :content "Hello #[0]."}]
       (should=
-        "D @user-1\nFrom: (user-1) at 07/05/22 00:00:00 on relay-1\nCC: @user-2\n>---------------\n>Hello @user-2."
+        "D @user-1\nFrom: (user-1) at 07/05/22 00:00:00 on relay-1\nCC: @user-2\n> ---------------\n> Hello @user-2."
         (format-reply event))))
   )
 

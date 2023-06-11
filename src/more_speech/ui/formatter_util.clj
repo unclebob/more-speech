@@ -26,7 +26,7 @@
 
 (defn prepend> [text]
   (let [lines (string/split-lines text)
-        lines (map #(str ">" %) lines)]
+        lines (map #(str "> " %) lines)]
     (string/join "\n" lines)))
 
 (defn wrap-and-trim [s n l]

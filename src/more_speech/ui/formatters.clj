@@ -199,7 +199,7 @@
         dm-prefix (if (:dm event)
                     (str "D @" (get-best-name (:pubkey event)) "\n")
                     "")]
-    (str dm-prefix header ">---------------\n" content)))
+    (str dm-prefix header "> ---------------\n" content)))
 
 (defn html-escape [content]
   (string/escape content {\& "&amp;"
