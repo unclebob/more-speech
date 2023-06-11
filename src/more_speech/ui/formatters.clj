@@ -190,16 +190,13 @@
 (defn format-reply [{:keys [content tags] :as event}]
   (let [content (replace-references content tags)
         content (prepend> content)
-        header (format "From: %s at %s on %s\n%s"
+        header (format "From: %s at %s"
                        (format-user-id (:pubkey event))
-                       (format-time (:created-at event))
-                       (first (:relays event))
-                       (make-cc-list event)
-                       )
+                       (format-short-time (:created-at event)))
         dm-prefix (if (:dm event)
                     (str "D @" (get-best-name (:pubkey event)) "\n")
                     "")]
-    (str dm-prefix header "> ---------------\n" content)))
+    (str dm-prefix header "\n\n" content "\n\n" (make-cc-list event))))
 
 (defn html-escape [content]
   (string/escape content {\& "&amp;"
