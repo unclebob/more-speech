@@ -156,8 +156,8 @@
              reaction-mark (make-reaction-mark event)
              header-text (-> content (string/replace \newline \~) (abbreviate 130))
              subject-content (if (empty? subject)
-                       header-text
-                       (abbreviate (str subject "|" header-text) 130))]
+                               header-text
+                               (abbreviate (str subject "|" header-text) 130))]
          (condp = opt
            :long (format "%s%s %20s %s %s%s%s\n" reply-mark reaction-mark name time zap-mark dm-mark subject-content)
            :short (format "%s%s %s %s %s%s%s" reply-mark reaction-mark name time zap-mark dm-mark subject-content)
@@ -313,6 +313,12 @@
 
             (= seg-type :url)
             (str formatted-content (linkify seg))
+
+            (and
+              (= seg-type :namereference)
+              (string/starts-with? seg "@npub1"))
+            (let [author (get-author-name reference)]
+              (str formatted-content (ms-linkify "ms-namereference" author (str "@" author))))
 
             (= seg-type :namereference)
             (str formatted-content (ms-linkify "ms-namereference" reference (str "@" reference)))

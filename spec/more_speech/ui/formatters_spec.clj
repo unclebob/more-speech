@@ -341,6 +341,13 @@
         (should= "<a href=\"ms-namereference://user1\">nostr:user1</a>"
                  (reformat-article-into-html (str "nostr:" npub)))))
 
+    (it "should replace @npub with namereference link using user's name "
+      (let [user-id (rand-int 1000000000)
+            npub (bech32/encode "npub" user-id)]
+        (gateway/add-profile @db user-id {:name "user1"})
+        (should= "<a href=\"ms-namereference://user1\">@user1</a>"
+                 (reformat-article-into-html (str "@" npub)))))
+
     ;(it "should replace nostr:nprofile with namereference link using user's name "
     ;  (let [user-id (rand-int 1000000000)
     ;        npub (bech32/encode "nprofile" user-id)]
