@@ -1,24 +1,20 @@
 (ns more-speech.ui.swing.profile-window-spec
   (:require
     [more-speech.bech32 :as bech32]
-    [more-speech.config :as config]
     [more-speech.data-storage :as data-storage]
-    [more-speech.db.in-memory :as in-memory]
     [more-speech.mem :refer :all]
     [more-speech.nostr.elliptic-signature :as es]
     [more-speech.nostr.event-composers :as event-composers]
     [more-speech.nostr.protocol :as protocol]
     [more-speech.nostr.util :as util]
+    [more-speech.spec-util :refer :all]
     [more-speech.ui.swing.profile-window :refer :all]
     [speclj.core :refer :all]))
 
 (declare db)
 (describe "profile window"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
-  (before (clear-mem))
+  (setup-db-mem)
 
   (context "saving profile"
     (it "should save valid profile with hex private key"

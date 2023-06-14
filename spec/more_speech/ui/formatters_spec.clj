@@ -1,11 +1,10 @@
 (ns more-speech.ui.formatters-spec
   (:require
     [more-speech.bech32 :as bech32]
-    [more-speech.config :as config]
     [more-speech.db.gateway :as gateway]
-    [more-speech.db.in-memory :as in-memory]
     [more-speech.mem :refer :all]
     [more-speech.nostr.util :refer [hexify]]
+    [more-speech.spec-util :refer :all]
     [more-speech.ui.formatter-util :refer :all]
     [more-speech.ui.formatters :refer :all]
     [speclj.core :refer :all]))
@@ -20,11 +19,8 @@
 
 (declare db)
 (describe "format header"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db)
-          (clear-mem)
-          (set-mem :pubkey 99))
+  (setup-db-mem)
+  (before (set-mem :pubkey 99))
 
   (it "formats an empty message"
     (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
@@ -67,18 +63,18 @@
       (should= (str "(user-1) " timestamp " the message nostr:user-2") header)))
 
   (it "formats a message with a user reference that has a petname"
-      (gateway/add-profile @db 1 {:name "user-1"})
-      (gateway/add-profile @db 2 {:name "user-2"})
-      (set-mem :pubkey 1)
-      (gateway/add-contacts @db 1 [{:pubkey 2 :petname "petname"}])
-      (let [npub2 (bech32/encode "npub" 2)
-            event {:pubkey 1
-                   :created-at 1
-                   :content (str "the message nostr:" npub2)
-                   :tags []}
-            timestamp (format-time (event :created-at))
-            header (trim-header (format-header event))]
-        (should= (str "user-1 " timestamp " the message nostr:petname") header)))
+    (gateway/add-profile @db 1 {:name "user-1"})
+    (gateway/add-profile @db 2 {:name "user-2"})
+    (set-mem :pubkey 1)
+    (gateway/add-contacts @db 1 [{:pubkey 2 :petname "petname"}])
+    (let [npub2 (bech32/encode "npub" 2)
+          event {:pubkey 1
+                 :created-at 1
+                 :content (str "the message nostr:" npub2)
+                 :tags []}
+          timestamp (format-time (event :created-at))
+          header (trim-header (format-header event))]
+      (should= (str "user-1 " timestamp " the message nostr:petname") header)))
 
   (it "formats a long message with line ends."
     (let [event {:pubkey 16r1111111111111111111111111111111111111111111111111111111111111111
@@ -125,10 +121,7 @@
     ))
 
 (describe "Replacing References"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db)
-          (clear-mem))
+  (setup-db-mem)
 
   (context "using #[n] and p tags"
     (before (gateway/add-profile @db 0 {:name "x"}))
@@ -184,10 +177,8 @@
   )
 
 (describe "format-reply"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db)
-          (gateway/add-profile @db 1 {:name "user-1"})
+  (setup-db-mem)
+  (before (gateway/add-profile @db 1 {:name "user-1"})
           (gateway/add-profile @db 2 {:name "user-2"}))
   (it "formats a reply to an event"
     (let [created-at (make-date "07/05/2022")
@@ -295,11 +286,10 @@
     (should= "x" (extract-reference "nostr:x")))
   )
 
+(declare user-id npub)
+
 (describe "Format article"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db)
-          (clear-mem))
+  (setup-db-mem)
 
   (it "should escape HTML entities"
     (should= "&lt;b&gt;text&lt;&#x2F;b&gt;" (reformat-article-into-html "<b>text</b>")))
@@ -334,56 +324,52 @@
       (should= "<a href=\"ms-namereference://name\">nostr:name</a>"
                (reformat-article-into-html "nostr:name")))
 
-    (it "should replace nostr:npub with namereference link using user's name "
-      (let [user-id (rand-int 1000000000)
-            npub (bech32/encode "npub" user-id)]
-        (gateway/add-profile @db user-id {:name "user1"})
+    (context "formatting bech32 references"
+      (with user-id (rand-int 1000000000))
+      (with npub (bech32/encode "npub" @user-id))
+
+      (it "should replace nostr:npub with namereference link using user's name "
+        (gateway/add-profile @db @user-id {:name "user1"})
         (should= "<a href=\"ms-namereference://user1\">nostr:user1</a>"
-                 (reformat-article-into-html (str "nostr:" npub)))))
+                 (reformat-article-into-html (str "nostr:" @npub))))
 
-    (it "should replace @npub with namereference link using user's name "
-      (let [user-id (rand-int 1000000000)
-            npub (bech32/encode "npub" user-id)]
-        (gateway/add-profile @db user-id {:name "user1"})
+      (it "should replace @npub with namereference link using user's name "
+        (gateway/add-profile @db @user-id {:name "user1"})
         (should= "<a href=\"ms-namereference://user1\">@user1</a>"
-                 (reformat-article-into-html (str "@" npub)))))
+                 (reformat-article-into-html (str "@" @npub))))
 
-    ;(it "should replace nostr:nprofile with namereference link using user's name "
-    ;  (let [user-id (rand-int 1000000000)
-    ;        npub (bech32/encode "nprofile" user-id)]
-    ;    (gateway/add-profile @db user-id {:name "user1"})
-    ;    (should= "<a href=\"ms-namereference://user1\">nostr:user1</a>"
-    ;             (reformat-article-into-html (str "nostr:" npub)))))
+      (it "should replace nostr:npub with namereference link using npub if user does not exist "
+        (should= (str "<a href=\"ms-namereference://"
+                      @npub "\">nostr:" @npub "</a>")
+                 (reformat-article-into-html (str "nostr:" @npub))))
 
-    (it "should replace nostr:npub with namereference link using npub if user does not exist "
-          (let [user-id (rand-int 1000000000)
-                npub (bech32/encode "npub" user-id)]
-            (should= (str "<a href=\"ms-namereference://"
-                          npub "\">nostr:" npub "</a>")
-                     (reformat-article-into-html (str "nostr:" npub)))))
 
-    (it "should replace nostr:nevent with notereference link"
-          (let [user-id (rand-int 1000000000)
-                nevent (bech32/tlv-encode "nevent" {:special (hexify user-id)})]
-            (should= (str "<a href=\"ms-neventreference://"
-                          nevent "\">nostr:[event]</a>")
-                     (reformat-article-into-html (str "nostr:" nevent)))))
+      ;(it "should replace nostr:nprofile with namereference link using user's name "
+      ;  (let [user-id (rand-int 1000000000)
+      ;        npub (bech32/encode "nprofile" user-id)]
+      ;    (gateway/add-profile @db user-id {:name "user1"})
+      ;    (should= "<a href=\"ms-namereference://user1\">nostr:user1</a>"
+      ;             (reformat-article-into-html (str "nostr:" npub)))))
 
-    (it "should replace nostr:note with notereference link"
-              (let [user-id (rand-int 1000000000)
-                    npub (bech32/encode "note" user-id)]
-                (should= (str "<a href=\"ms-notereference://"
-                              npub "\">nostr:" npub "</a>")
-                         (reformat-article-into-html (str "nostr:" npub)))))
+      (it "should replace nostr:nevent with notereference link"
+        (let [nevent (bech32/tlv-encode "nevent" {:special (hexify @user-id)})]
+          (should= (str "<a href=\"ms-neventreference://"
+                        nevent "\">nostr:[event]</a>")
+                   (reformat-article-into-html (str "nostr:" nevent)))))
+
+      (it "should replace nostr:note with notereference link"
+        (let [note (bech32/encode "note" @user-id)]
+          (should= (str "<a href=\"ms-notereference://"
+                        note "\">nostr:" note "</a>")
+                   (reformat-article-into-html (str "nostr:" note)))))
+      )
     )
   )
 
 (declare db)
 (describe "Format User ID"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db)
-          (clear-mem))
+  (setup-db-mem)
+
   (it "shows untrusted pubkey if no profile or petname"
     (let [pubkey 16rdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef]
       (should= "(deadbee...)" (format-user-id pubkey 30))))

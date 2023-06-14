@@ -1,18 +1,15 @@
 (ns more-speech.nostr.tab-searcher-spec
-  (:require [speclj.core :refer :all]
+  (:require [more-speech.db.gateway :as gateway]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.tab-searcher :refer :all]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
-            [more-speech.config :as config]
             [more-speech.nostr.util :as util]
-            [more-speech.mem :refer :all]))
+            [more-speech.spec-util :refer :all]
+            [speclj.core :refer :all]))
 
 (declare db)
 (describe "Tab Searcher"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (context "matching events to targets"
     (it "sees no match if target is not present"
@@ -87,11 +84,11 @@
                                     [:p (util/hexify 88N)]]})))
 
     (it "should match if username matches any p tag"
-          (set-mem :pubkey 99N)
-          (gateway/add-profile @db 1N {:name "username"})
-          (should (match-target "username"
-                                {:id 153N :pubkey 2N :content ""
-                                 :tags [[:e (util/hexify 1N)]
-                                        [:p (util/hexify 88N)]]})))
+      (set-mem :pubkey 99N)
+      (gateway/add-profile @db 1N {:name "username"})
+      (should (match-target "username"
+                            {:id 153N :pubkey 2N :content ""
+                             :tags [[:e (util/hexify 1N)]
+                                    [:p (util/hexify 88N)]]})))
     )
   )

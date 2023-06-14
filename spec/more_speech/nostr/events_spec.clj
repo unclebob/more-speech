@@ -1,13 +1,13 @@
 (ns more-speech.nostr.events_spec
-  (:require [speclj.core :refer :all]
-            [more-speech.db.gateway :as gateway]
+  (:require [more-speech.db.gateway :as gateway]
             [more-speech.db.in-memory :as in-memory]
-            [more-speech.nostr.events :refer :all]
-            [more-speech.nostr.event-dispatcher :refer :all]
-            [more-speech.nostr.elliptic-signature :refer :all]
-            [more-speech.nostr.util :refer :all]
             [more-speech.mem :refer :all]
-            [more-speech.config :as config]))
+            [more-speech.nostr.elliptic-signature :refer :all]
+            [more-speech.nostr.event-dispatcher :refer :all]
+            [more-speech.nostr.events :refer :all]
+            [more-speech.nostr.util :refer :all]
+            [more-speech.spec-util :refer :all]
+            [speclj.core :refer :all]))
 
 (defrecord event-handler-dummy []
   event-handler
@@ -84,8 +84,7 @@
                       [:e "0002" "anotherurl"]]
                :content "the content"
                :sig 0xdddddd})
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
+  (setup-db-mem)
   (before
     (swap! (get-mem) assoc :event-handler (->event-handler-dummy))
     (in-memory/clear-events @db)
@@ -207,9 +206,7 @@
   )
 
 (describe "fixing names"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (it "should not fix a good name"
     (should= "name" (fix-name "name")))
@@ -235,9 +232,7 @@
   )
 
 (describe "process-name-event"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (it "loads profiles"
     (process-name-event
@@ -325,9 +320,7 @@
 
 (describe "process=reaction"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (it "adds a reaction to an event"
     (gateway/add-event @db {:id 1})
@@ -342,17 +335,17 @@
 
   (it "chooses the last e and p tags"
     (gateway/add-event @db {:id 1})
-    (process-reaction @db {:pubkey 99 :content "!" :tags [[:e "something"][:p "something"][:e (hexify 1)] [:p (hexify 2)]]})
+    (process-reaction @db {:pubkey 99 :content "!" :tags [[:e "something"] [:p "something"] [:e (hexify 1)] [:p (hexify 2)]]})
     (should= {:id 1 :reactions #{[99 "!"]}}
              (gateway/get-event @db 1)))
 
   (it "does not add a reaction if no e tag"
     (gateway/add-event @db {:id 1})
     (with-redefs [gateway/add-reaction (stub :add-reaction)]
-          (process-reaction @db {:content "!" :tags []})
-          (process-reaction @db {:content "!" :tags [[:p (hexify 2)]]})
-          (should-not-have-invoked :add-reaction)))
-    )
+      (process-reaction @db {:content "!" :tags []})
+      (process-reaction @db {:content "!" :tags [[:p (hexify 2)]]})
+      (should-not-have-invoked :add-reaction)))
+  )
 
 (describe "tag processing"
   (context "tag extraction"
@@ -366,11 +359,11 @@
       (should= [["arg1" "arg2"]]
                (get-tag {:tags [[:target "arg1" "arg2"]]} :target))
       (should= [["arg1" "arg2"] ["arg3" "arg4"]]
-                     (get-tag {:tags [[:e 1]
-                                      [:target "arg1" "arg2"]
-                                      [:p 2]
-                                      [:target "arg3" "arg4"]
-                                      [:q 3]]} :target))
+               (get-tag {:tags [[:e 1]
+                                [:target "arg1" "arg2"]
+                                [:p 2]
+                                [:target "arg3" "arg4"]
+                                [:q 3]]} :target))
       )
 
     ))

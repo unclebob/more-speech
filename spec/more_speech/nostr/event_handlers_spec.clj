@@ -1,20 +1,16 @@
 (ns more-speech.nostr.event-handlers-spec
   (:require
-    [more-speech.nostr.util :as util]
-    [speclj.core :refer :all]
-    [more-speech.nostr.event-dispatcher :as handlers]
     [more-speech.db.gateway :as gateway]
-    [more-speech.db.in-memory :as in-memory]
-    [more-speech.config :as config]
-    [more-speech.mem :refer :all]))
+    [more-speech.mem :refer :all]
+    [more-speech.nostr.event-dispatcher :as handlers]
+    [more-speech.nostr.util :as util]
+    [more-speech.spec-util :refer :all]
+    [speclj.core :refer :all]))
 
 (declare db)
 (describe "event-handlers"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
-  (before (clear-mem))
+  (setup-db-mem)
 
   (context "Kind 0 name event"
     (it "Does not add a suffix to names that don't exist."
@@ -66,19 +62,19 @@
         (should= 1 (get-mem [:event-counter :kinds 1]))))
 
     (it "validates a duplicate"
-          (let [event {:id 1 :content "content" :kind 1}]
-            (with-redefs
-              [handlers/handle-text-event (stub :handle-text-event)
-               handlers/process-event (stub :process-event)
-               util/translate-event (stub :translate-event {:return event})
-               handlers/decrypt-dm-event (stub :decrypt-dm-event {:return event})
-               handlers/compute-id (stub :compute-id {:return 1})]
-              (set-mem [:processed-event-ids] {1 #{:first-url}})
-              (handlers/validate-and-process-event
-                :url [:type :subscription-id event]))
+      (let [event {:id 1 :content "content" :kind 1}]
+        (with-redefs
+          [handlers/handle-text-event (stub :handle-text-event)
+           handlers/process-event (stub :process-event)
+           util/translate-event (stub :translate-event {:return event})
+           handlers/decrypt-dm-event (stub :decrypt-dm-event {:return event})
+           handlers/compute-id (stub :compute-id {:return 1})]
+          (set-mem [:processed-event-ids] {1 #{:first-url}})
+          (handlers/validate-and-process-event
+            :url [:type :subscription-id event]))
 
-            (should-not-have-invoked :handle-text-event)
-            (should= {1 #{:first-url :url}} (get-mem [:processed-event-ids]))
-            (should= 1 (get-mem [:event-counter :kinds 1]))))
+        (should-not-have-invoked :handle-text-event)
+        (should= {1 #{:first-url :url}} (get-mem [:processed-event-ids]))
+        (should= 1 (get-mem [:event-counter :kinds 1]))))
     )
   )

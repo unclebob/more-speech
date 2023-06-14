@@ -1,17 +1,14 @@
 (ns more-speech.nostr.trust-updater-spec
-  (:require [more-speech.config :as config]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
+  (:require [more-speech.db.gateway :as gateway]
             [more-speech.mem :refer :all]
             [more-speech.nostr.trust-updater :refer :all]
+            [more-speech.spec-util :refer :all]
             [speclj.core :refer :all]))
 
 (declare db)
 (describe "Setting Trust"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (it "establishes new trust with a petname."
     (let [my-pubkey 1]

@@ -1,20 +1,16 @@
 (ns more-speech.nostr.event-dispatcher-spec
   (:require
-    [more-speech.config :as config]
     [more-speech.db.gateway :as gateway]
-    [more-speech.db.in-memory :as in-memory]
     [more-speech.mem :refer :all]
     [more-speech.nostr.event-dispatcher :as ed]
     [more-speech.nostr.events :as events]
+    [more-speech.spec-util :refer :all]
     [speclj.core :refer :all]))
 
 (declare db)
 (describe "event-dispatcher"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
-  (before (clear-mem))
+  (setup-db-mem)
 
   (context "cross references"
     (it "cross references an existing event."

@@ -1,11 +1,11 @@
 (ns more-speech.ui.swing.tabs-spec
   (:require [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
             [more-speech.mem :refer :all]
             [more-speech.nostr.util :as util]
-            [more-speech.ui.swing.main-window :as main-window]
+            [more-speech.spec-util :refer :all]
             [more-speech.ui.swing.article-panel :as article-panel]
+            [more-speech.ui.swing.main-window :as main-window]
             [more-speech.ui.swing.tabs :refer :all]
             [more-speech.ui.swing.util :refer :all]
             [more-speech.ui.swing.util :as swing-util]
@@ -143,9 +143,7 @@
 
   (context "selecting nodes"
     (with-stubs)
-    (with db (in-memory/get-db))
-    (before-all (config/set-db! :in-memory))
-    (before (in-memory/clear-db @db))
+    (setup-db-mem)
 
     (it "remembers which articles have been read and loads article"
       (with-redefs
@@ -171,9 +169,7 @@
 
 (describe "adding ids to tabs"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (it "adds an an unrooted article id to a tab"
     (gateway/add-event @db {:id 1 :tags []})
@@ -234,10 +230,7 @@
 
 (describe "adding events"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db)
-          (clear-mem))
+  (setup-db-mem)
 
   (it "adds one event"
     (should= [0 [99]]

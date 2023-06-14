@@ -2,7 +2,6 @@
   (:require [more-speech.bech32 :as bech32]
             [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
             [more-speech.mem :refer :all]
             [more-speech.nostr.elliptic-signature :refer :all]
             [more-speech.nostr.event-composers :refer :all]
@@ -11,6 +10,7 @@
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.util :refer :all]
+            [more-speech.spec-util :refer :all]
             [speclj.core :refer :all])
   (:import (ecdhJava SECP256K1)))
 
@@ -23,10 +23,7 @@
 (declare db)
 
 (describe "Composing outgoing events"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
-  (before (clear-mem))
+  (setup-db-mem)
 
   (context "composing metadata (kind:0) messages"
     (it "composes using the keys data structure"
@@ -288,9 +285,7 @@
 
 (describe "Emplacing references"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (context "replace @user with #[n] where n is the index of the 'p' tag."
     (it "emplaces nothing if there is no @user in the content"
@@ -363,8 +358,7 @@
         (should-be-nil (gateway/get-profile @db 0x01234567abc))))))
 
 (describe "find-user-id"
-  (with db (in-memory/get-db))
-  (before (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (it "finds the id from a profile name"
     (gateway/add-profile @db 1 {:name "bob"})

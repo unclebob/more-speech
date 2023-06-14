@@ -1,11 +1,11 @@
 (ns more-speech.nostr.protocol-spec
   (:require [more-speech.config :as config]
             [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
             [more-speech.mem :as mem]
             [more-speech.nostr.protocol :refer :all]
             [more-speech.nostr.util :as util]
             [more-speech.relay :as relay]
+            [more-speech.spec-util :refer :all]
             [more-speech.websocket-relay :as ws-relay]
             [speclj.core :refer :all]))
 
@@ -13,12 +13,9 @@
 (declare until since min-time back-to relay)
 
 (describe "protocol utilities"
+  (setup-db-mem)
   (with-stubs)
   (with now 100000)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
-  (before (mem/clear-mem))
   (it "increments relay retries on un-retried relays"
     (with-redefs [util/get-now-ms (stub :get-now {:return @now})]
       (should= {"relay" {:retries 1, :retry-time @now}}
@@ -59,8 +56,8 @@
         (Thread/sleep 10)
         (should=
           #{["REQ" "ms-future" {"kinds" [0 1 2 3 4 7 9735], "since" @now, "authors" #{"author2xxx" "author1xxx"}} {"kinds" [0 1 2 3 4 7 9735], "since" @now, "#p" #{"0000000000000000000000000000000000000000000000000000000000000001" "0000000000000000000000000000000000000000000000000000000000000002"}}]
-           ["REQ" "ms-past-author" {"kinds" [0 1 2 3 4 7 9735], "since" (- @now config/batch-time), "until" @now, "authors" #{"author2xxx" "author1xxx"}, "limit" config/batch-size}]
-           ["REQ" "ms-past-mention" {"kinds" [0 1 2 3 4 7 9735], "since" (- @now config/batch-time), "until" @now, "#p" #{"0000000000000000000000000000000000000000000000000000000000000001" "0000000000000000000000000000000000000000000000000000000000000002"}, "limit" config/batch-size}]}
+            ["REQ" "ms-past-author" {"kinds" [0 1 2 3 4 7 9735], "since" (- @now config/batch-time), "until" @now, "authors" #{"author2xxx" "author1xxx"}, "limit" config/batch-size}]
+            ["REQ" "ms-past-mention" {"kinds" [0 1 2 3 4 7 9735], "since" (- @now config/batch-time), "until" @now, "#p" #{"0000000000000000000000000000000000000000000000000000000000000001" "0000000000000000000000000000000000000000000000000000000000000002"}, "limit" config/batch-size}]}
           (set (mem/get-mem :stub-send))))
       (should=
         {:eose :next-batch,
@@ -92,13 +89,13 @@
         (send-subscription @relay 1000 @now)
         (Thread/sleep 10)
         (should= #{["REQ" "ms-future"
-                   {"kinds" [0 1 2 3 4 7 9735],
-                    "since" @now}]
-                  ["REQ" "ms-past"
-                   {"kinds" [0 1 2 3 4 7 9735],
-                    "since" (- @now config/batch-time),
-                    "until" @now,
-                    "limit" config/batch-size}]}
+                    {"kinds" [0 1 2 3 4 7 9735],
+                     "since" @now}]
+                   ["REQ" "ms-past"
+                    {"kinds" [0 1 2 3 4 7 9735],
+                     "since" (- @now config/batch-time),
+                     "until" @now,
+                     "limit" config/batch-size}]}
                  (set (mem/get-mem :stub-send)))
 
         (should= {:eose :next-batch,

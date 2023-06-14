@@ -1,8 +1,7 @@
 (ns more-speech.ui.swing.users-window-spec
   (:require
-    [more-speech.config :as config]
-    [more-speech.db.in-memory :as in-memory]
     [more-speech.mem :refer :all]
+    [more-speech.spec-util :refer :all]
     [more-speech.ui.swing.users-window :as users-window]
     [speclj.core :refer :all]))
 
@@ -10,10 +9,7 @@
 
 (describe "users window"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
-  (before (clear-mem))
+  (setup-db-mem)
 
   (context "selection management"
     (it "removes ids from selection lists"

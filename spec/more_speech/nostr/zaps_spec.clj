@@ -4,13 +4,13 @@
     [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
     [more-speech.db.gateway :as gateway]
-    [more-speech.db.in-memory :as in-memory]
     [more-speech.mem :refer :all]
     [more-speech.nostr.elliptic-signature :as es]
     [more-speech.nostr.event-composers :as composers]
     [more-speech.nostr.util :as util]
     [more-speech.nostr.zaps :as zaps]
     [more-speech.relay :as relay]
+    [more-speech.spec-util :refer :all]
     [more-speech.util.fortune-messages :as fortune]
     [more-speech.websocket-relay :as ws-relay]
     [speclj.core :refer :all])
@@ -19,10 +19,7 @@
 (declare db)
 (describe "zaps"
   (with-stubs)
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db))
-  (before (clear-mem))
+  (setup-db-mem)
 
   (context "zap address"
     (context "zap address is in tag"

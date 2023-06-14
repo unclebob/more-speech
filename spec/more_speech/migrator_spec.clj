@@ -4,11 +4,12 @@
             [more-speech.config :as config]
             [more-speech.data-storage :as data-storage]
             [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
             [more-speech.mem :as mem]
             [more-speech.migrator :refer :all]
             [more-speech.nostr.elliptic-signature :as es]
             [more-speech.nostr.util :as util]
+            [more-speech.spec-util :refer :all]
+            [more-speech.spec-util :refer :all]
             [more-speech.user-configuration :as user-configuration]
             [more-speech.util.files :refer :all]
             [speclj.core :refer :all]))
@@ -230,9 +231,7 @@
                 1N))))
 
   (context "migration 10 XTDB database"
-    (with db (in-memory/get-db))
-    (before-all (config/set-db! :in-memory))
-    (before (in-memory/clear-db @db))
+    (setup-db-mem)
 
     (it "does not load profiles if no profile file is found"
       (with-redefs [gateway/add-profile (stub :add-profile)]
@@ -301,10 +300,7 @@
     )
 
   (context "migration 11 password protect private key"
-    (with db (in-memory/get-db))
-    (before-all (config/set-db! :in-memory))
-    (before (in-memory/clear-db @db)
-            (mem/clear-mem))
+    (setup-db-mem)
 
     (it "password protects the keys file"
       (let [bytes-private-key (util/make-private-key)

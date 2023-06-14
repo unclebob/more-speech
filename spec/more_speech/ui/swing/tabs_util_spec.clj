@@ -1,19 +1,15 @@
 (ns more-speech.ui.swing.tabs-util-spec
-  (:require [speclj.core :refer :all]
-            [more-speech.ui.swing.tabs-util :refer :all]
+  (:require [more-speech.db.gateway :as gateway]
             [more-speech.mem :refer :all]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
-            [more-speech.config :as config])
-  (:import (javax.swing.tree DefaultMutableTreeNode)))
+            [more-speech.spec-util :refer :all]
+            [more-speech.ui.swing.tabs-util :refer :all]
+            [speclj.core :refer :all])
+(:import (javax.swing.tree DefaultMutableTreeNode)) )
 
 (declare db)
 
 (describe "header tree"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (in-memory/clear-db @db)
-          (clear-mem))
+  (setup-db-mem)
 
   (context "finding chronological insertion point"
     (it "returns zero if empty tree"

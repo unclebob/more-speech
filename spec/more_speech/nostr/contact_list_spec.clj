@@ -1,19 +1,15 @@
 (ns more-speech.nostr.contact-list-spec
-  (:require [speclj.core :refer :all]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.db.in-memory :as in-memory]
+  (:require [more-speech.db.gateway :as gateway]
+            [more-speech.mem :refer :all]
             [more-speech.nostr.contact-list :refer :all]
             [more-speech.nostr.util :refer [hexify]]
-            [more-speech.mem :refer :all]
-            [more-speech.config :as config]))
+            [more-speech.spec-util :refer :all]
+            [speclj.core :refer :all]))
 
 (declare db)
 
 (describe "contact-lists"
-  (with db (in-memory/get-db))
-  (before-all (config/set-db! :in-memory))
-  (before (clear-mem)
-          (in-memory/clear-db @db))
+  (setup-db-mem)
 
   (describe "Processing Contact List events (Kind 3)"
     (it "processes and saves a full event"
@@ -113,10 +109,7 @@
     )
 
   (describe "trust accessors"
-    (with db (in-memory/get-db))
-      (before-all (config/set-db! :in-memory))
-      (before (clear-mem)
-              (in-memory/clear-db @db))
+    (setup-db-mem)
 
     (it "gets trustees"
       (set-mem :pubkey 99)
