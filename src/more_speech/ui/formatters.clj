@@ -295,64 +295,58 @@
     (.startsWith s "@") (subs s 1)
     :else s))
 
+(defmulti format-segment (fn [_formatted-content [seg-type _seg]] seg-type))
+
+(defmethod format-segment :text [formatted-content [_seg-type seg]]
+  (str formatted-content
+       (-> seg format-replies html-escape break-newlines non-breaking-spaces)))
+
+(defmethod format-segment :url [formatted-content [_seg-type seg]]
+  (str formatted-content (linkify seg)))
+
+(defmethod format-segment :namereference [formatted-content [_seg-type seg]]
+  (let [author-name (if (string/starts-with? seg "@npub1")
+                      (get-author-name (extract-reference seg))
+                      (extract-reference seg))]
+    (str formatted-content
+         (ms-linkify "ms-namereference" author-name (str "@" author-name)))))
+
+(defmethod format-segment :nostrnamereference [formatted-content [_seg-type seg]]
+  (if (or (.startsWith seg ":nostr:nevent1")
+          (.startsWith seg ":nostr:nprofile1"))
+    seg
+    (str formatted-content
+         (ms-linkify "ms-namereference"
+                     (extract-reference seg)
+                     (str "nostr:" (extract-reference seg))))))
+
+(defmethod format-segment :nostrnpubreference [formatted-content [_seg-type seg]]
+  (let [author (get-author-name (extract-reference seg))]
+    (str formatted-content
+         (ms-linkify "ms-namereference" author (str "nostr:" author)))))
+
+(defmethod format-segment :idreference [formatted-content [_seg-type seg]]
+  (let [id (subs seg 1)]
+    (str formatted-content (ms-linkify "ms-idreference" id (str "@" id)))))
+
+(defmethod format-segment :nostrnotereference [formatted-content [_seg-type seg]]
+  (let [reference (extract-reference seg)]
+    (str formatted-content
+         (ms-linkify "ms-notereference" reference (str "nostr:" reference)))))
+
+(defmethod format-segment :nostreventreference [formatted-content [_seg-type seg]]
+  (str formatted-content
+       (ms-linkify "ms-neventreference" (extract-reference seg) "nostr:[event]")))
+
+(defmethod format-segment :img [formatted-content [_seg-type seg]]
+  (str formatted-content (img-ify seg)))
+
+(defmethod format-segment :default [formatted-content [_seg-type _seg]]
+  formatted-content)
+
 (defn reformat-article-into-html [article]
   (let [segments (segment-article article)]
-    (reduce
-      (fn [formatted-content [seg-type seg]]
-        (let [reference (extract-reference seg)]
-          (cond
-            (= seg-type :text)
-            (str formatted-content
-                 ((comp
-                    non-breaking-spaces
-                    break-newlines
-                    html-escape
-                    format-replies
-                    ) seg)
-                 )
-
-            (= seg-type :url)
-            (str formatted-content (linkify seg))
-
-            (and
-              (= seg-type :namereference)
-              (string/starts-with? seg "@npub1"))
-            (let [author (get-author-name reference)]
-              (str formatted-content (ms-linkify "ms-namereference" author (str "@" author))))
-
-            (= seg-type :namereference)
-            (str formatted-content (ms-linkify "ms-namereference" reference (str "@" reference)))
-
-            (and (= seg-type :nostrnamereference)
-                 (or (.startsWith seg ":nostr:nevent1")
-                     (.startsWith seg ":nostr:nprofile1")))
-            seg
-
-            (= seg-type :nostrnamereference)
-            (str formatted-content (ms-linkify "ms-namereference" reference (str "nostr:" reference)))
-
-            (= seg-type :nostrnpubreference)
-            (let [author (get-author-name reference)]
-              (str formatted-content (ms-linkify "ms-namereference" author (str "nostr:" author))))
-
-            (= seg-type :idreference)
-            (let [id (subs seg 1)]
-              (str formatted-content (ms-linkify "ms-idreference" id (str "@" id))))
-
-            (= seg-type :nostrnotereference)
-            (str formatted-content (ms-linkify "ms-notereference" reference (str "nostr:" reference)))
-
-            (= seg-type :nostreventreference)
-            (str formatted-content (ms-linkify "ms-neventreference" reference "nostr:[event]"))
-
-            (= seg-type :img)
-            (str formatted-content (img-ify seg))
-
-            :else
-            formatted-content
-            )))
-      ""
-      segments)))
+    (reduce format-segment "" segments)))
 
 (defn hexify-event [event]
   (assoc event :pubkey (hexify (:pubkey event))
