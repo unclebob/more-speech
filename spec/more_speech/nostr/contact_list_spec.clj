@@ -6,64 +6,56 @@
             [more-speech.spec-util :refer :all]
             [speclj.core :refer :all]))
 
-(declare db)
+(declare db pubkey contact1 contact2)
 
 (describe "contact-lists"
   (setup-db-mem)
+  (with pubkey 99)
+  (with contact1 1)
+  (with contact2 2)
 
   (describe "Processing Contact List events (Kind 3)"
     (it "processes and saves a full event"
-      (let [pubkey 99
-            contact1 1
-            contact2 2
-            event {:pubkey pubkey
-                   :tags [[:p (hexify contact1) "relay1" "contact1"]
-                          [:p (hexify contact2) "relay2" "contact2"]]}
+      (let [event {:pubkey @pubkey
+                   :tags [[:p (hexify @contact1) "relay1" "contact1"]
+                          [:p (hexify @contact2) "relay2" "contact2"]]}
             _ (process-contact-list @db event)]
         (should= [{:pubkey 1, :relay "relay1", :petname "contact1"}
                   {:pubkey 2, :relay "relay2", :petname "contact2"}]
-                 (gateway/get-contacts @db pubkey))))
+                 (gateway/get-contacts @db @pubkey))))
 
     (it "unpacks a full event"
-      (let [pubkey 99
-            contact1 1
-            contact2 2
-            event {:pubkey pubkey
-                   :tags [[:p (hexify contact1) "relay1" "contact1"]
-                          [:p (hexify contact2) "relay2" "contact2"]]}]
-        (should= [pubkey
-                  [{:pubkey contact1
+      (let [event {:pubkey @pubkey
+                   :tags [[:p (hexify @contact1) "relay1" "contact1"]
+                          [:p (hexify @contact2) "relay2" "contact2"]]}]
+        (should= [@pubkey
+                  [{:pubkey @contact1
                     :relay "relay1"
                     :petname "contact1"}
-                   {:pubkey contact2
+                   {:pubkey @contact2
                     :relay "relay2"
                     :petname "contact2"}]]
                  (unpack-contact-list-event event))))
 
     (it "unpacks a partial event"
-      (let [pubkey 99
-            contact1 1
-            contact2 2
-            event {:pubkey pubkey
-                   :tags [[:p (hexify contact1)]
-                          [:p (hexify contact2)]]}]
-        (should= [pubkey
-                  [{:pubkey contact1
+      (let [event {:pubkey @pubkey
+                   :tags [[:p (hexify @contact1)]
+                          [:p (hexify @contact2)]]}]
+        (should= [@pubkey
+                  [{:pubkey @contact1
                     :relay nil
                     :petname nil}
-                   {:pubkey contact2
+                   {:pubkey @contact2
                     :relay nil
                     :petname nil}]]
                  (unpack-contact-list-event event))))
 
     (it "properly skips a malformed tag"
-      (let [pubkey 99
-            contact2 2
-            event {:pubkey pubkey
+      (let [event {:pubkey @pubkey
                    :tags [[:p "garbage"]
-                          [:p (hexify contact2)]]}]
-        (should= [pubkey
-                  [{:pubkey contact2
+                          [:p (hexify @contact2)]]}]
+        (should= [@pubkey
+                  [{:pubkey @contact2
                     :relay nil
                     :petname nil}]]
                  (unpack-contact-list-event event))))
