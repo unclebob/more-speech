@@ -1,49 +1,82 @@
 (ns more-speech.mem
-  (:require [clojure.spec.alpha :as s]))
+  (:require [clojure.spec.alpha :as s]
+            [more-speech.types.relay :as relay-type]
+            [more-speech.types.profile :as profile-type]))
 
-(s/def ::id number?)
-(s/def ::pubkey number?)
-(s/def ::created-at number?)
-(s/def ::content string?)
-(s/def ::sig number?)
-(s/def ::tag (s/tuple keyword? number?))
-(s/def ::tags (s/coll-of ::tag))
-(s/def ::references (s/coll-of number?))
-(s/def ::relay-url string?)
-(s/def ::relays (s/coll-of ::relay-url))
-(s/def ::event (s/keys :req-un [::id
-                                ::pubkey
-                                ::created-at
-                                ::content
-                                ::sig
-                                ::tags
-                                ::references]
-                       :opt-un [::relays]))
+;(s/def ::id number?)
+;(s/def ::created-at number?)
+;(s/def ::content string?)
+;(s/def ::sig number?)
+;(s/def ::tag (s/tuple keyword? number?))
+;(s/def ::tags (s/coll-of ::tag))
+;(s/def ::references (s/coll-of number?))
+;(s/def ::relay-url string?)
+;(s/def ::relays (s/coll-of ::relay-url))
+;(s/def ::event (s/keys :req-un [::id
+;                                ::pubkey
+;                                ::created-at
+;                                ::content
+;                                ::sig
+;                                ::tags
+;                                ::references]
+;                       :opt-un [::relays]))
+;
+;(s/def ::text-event-map (s/map-of :id :event))
+;
 
-(s/def ::text-event-map (s/map-of :id :event))
+;(s/def ::profiles (s/map-of ::id ::profile))
+;(s/def ::public-key string?)
+;(s/def ::private-key string?)
+;(s/def ::keys (s/keys :req-un [::name ::about ::picture ::public-key ::private-key]))
+;(s/def ::selected (s/coll-of ::id))
+;(s/def ::blocked (s/coll-of ::id))
+;(s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
+;(s/def ::tabs-list (s/coll-of ::tab))
+;(s/def ::selected-event ::id)
+;(s/def ::event-history (s/coll-of (s/tuple number? ::id)))
+;(s/def ::back-count number?)
+;(s/def ::backing-up boolean?)
+;
+;
+;(s/def ::id number?)
+;(s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))
 
-(s/def ::name string?)
-(s/def ::about string?)
-(s/def ::picture string?)
-(s/def ::profile (s/keys :req-un [::name ::about ::picture]))
-(s/def ::profiles (s/map-of ::id ::profile))
-(s/def ::public-key string?)
-(s/def ::private-key string?)
-(s/def ::keys (s/keys :req-un [::name ::about ::picture ::public-key ::private-key]))
-(s/def ::selected (s/coll-of ::id))
-(s/def ::blocked (s/coll-of ::id))
-(s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
-(s/def ::tabs-list (s/coll-of ::tab))
-(s/def ::selected-event ::id)
-(s/def ::event-history (s/coll-of (s/tuple number? ::id)))
-(s/def ::back-count number?)
-(s/def ::backing-up boolean?)
-
-
-(s/def ::id number?)
-(s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))
+(s/def ::pubkey number?) ;The public key of the user
+(s/def ::keys ::profile-type/profile)
+(s/def ::mem (s/keys :req-un [::relay-type/relays
+                              ::pubkey
+                              ::keys]
+                     :opt-un [::request-hours-ago
+                              ::websocket-backlog
+                              ::active-subscriptions
+                              ::tabs-list
+                              ::tab-tree-map
+                              ::frame
+                              ::selected-event
+                              ::selected-tab
+                              ::node-map
+                              ::days-changed
+                              ::earliest-loaded-time
+                              ::user-configuration
+                              ::orphaned-replies
+                              ::backing-up
+                              ::event-history
+                              ::event-counter
+                              ::back-count
+                              ::send-chan
+                              ::article-window
+                              ::article-panel
+                              ::refresh-main-window
+                              ::relay-manager-frame
+                              ::tabs-window
+                              ::user-window
+                              ::event-handler]))
 
 (def memory (atom nil))
+
+(defn conform-mem []
+  (when-let [error (s/explain-data ::mem @memory)]
+    (prn 'conform-mem error)))
 
 (defn get-mem
   ([]

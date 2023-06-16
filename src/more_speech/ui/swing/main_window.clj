@@ -2,7 +2,7 @@
   (:require [clojure.core.async :as async]
             [more-speech.config :as config]                 ;break cycle.
             [more-speech.logger.default :refer [log-pr]]
-            [more-speech.mem :refer :all]
+            [more-speech.mem :refer :all :as mem]
             [more-speech.nostr.event-dispatcher :as handlers]
             [more-speech.ui.swing.article-panel :as article-panel]
             [more-speech.ui.swing.profile-window :as profile-window]
@@ -104,6 +104,8 @@
 
 (defn setup-main-timer []
   (let [main-timer (Timer. "main timer")
+        spec-task (proxy [TimerTask] []
+                     (run [] (mem/conform-mem)))
         prune-tabs-task (proxy [TimerTask] []
                           (run [] (tabs/prune-tabs)))
         repaint-task (proxy [TimerTask] []
@@ -116,7 +118,9 @@
                (long prune-tabs-frequency)
                (long prune-tabs-frequency))
     (.schedule main-timer repaint-task 3000 3000)
-    (.schedule main-timer reload-article-task 1000 1000)))
+    (.schedule main-timer reload-article-task 1000 1000)
+    (when (config/is-test-run?)
+      (.schedule main-timer spec-task 5000 5000))))
 
 (defn setup-main-window []
   (setup-main-timer)

@@ -1,7 +1,8 @@
 (ns more-speech.nostr.relays-spec
   (:require [clojure.spec.alpha :as s]
             [more-speech.mem :refer :all]
-            [more-speech.nostr.relays :refer :all :as relays]
+            [more-speech.nostr.relays :refer :all]
+            [more-speech.types.relay :as relay-type]
             [speclj.core :refer :all]))
 
 (describe "Relays"
@@ -10,31 +11,31 @@
       (set-mem :relays {})
       (load-relays nil)
       (should= {} (get-mem :relays))
-      (should (s/conform ::relays/relays (get-mem :relays))))
+      (should= nil (s/explain-data ::relay-type/relays (get-mem :relays))))
 
     (it "loads an empty file"
       (load-relays "")
       (should= (get-mem :relays) {})
-      (should (s/conform ::relays/relays (get-mem :relays))))
+      (should= nil  (s/explain-data ::relay-type/relays (get-mem :relays))))
 
     (it "loads a relay file with one relay"
-      (load-relays "{\"relay-url\" {:read true :write true}}")
+      (load-relays "{\"relay-url\" {:read :read-all :write true}}")
       (should= (get-mem :relays)
                {"relay-url"
-                {:read true :write true :connection nil :subscribed false}})
-      (should (s/conform ::relays/relays (get-mem :relays))))
+                {:read :read-all :write true :connection nil :subscribed false}})
+      (should= nil (s/explain-data ::relay-type/relays (get-mem :relays))))
 
     (it "loads a relay file with more than one relay"
-      (load-relays (str "{\"relay-url-1\" {:read true :write true}\n"
-                        "\"relay-url-2\" {:read false :write false}}")
+      (load-relays (str "{\"relay-url-1\" {:read :read-all :write true}\n"
+                        "\"relay-url-2\" {:read :read-none :write false}}")
                    )
 
       (should= {"relay-url-1"
-                {:read true :write true :connection nil :subscribed false}
+                {:read :read-all :write true :connection nil :subscribed false}
                 "relay-url-2"
-                {:read false :write false :connection nil :subscribed false}}
+                {:read :read-none :write false :connection nil :subscribed false}}
                (get-mem :relays))
-      (should (s/conform ::relays/relays (get-mem :relays)))))
+      (should= nil (s/explain-data ::relay-type/relays (get-mem :relays)))))
   )
 
 (describe "relays-for-writing"
