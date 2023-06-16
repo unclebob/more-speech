@@ -5,7 +5,6 @@
     [more-speech.config :as config]
     [more-speech.logger.default :refer [log-pr]]
     [more-speech.mem :refer :all]
-    [more-speech.mem :refer :all]
     [more-speech.nostr.contact-list :as contact-list]
     [more-speech.nostr.event-dispatcher :as handlers]
     [more-speech.nostr.events :as events]
@@ -23,14 +22,15 @@
     (.format (SimpleDateFormat. "MM/dd/yyyy kk:mm:ss z") date)))
 
 (defn send-request [[_type id _filters :as request]]
-  (doseq [url (keys @relays)]
-    (when (not= :read-none (get-in @relays [url :read]))
-      (let [relay (:connection (get @relays url))]
-        (when (some? relay)
-          (set-mem [:active-subscriptions url id] {:eose :close})
-          (relay/send relay request)
-          (future (do (Thread/sleep 2000)
-                      (relay/send relay ["CLOSE" id]))))))))
+  (let [relays (get-mem :relays)]
+    (doseq [url (keys relays)]
+      (when (not= :read-none (get-in relays [url :read]))
+        (let [relay (:connection (get relays url))]
+          (when (some? relay)
+            (set-mem [:active-subscriptions url id] {:eose :close})
+            (relay/send relay request)
+            (future (do (Thread/sleep 2000)
+                        (relay/send relay ["CLOSE" id])))))))))
 
 (defn- make-request-id []
   (let [r (rand-int 1000000)]
@@ -66,7 +66,8 @@
   )
 
 (defn request-batch [url id back-to filter]
-  (let [relay (get-in @relays [url :connection])
+  (let [relays (get-mem :relays)
+        relay (get-in relays [url :connection])
         since (- (util/get-now) config/batch-time)
         until (util/get-now)
         query (assoc filter "since" since
@@ -104,7 +105,8 @@
     (when (get-mem [:active-subscriptions url id :batch-closed])
       (throw (Exception. "Duplicate EOSE in batch.")))
 
-    (let [relay (get-in @relays [url :connection])
+    (let [relays (get-mem :relays)
+          relay (get-in relays [url :connection])
           {:keys [min-time event-counter back-to until
                   last-batch-min-time filter since
                   ]} (get-mem [:active-subscriptions url id])
@@ -201,7 +203,7 @@
 
 (defn close-relay [relay]
   (relay/close relay)
-  (swap! relays assoc-in [(::ws-relay/url relay) :connection] nil))
+  (set-mem [:relays (::ws-relay/url relay) :connection] nil))
 
 (defn add-event-time [[earliest latest] time]
   (let [earliest (if (nil? earliest) time (min earliest time))
@@ -247,8 +249,8 @@
     (send-off events/event-agent handlers/handle-event message url)))
 
 (defn subscribe-to-relay [url since now]
-  (let [relay (get-in @relays [url :connection])
-        read-type (get-in @relays [url :read])]
+  (let [relay (get-mem [:relays url :connection])
+        read-type (get-mem [:relays url :read])]
     (when (and (or (not= :false read-type)
                    (not= :no-read read-type))
                (some? relay))
@@ -258,12 +260,12 @@
         :read-trusted (subscribe-trusted relay since now)
         :read-web-of-trust (subscribe-web-of-trust relay since now)
         nil)
-      (swap! relays assoc-in [url :subscribed] true))))
+      (set-mem [:relays url :subscribed] true))))
 
 (defn subscribe-to-relays [subscription-time now]
   (let [date (- subscription-time 3600)]
     (log-pr 2 'subscription-date date (format-time date))
-    (doseq [url (keys @relays)]
+    (doseq [url (keys (get-mem :relays))]
       (subscribe-to-relay url date now))))
 
 (defn get-relay-info [url]
@@ -276,7 +278,7 @@
 
 (defn connect-to-relay [relay]
   (let [url (::ws-relay/url relay)
-        relay-config (get @relays url)
+        relay-config (get-mem [:relays url])
         read-type (:read relay-config)
         readable? (or (= read-type true)
                       (= read-type :read-all)
@@ -288,8 +290,8 @@
                      (relay/open relay)
                      nil)]
     (when (some? open-relay)
-      (swap! relays assoc-in [url :connection] open-relay)
-      (swap! relays assoc-in [url :relay-info] (get-relay-info url)))))
+      (set-mem [:relays url :connection] open-relay)
+      (set-mem [:relays url :relay-info] (get-relay-info url)))))
 
 (defn increment-relay-retry
   "used in a swap!, increments retries counter unless the last retry was over an hour ago
@@ -307,7 +309,7 @@
 
 (defn handle-close [relay]
   (let [url (::ws-relay/url relay)]
-    (swap! relays assoc-in [url :connection] nil)
+    (set-mem [:relays url :connection] nil)
     (log-pr 2 url 'is-closed)))
 
 (defn make-relay [url]
@@ -321,19 +323,20 @@
 
 (defn retry-relay [url since]
   (let [now (util/get-now)
-        retrying? (get-in @relays [url :retrying])]
+        retrying? (get-mem [:relays url :retrying])]
     (when (not retrying?)
       (log-pr 2 'relay-closed url)
-      (swap! relays assoc-in [url :retrying] true)
-      (swap! relays assoc-in [url :connection] nil)
+      (set-mem [:relays url :retrying] true)
+      (set-mem [:relays url :connection] nil)
       (future
-        (let [retries (get-in @relays [url :retries] 0)
+        (let [relays (get-mem :relays)
+              retries (get-in relays [url :retries] 0)
               seconds-to-wait (min 300 (* retries 30))]
           (log-pr 2 'retries retries url)
           (log-pr 2 'waiting seconds-to-wait 'seconds url)
-          (swap! relays increment-relay-retry url)
+          (update-mem :relays increment-relay-retry url)
           (Thread/sleep (* 1000 seconds-to-wait))
-          (swap! relays assoc-in [url :retrying] false)
+          (set-mem [:relays url :retrying] false)
           (reconnect-to-relay url since now))))))
 
 (defn is-dead? [url]
@@ -344,8 +347,9 @@
     (> dead-time 120)))
 
 (defn check-open [url]
-  (let [relay (get-in @relays [url :connection])]
-    (when-not (get-in @relays [url :retrying])
+  (let [relays (get-mem :relays)
+        relay (get-in relays [url :connection])]
+    (when-not (get-in relays [url :retrying])
       (when (is-dead? url)
         (log-pr 2 'relay-check-open-deadman-timeout url)
         (when (some? relay)
@@ -353,7 +357,7 @@
         (future (retry-relay url (get-mem [:deadman url])))))))
 
 (defn is-active-url? [url]
-  (let [relay-descriptor (get @relays url)
+  (let [relay-descriptor (get-mem [:relays url])
         read-state (:read relay-descriptor)
         write-state (:write relay-descriptor)
         is-reading? (or (= :read-all read-state)
@@ -363,12 +367,12 @@
     (or is-reading? is-writing?)))
 
 (defn check-all-active-relays []
-  (doseq [url (keys @relays)]
+  (doseq [url (keys (get-mem :relays))]
     (when (is-active-url? url)
       (check-open url))))
 
 (defn connect-to-relays []
-  (let [futures (for [url (keys @relays)]
+  (let [futures (for [url (keys (get-mem :relays))]
                   (let [relay (make-relay url)]
                     (future (connect-to-relay relay))))]
     (doseq [f futures] (deref f)))
@@ -376,33 +380,35 @@
 
 (defn request-contact-lists-from-relays []
   (log-pr 2 'requesting-contact-lists)
-  (doseq [url (keys @relays)]
-    (let [relay (get-in @relays [url :connection])
-          read-type (get-in @relays [url :read])]
-      (when (= :read-all read-type)
-        (request-contact-lists relay)))))
+  (let [relays (get-mem :relays)]
+    (doseq [url (keys relays)]
+      (let [relay (get-in relays [url :connection])
+            read-type (get-in relays [url :read])]
+        (when (= :read-all read-type)
+          (request-contact-lists relay))))))
 
 (defn request-metadata-from-relays [since]
   (log-pr 2 'requesting-metadata)
-  (doseq [url (keys @relays)]
-    (let [relay (get-in @relays [url :connection])
-          read? (get-in @relays [url :read])]
-      (when (and read? (some? relay))
-        (request-metadata relay since)))))
+  (let [relays (get-mem :relays)]
+    (doseq [url (keys relays)]
+      (let [relay (get-in relays [url :connection])
+            read? (get-in relays [url :read])]
+        (when (and read? (some? relay))
+          (request-metadata relay since))))))
 
 (defn close-all-relays []
-  (doseq [url (keys @relays)]
-    (let [relay (get-in @relays [url :connection])]
-      (when (some? relay)
-        (relay/close relay)))))
+  (let [relays (get-mem :relays)]
+    (doseq [url (keys relays)]
+      (let [relay (get-in relays [url :connection])]
+        (when (some? relay)
+          (relay/close relay))))))
 
 (defn reconnect-all-relays []
   (let [now (- (util/get-now) 120)]
     (close-all-relays)
     (Thread/sleep 1000)
-    (doseq [url (keys @relays)]
+    (doseq [url (keys (get-mem :relays))]
       (reconnect-to-relay url now now))))
-
 
 (defn initialize []
   (let [timer (Timer. "Dead socket timer")

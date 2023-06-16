@@ -218,7 +218,8 @@
 
 (defn compose-and-send-metadata-and-relay-recommendations []
   (send-event (compose-metadata-event))
-  (let [server-urls (filter #(:write (get @relays %)) (keys @relays))
+  (let [relays (get-mem :relays)
+        server-urls (filter #(:write (get relays %)) (keys relays))
         server-urls (map remove-arguments server-urls)]
     (log-pr 2 'server-urls server-urls)
     (future

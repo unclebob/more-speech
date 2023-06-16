@@ -3,7 +3,6 @@
             [more-speech.config :as config]
             [more-speech.logger.default :refer [log log-pr]]
             [more-speech.mem :refer :all]
-            [more-speech.mem :refer :all]
             [more-speech.nostr.event-composers :as composers]
             [more-speech.nostr.protocol :as protocol]
             [more-speech.nostr.util :as util]
@@ -11,9 +10,10 @@
             [more-speech.user-configuration :as user-configuration]))
 
 (defn send-event-to-relays [msg]
-  (let [urls (keys @relays)
-        send-urls (filter #(:write (get @relays %)) urls)
-        writeable-relays (map #(get-in @relays [% :connection]) send-urls)
+  (let [relays (get-mem :relays)
+        urls (keys relays)
+        send-urls (filter #(:write (get relays %)) urls)
+        writeable-relays (map #(get-in relays [% :connection]) send-urls)
         writeable-relays (filter some? writeable-relays)]
     (doseq [relay writeable-relays] (relay/send relay msg))))
 

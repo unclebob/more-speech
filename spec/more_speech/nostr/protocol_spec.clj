@@ -44,7 +44,7 @@
 
   (context "sending subscriptions"
     (with relay {::ws-relay/url "url" :connection :relay})
-    (before (reset! mem/relays {"url" @relay}))
+    (before (mem/set-mem [:relays "url"] @relay))
     (before (mem/set-mem :websocket-backlog 0))
 
     (it "sends subscriptions for authors"
@@ -111,7 +111,7 @@
     )
 
   (context "request batching"
-    (before (reset! mem/relays {"url" {:connection :relay}}))
+    (before (mem/set-mem [:relays "url" :connection] :relay))
     (before (mem/set-mem :websocket-backlog 0))
 
     (it "counts events"

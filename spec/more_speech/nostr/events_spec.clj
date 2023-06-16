@@ -124,7 +124,7 @@
 (describe "relay recommendation event kind 2"
   (with now (int (/ (System/currentTimeMillis) 1000)))
   (it "adds a relay recommendation"
-    (reset! relays {})
+    (set-mem :relays {})
     (let [event {:id 1
                  :pubkey 1
                  :created-at @now
@@ -133,7 +133,7 @@
                  :content "wss://relay-url"
                  :sig 0xdddddd}]
       (process-server-recommendation event)
-      (should= {"wss://relay-url" {:read :read-none, :write false}} @relays))))
+      (should= {"wss://relay-url" {:read :read-none, :write false}} (get-mem :relays)))))
 
 (describe "get references"
   (it "given no tags, finds no references"

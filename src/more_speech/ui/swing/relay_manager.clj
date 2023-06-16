@@ -23,28 +23,28 @@
 (declare close-relay-manager read-click write-click key-pressed-in-name mouse-pressed-in-name)
 
 (defn reconnect-to-relay [url]
-  (let [relay (get-in @relays [url :connection])
+  (let [relay (get-mem [:relays url :connection])
         relay (if (some? relay) relay (protocol/make-relay url))
         now (util/get-now)]
-    (swap! relays assoc-in [url :retries] 0)
+    (set-mem [:relays url :retries] 0)
     (protocol/unsubscribe relay)
     (protocol/close-relay relay)
     (protocol/reconnect-to-relay url now now)))
 
 (defn set-relay-read [label url read-type _e]
-  (swap! relays assoc-in [url :read] read-type)
+  (set-mem [:relays url :read] read-type)
   (data-storage/write-relays)
   (config! label :text (str read-type))
   (reconnect-to-relay url))
 
 (defn set-relay-write [label url write-type _e]
-  (swap! relays assoc-in [url :write] write-type)
+  (set-mem [:relays url :write] write-type)
   (data-storage/write-relays)
   (config! label :text (str write-type))
   (reconnect-to-relay url))
 
 (defn is-connected? [url]
-  (some? (get-in @relays [url :connection])))
+  (some? (get-mem [:relays url :connection])))
 
 (defn relay-id
   "converts a url to a string suitable for a select id"
@@ -65,7 +65,7 @@
        "<body>" body "</body>"))
 
 (defn show-relay-info [url _e]
-  (when-let [relay-info (get-in @relays [url :relay-info])]
+  (when-let [relay-info (get-mem [:relays url :relay-info])]
     (let [html-doc (make-html-document
                      config/editor-pane-stylesheet
                      (str "<h2> Name:</h2>" (get relay-info "name")
@@ -151,7 +151,7 @@
 
 (defn make-relay-line-item
   [url]
-  (let [relay (get @relays url)
+  (let [relay (get-mem [:relays url])
         relay-info (:relay-info relay)
         paid? (get-in relay-info ["limitation" "payment_required"])
         paid-mark (if paid? "$" " ")]
@@ -207,15 +207,15 @@
             (recur (rest relay-line-items) (conj pruned-line-items line-item))))))))
 
 (defn delete-url [url]
-  (swap! relays dissoc url)
+  (update-mem :relays dissoc url)
   (replace-line-item-in-manager-frame nil url))
 
 (defn commit-valid-url [new-url old-url]
   (if (some? old-url)
-    (swap! relays assoc new-url (get @relays old-url))
-    (swap! relays assoc new-url {:read :read-none :write false}))
+    (set-mem [:relays new-url] (get (get-mem :relays) old-url))
+    (set-mem [:relays new-url] {:read :read-none :write false}))
   (when (some? old-url)
-    (swap! relays dissoc old-url))
+    (update-mem :relays dissoc old-url))
   (replace-line-item-in-manager-frame new-url old-url))
 
 (defn revert-field [field old-url]
@@ -236,7 +236,7 @@
       (commit-valid-url new-url old-url))))
 
 (defn show-relay-status [relay-panel]
-  (let [urls (keys @relays)
+  (let [urls (keys (get-mem :relays))
         active-urls (sort (filter protocol/is-active-url? urls))]
     (doseq [url active-urls]
       (let [event-counter-selector (keyword (str "#events-" (relay-id url)))
@@ -245,19 +245,16 @@
             notice-label (select relay-panel [notice-label-selector])
             connection-label-selector (keyword (str "#connection-" (relay-id url)))
             connection-label (select relay-panel [connection-label-selector])
-            relay (get @relays url)
+            relay (get-mem [:relays url])
             relay-info (:relay-info relay)
             paid? (get-in relay-info ["limitation" "payment_required"])
-            paid-mark (if paid? "$" " ")
-            ]
+            paid-mark (if paid? "$" " ")]
         (config! event-label
                  :text (str (get-mem [:events-by-relay url])))
         (config! notice-label
                  :text (get-mem [:relay-notice url]))
         (config! connection-label
-                 :text (str paid-mark (if (is-connected? url) "✓" "X")))
-        ))
-    ))
+                 :text (str paid-mark (if (is-connected? url) "✓" "X")))))))
 
 (defn scroll-to-top [scrollable-panel]
   (invoke-later (.setViewPosition (.getViewport scrollable-panel) (Point. 0 0))))
@@ -265,7 +262,7 @@
 (defn show-relay-manager [_e]
   (when-not (get-mem :relay-manager-frame)
     (let [relay-frame (frame :title "Relays" :size [manager-width :by manager-height])
-          all-relay-urls (set (keys @relays))
+          all-relay-urls (set (keys (get-mem :relays)))
           active-urls (sort (filter protocol/is-active-url? all-relay-urls))
           inactive-urls (sort (remove protocol/is-active-url? all-relay-urls))
           connected-line-items (map make-relay-line-item active-urls)

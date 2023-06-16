@@ -6,7 +6,7 @@
               [relay :as relay]
               [websocket-relay :as ws-relay])
             [more-speech.logger.default :refer [log-pr]]
-            [more-speech.mem :refer [relays]]))
+            [more-speech.mem :refer :all]))
 
 (defn- connection? [c]
   (= (::relay/type c) ::ws-relay/websocket))
@@ -35,36 +35,38 @@
                         {}
                         (read-string relay-text))
         loaded-relays (set-relay-defaults loaded-relays)]
-    (reset! relays loaded-relays)))
+    (set-mem :relays loaded-relays)))
 
 (defn load-relays-from-file [file-name]
   (load-relays (slurp file-name)))
 
 (defn relays-for-reading []
-  (loop [urls (keys @relays)
-         relays-to-read []]
-    (if (empty? urls)
-      relays-to-read
-      (let [url (first urls)
-            relay (get @relays url)
-            read (:read relay)
-            read (condp = read false :read-none true :read-all read)]
-        (if (not= :read-none read)
-          (recur (rest urls) (conj relays-to-read url))
-          (recur (rest urls) relays-to-read))))))
+  (let [relays (get-mem :relays)]
+    (loop [urls (keys relays)
+           relays-to-read []]
+      (if (empty? urls)
+        relays-to-read
+        (let [url (first urls)
+              relay (get relays url)
+              read (:read relay)
+              read (condp = read false :read-none true :read-all read)]
+          (if (not= :read-none read)
+            (recur (rest urls) (conj relays-to-read url))
+            (recur (rest urls) relays-to-read)))))))
 
 (defn relays-for-writing []
-  (loop [urls (keys @relays)
-         relays-to-write {}]
-    (if (empty? urls)
-      relays-to-write
-      (let [url (first urls)
-            relay (get @relays url)
-            read (:read relay)
-            read (condp = read false :read-none true :read-all read)
-            write (:write relay)]
-        (recur (rest urls)
-               (assoc relays-to-write url {:read read :write write}))))))
+  (let [relays (get-mem :relays)]
+    (loop [urls (keys relays)
+           relays-to-write {}]
+      (if (empty? urls)
+        relays-to-write
+        (let [url (first urls)
+              relay (get relays url)
+              read (:read relay)
+              read (condp = read false :read-none true :read-all read)
+              write (:write relay)]
+          (recur (rest urls)
+                 (assoc relays-to-write url {:read read :write write})))))))
 
 (defn validate-relay-url [url]
   (if (empty? url)
@@ -83,9 +85,9 @@
                (empty? checked-url))
       (log-pr 2 'invalid-relay url))
     (when (and (not (empty? checked-url))
-               (not (contains? @relays checked-url)))
+               (not (contains? (get-mem :relays) checked-url)))
       (log-pr 2 'adding-relay checked-url)
-      (swap! relays assoc checked-url {:read :read-none :write false}))))
+      (set-mem [:relays checked-url] {:read :read-none :write false}))))
 
 (defn add-recommended-relays-in-tags [event]
   (loop [tags (:tags event)]

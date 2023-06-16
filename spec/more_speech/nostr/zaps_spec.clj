@@ -109,9 +109,9 @@
                 _ (set-mem :pubkey my-pubkey)
                 _ (set-mem [:keys :private-key] (util/hexify my-privkey))
                 _ (set-mem [:keys :public-key] (util/hexify my-pubkey))
-                _ (reset! relays {"relay-r1" {:read :read-all}
-                                  "relay-nr" {:read :read-none}
-                                  "relay-r2" {:read :read-all}})
+                _ (set-mem :relays {"relay-r1" {:read :read-all}
+                                    "relay-nr" {:read :read-none}
+                                    "relay-r2" {:read :read-all}})
                 body (zaps/make-zap-request
                        wallet-response event amount comment lnurl)
                 {:keys [kind content tags pubkey created_at]} body

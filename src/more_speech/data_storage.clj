@@ -134,7 +134,7 @@
     (set-mem :incoming-events 0)
 
     (if (config/is-test-run?)
-      (reset! relays config/test-relays)
+      (set-mem :relays config/test-relays)
       (relays/load-relays-from-file @config/relays-filename))))
 
 (defn load-events [old-events handler]

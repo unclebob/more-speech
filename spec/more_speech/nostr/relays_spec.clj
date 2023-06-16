@@ -7,21 +7,22 @@
 (describe "Relays"
   (context "loads relays from the \"relays\" file and sets defaults."
     (it "loads a non-existent file"
-      (reset! relays {})
+      (set-mem :relays {})
       (load-relays nil)
-      (should= {} @relays)
-      (should (s/conform ::relays/relays @relays)))
+      (should= {} (get-mem :relays))
+      (should (s/conform ::relays/relays (get-mem :relays))))
 
     (it "loads an empty file"
       (load-relays "")
-      (should= @relays {})
-      (should (s/conform ::relays/relays @relays)))
+      (should= (get-mem :relays) {})
+      (should (s/conform ::relays/relays (get-mem :relays))))
 
     (it "loads a relay file with one relay"
       (load-relays "{\"relay-url\" {:read true :write true}}")
-      (should= @relays {"relay-url"
-                        {:read true :write true :connection nil :subscribed false}})
-      (should (s/conform ::relays/relays @relays)))
+      (should= (get-mem :relays)
+               {"relay-url"
+                {:read true :write true :connection nil :subscribed false}})
+      (should (s/conform ::relays/relays (get-mem :relays))))
 
     (it "loads a relay file with more than one relay"
       (load-relays (str "{\"relay-url-1\" {:read true :write true}\n"
@@ -32,15 +33,15 @@
                 {:read true :write true :connection nil :subscribed false}
                 "relay-url-2"
                 {:read false :write false :connection nil :subscribed false}}
-               @relays)
-      (should (s/conform ::relays/relays @relays))))
+               (get-mem :relays))
+      (should (s/conform ::relays/relays (get-mem :relays)))))
   )
 
 (describe "relays-for-writing"
   (it "trims off the dynamic components and translates read from boolean"
-    (reset! relays {"url1" {:read true :write true :junk "junk"}
-                    "url2" {:read false :write false :junk "junk2"}
-                    "url3" {:read :read-trusted :write false}})
+    (set-mem :relays {"url1" {:read true :write true :junk "junk"}
+                      "url2" {:read false :write false :junk "junk2"}
+                      "url3" {:read :read-trusted :write false}})
     (should= {"url1" {:read :read-all :write true}
               "url2" {:read :read-none :write false}
               "url3" {:read :read-trusted :write false}}
