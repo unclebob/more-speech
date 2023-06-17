@@ -19,12 +19,12 @@
                                   ::picture
                                   ::public-key
                                   ::private-key]
-                         :req-opt [::lud16
-                                   ::lud06
-                                   ::banner
-                                   ::display-name
-                                   ::website
-                                   ::nip05
-                                   ::created-at
-                                   ::wallet-connect
-                                   ::password]))
+                         :opt-un [::lud16
+                                  ::lud06
+                                  ::banner
+                                  ::display-name
+                                  ::website
+                                  ::nip05
+                                  ::created-at
+                                  ::wallet-connect
+                                  ::password]))

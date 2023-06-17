@@ -1,7 +1,8 @@
 (ns more-speech.mem
   (:require [clojure.spec.alpha :as s]
             [more-speech.types.relay :as relay-type]
-            [more-speech.types.profile :as profile-type]))
+            [more-speech.types.profile :as profile-type]
+            [more-speech.types.active-subscription :as subscription-type]))
 
 ;(s/def ::id number?)
 ;(s/def ::created-at number?)
@@ -43,12 +44,15 @@
 
 (s/def ::pubkey number?) ;The public key of the user
 (s/def ::keys ::profile-type/profile)
+(s/def ::request-hours-ago int?) ;command line argument
+(s/def ::websocket-backlog int?) ;number of unprocessed events
+
 (s/def ::mem (s/keys :req-un [::relay-type/relays
                               ::pubkey
                               ::keys]
                      :opt-un [::request-hours-ago
                               ::websocket-backlog
-                              ::active-subscriptions
+                              ::subscription-type/active-subscriptions
                               ::tabs-list
                               ::tab-tree-map
                               ::frame
