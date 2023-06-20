@@ -164,14 +164,17 @@
            :menu-item (format "%-20.20s %s %10.10s|%-30.30s" name short-time subject content)
 
            :tree-header
-           (let [read-mark (if (:read? args) " " "<span style=\"font-size:5px\">🔵</span>&nbsp&nbsp")
+           (let [name (format-user-id pubkey 30 10)
+                 read-mark (if (:read? args) " " "<span style=\"font-size:5px\">🔵</span>&nbsp&nbsp")
                  trimmed-content (-> content
                                      (string/replace \newline \space)
-                                     (wrap-and-trim 100 2))
+                                     (wrap-and-trim 100 2)
+                                     string/trim
+                                     (string/replace "\n" "<br>"))
                  escaped-name (escape-html name)
                  escaped-dm-mark (escape-html dm-mark)
                  reaction-mark (if (some? (:reactions event)) (str "🤙" reaction-mark) "")]
-             (format "<html>%s<span style=\"font-size:11px\"><b>%-20.20s %s %s %s%s <i>%s</i></b></span><br>%s<hr></html>"
+             (format "<html>%s<span style=\"font-size:11px\"><b>%-30.30s %s %s %s%s <i>%s</i></b></span><br>%s<br>------------------------------------------------------------</html>"
                      read-mark escaped-name reaction-mark short-time
                      zap-mark escaped-dm-mark subject
                      trimmed-content))

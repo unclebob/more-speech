@@ -39,7 +39,7 @@
     (let [point (.lastIndexOf s " " n)
           point (if (< point 1) n point)]
       (str (subs s 0 point)
-           "<br>"
+           "\n"
            (wrap-and-trim (subs s point) n (dec l))))))
 
 (defn escape-html [s] (string/escape s config/html-escapes))
