@@ -65,8 +65,6 @@
                               ::selected-event
                               ::selected-tab
                               ::node-map
-                              ::days-changed
-                              ::earliest-loaded-time
                               ::user-configuration
                               ::orphaned-replies
                               ::backing-up

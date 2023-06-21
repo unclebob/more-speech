@@ -87,12 +87,10 @@
       (update-mem :orphaned-replies dissoc id))))
 
 (defn add-event [db event urls]
-  (let [id (:id event)
-        time (:created-at event)]
+  (let [id (:id event)]
     (when-not (gateway/event-exists? db id)
       (gateway/add-event db event)
-      (add-cross-reference db event)
-      (set-mem :days-changed (conj (get-mem :days-changed) (quot time 86400))))
+      (add-cross-reference db event))
     (gateway/add-relays-to-event db id urls)))
 
 (defn process-text-event [db event url]

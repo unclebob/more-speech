@@ -155,6 +155,9 @@
             (log-pr 1 'EXCEPTION 'load-events e)))
         (recur (rest events) (inc event-count))))))
 
+;-------This daily partitioning and writing is used by the migrator
+;-------But does not need to be more than a stub nowadays.
+
 (defn partition-messages-by-day [message-map]
   (let [messages (sort-by :created-at (vals message-map))
         messages (partition-by #(quot (:created-at %) 86400) messages)
@@ -184,17 +187,6 @@
                  (clojure.pprint/pprint
                    (second day-partition)))))))))
 
-(defn write-changed-days []
-  (log-pr 2 'writing-events-for-changed-days)
-  (let [days-changed (get-mem :days-changed)
-        earliest-loaded-time (get-mem :earliest-loaded-time)
-        _ (log-pr 2 'earliest-loaded-time earliest-loaded-time)
-        first-day-loaded (quot earliest-loaded-time 86400)
-        days-to-write (set (filter #(>= % first-day-loaded) days-changed))
-        daily-partitions (partition-messages-by-day (get @in-memory/db :text-event-map))
-        changed-partitions (filter #(contains? days-to-write (first %)) daily-partitions)]
-    (write-messages-by-day changed-partitions)))
-
 (defn time-from-file-name [file-name]
   (if (nil? file-name)
     nil
@@ -205,14 +197,11 @@
         nil)))
   )
 
-(defn get-last-event-time [file-name]
-  (let [events (read-string (slurp (str @config/messages-directory "/" file-name)))
-        last-event (last events)
-        last-time (:created-at last-event)]
-    last-time))
 
 (defn is-message-file? [file-name]
   (re-matches #"\d+\-\d+\w+\d+" file-name))
+
+;---------
 
 (defn get-read-events []
   (let [db (get-db)
