@@ -4,7 +4,8 @@
             [more-speech.types.profile :as profile-type]
             [more-speech.types.active-subscription :as subscription-type]
             [more-speech.types.tab :as tab-type])
-  (:import (javax.swing JFrame)))
+  (:import (javax.swing JFrame)
+           (javax.swing.tree DefaultMutableTreeNode)))
 
 ;(s/def ::id number?)
 ;(s/def ::created-at number?)
@@ -37,16 +38,20 @@
 ;(s/def ::backing-up boolean?)
 ;
 ;
-;(s/def ::id number?)
+
 ;(s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))
 
+(s/def ::id number?)
 (s/def ::pubkey number?) ;The public key of the user
 (s/def ::keys ::profile-type/profile)
 (s/def ::request-hours-ago int?) ;command line argument
 (s/def ::websocket-backlog int?) ;number of unprocessed events
 (s/def ::frame #(instance? JFrame %)) ;The main frame
-(s/def ::selected-event number?) ;The id of the currently selected event
+(s/def ::selected-event ::id) ;The id of the currently selected event
 (s/def ::selected-tab int?) ;index of the selected tab within :tabs-list
+
+;map, by id, of all displayed nodes in the tabs.
+(s/def ::node-map (s/map-of ::id (s/coll-of #(instance? DefaultMutableTreeNode %))))
 
 (s/def ::mem (s/keys :req-un [::relay-type/relays
                               ::pubkey
