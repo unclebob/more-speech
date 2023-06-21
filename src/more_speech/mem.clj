@@ -1,8 +1,8 @@
 (ns more-speech.mem
   (:require [clojure.spec.alpha :as s]
-            [more-speech.types.relay :as relay-type]
-            [more-speech.types.profile :as profile-type]
             [more-speech.types.active-subscription :as subscription-type]
+            [more-speech.types.profile :as profile-type]
+            [more-speech.types.relay :as relay-type]
             [more-speech.types.tab :as tab-type])
   (:import (javax.swing JFrame)
            (javax.swing.tree DefaultMutableTreeNode)))
@@ -33,7 +33,6 @@
 ;(s/def ::private-key string?)
 ;(s/def ::keys (s/keys :req-un [::name ::about ::picture ::public-key ::private-key]))
 ;(s/def ::selected-event ::id)
-;(s/def ::event-history (s/coll-of (s/tuple number? ::id)))
 ;(s/def ::back-count number?)
 ;(s/def ::backing-up boolean?)
 ;
@@ -42,16 +41,24 @@
 ;(s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))
 
 (s/def ::id number?)
-(s/def ::pubkey number?) ;The public key of the user
+(s/def ::tab-index (s/and int? #(not (neg? %))))            ; non negative integer.
+(s/def ::pubkey number?)                                    ;The public key of the user
 (s/def ::keys ::profile-type/profile)
-(s/def ::request-hours-ago int?) ;command line argument
-(s/def ::websocket-backlog int?) ;number of unprocessed events
-(s/def ::frame #(instance? JFrame %)) ;The main frame
-(s/def ::selected-event ::id) ;The id of the currently selected event
-(s/def ::selected-tab int?) ;index of the selected tab within :tabs-list
+(s/def ::request-hours-ago int?)                            ;command line argument
+(s/def ::websocket-backlog int?)                            ;number of unprocessed events
+(s/def ::frame #(instance? JFrame %))                       ;The main frame
+(s/def ::selected-event ::id)                               ;The id of the currently selected event
+(s/def ::selected-tab ::tab-index)                          ;index of the selected tab within :tabs-list
 
 ;map, by id, of all displayed nodes in the tabs.
 (s/def ::node-map (s/map-of ::id (s/coll-of #(instance? DefaultMutableTreeNode %))))
+
+;map, by id -- so far unseen -- holding a collection of all known events that reference that id -- i.e. the orphans.
+(s/def ::orphaned-replies (s/map-of ::id (s/coll-of ::id)))
+
+;list, in order, of the last selected events.  Holds the tab index and the id
+(s/def ::event-history (s/coll-of (s/tuple ::tab-index ::id) :kind vector?))
+
 
 (s/def ::mem (s/keys :req-un [::relay-type/relays
                               ::pubkey
@@ -65,10 +72,9 @@
                               ::selected-event
                               ::selected-tab
                               ::node-map
-                              ::user-configuration
                               ::orphaned-replies
-                              ::backing-up
                               ::event-history
+
                               ::event-counter
                               ::back-count
                               ::send-chan
@@ -78,7 +84,10 @@
                               ::relay-manager-frame
                               ::tabs-window
                               ::user-window
-                              ::event-handler]))
+                              ::event-handler
+
+                              ::user-configuration
+                              ::backing-up]))
 
 (def memory (atom nil))
 
