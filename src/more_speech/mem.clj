@@ -3,7 +3,8 @@
             [more-speech.types.relay :as relay-type]
             [more-speech.types.profile :as profile-type]
             [more-speech.types.active-subscription :as subscription-type]
-            [more-speech.types.tab :as tab-type]))
+            [more-speech.types.tab :as tab-type])
+  (:import (javax.swing JFrame)))
 
 ;(s/def ::id number?)
 ;(s/def ::created-at number?)
@@ -43,6 +44,9 @@
 (s/def ::keys ::profile-type/profile)
 (s/def ::request-hours-ago int?) ;command line argument
 (s/def ::websocket-backlog int?) ;number of unprocessed events
+(s/def ::frame #(instance? JFrame %)) ;The main frame
+(s/def ::selected-event number?) ;The id of the currently selected event
+(s/def ::selected-tab int?) ;index of the selected tab within :tabs-list
 
 (s/def ::mem (s/keys :req-un [::relay-type/relays
                               ::pubkey
