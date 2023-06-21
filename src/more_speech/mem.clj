@@ -2,7 +2,8 @@
   (:require [clojure.spec.alpha :as s]
             [more-speech.types.relay :as relay-type]
             [more-speech.types.profile :as profile-type]
-            [more-speech.types.active-subscription :as subscription-type]))
+            [more-speech.types.active-subscription :as subscription-type]
+            [more-speech.types.tab :as tab-type]))
 
 ;(s/def ::id number?)
 ;(s/def ::created-at number?)
@@ -29,10 +30,6 @@
 ;(s/def ::public-key string?)
 ;(s/def ::private-key string?)
 ;(s/def ::keys (s/keys :req-un [::name ::about ::picture ::public-key ::private-key]))
-;(s/def ::selected (s/coll-of ::id))
-;(s/def ::blocked (s/coll-of ::id))
-;(s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
-;(s/def ::tabs-list (s/coll-of ::tab))
 ;(s/def ::selected-event ::id)
 ;(s/def ::event-history (s/coll-of (s/tuple number? ::id)))
 ;(s/def ::back-count number?)
@@ -53,8 +50,8 @@
                      :opt-un [::request-hours-ago
                               ::websocket-backlog
                               ::subscription-type/active-subscriptions
-                              ::tabs-list
-                              ::tab-tree-map
+                              ::tab-type/tabs-list
+                              ::tab-type/tab-tree-map
                               ::frame
                               ::selected-event
                               ::selected-tab
