@@ -50,6 +50,8 @@
 (s/def ::frame #(instance? JFrame %))                       ;The main frame
 (s/def ::selected-event ::id)                               ;The id of the currently selected event
 (s/def ::selected-tab ::tab-index)                          ;index of the selected tab within :tabs-list
+(s/def ::back-count int?)
+(s/def ::send-chan #(= clojure.core.async.impl.channels.ManyToManyChannel (type %)))
 
 ;map, by id, of all displayed nodes in the tabs.
 (s/def ::node-map (s/map-of ::id (s/coll-of #(instance? DefaultMutableTreeNode %))))
@@ -76,9 +78,9 @@
                               ::orphaned-replies
                               ::event-history
                               ::event-counter-type/event-counter
-
                               ::back-count
                               ::send-chan
+
                               ::article-window
                               ::article-panel
                               ::refresh-main-window
