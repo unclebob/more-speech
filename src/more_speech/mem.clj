@@ -3,7 +3,8 @@
             [more-speech.types.active-subscription :as subscription-type]
             [more-speech.types.profile :as profile-type]
             [more-speech.types.relay :as relay-type]
-            [more-speech.types.tab :as tab-type])
+            [more-speech.types.tab :as tab-type]
+            [more-speech.types.event-counter :as event-counter-type])
   (:import (javax.swing JFrame)
            (javax.swing.tree DefaultMutableTreeNode)))
 
@@ -74,8 +75,8 @@
                               ::node-map
                               ::orphaned-replies
                               ::event-history
+                              ::event-counter-type/event-counter
 
-                              ::event-counter
                               ::back-count
                               ::send-chan
                               ::article-window
