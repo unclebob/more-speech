@@ -7,7 +7,8 @@
             [more-speech.types.event-counter :as event-counter-type]
             [more-speech.types.user-configuration :as user-configuration-type]
             [more-speech.types.event :as event-type]
-            [more-speech.types.tabs-window :as tabs-window-type])
+            [more-speech.types.tabs-window :as tabs-window-type]
+            [more-speech.types.user-window :as user-window-type])
   (:import (javax.swing JFrame)
            (javax.swing.tree DefaultMutableTreeNode)))
 
@@ -86,8 +87,7 @@
                               ::event-handler
                               ::article-panel
                               ::tabs-window-type/tabs-window
-
-                              ::user-window
+                              ::user-window-type/user-window
 
                               ::backing-up]))
 
