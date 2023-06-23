@@ -63,6 +63,14 @@
 ;list, in order, of the last selected events.  Holds the tab index and the id
 (s/def ::event-history (s/coll-of (s/tuple ::tab-index ::id) :kind vector?))
 
+(s/def ::article-window-event-id ::id) ;id of article in the article window.
+(s/def ::refresh-main-window boolean?) ;when true, main window refreshes once.
+(s/def ::relay-manager-frame #(instance? JFrame %)) ;the frame if the relay manager is up.
+
+;The event handler decoupled through an interface.
+;should be #(instance? more-speech.nostr.event-dispatcher/event-handler %)
+;but that creates a cycle.
+(s/def ::event-handler some?)
 
 (s/def ::mem (s/keys :req-un [::relay-type/relays
                               ::pubkey
@@ -82,14 +90,14 @@
                               ::user-configuration-type/user-configuration
                               ::back-count
                               ::send-chan
-
-                              ::article-window
-                              ::article-panel
+                              ::article-window-event-id
                               ::refresh-main-window
                               ::relay-manager-frame
+                              ::event-handler
+
+                              ::article-panel
                               ::tabs-window
                               ::user-window
-                              ::event-handler
 
                               ::backing-up]))
 
