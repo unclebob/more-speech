@@ -6,7 +6,8 @@
             [more-speech.types.tab :as tab-type]
             [more-speech.types.event-counter :as event-counter-type]
             [more-speech.types.user-configuration :as user-configuration-type]
-            [more-speech.types.event :as event-type])
+            [more-speech.types.event :as event-type]
+            [more-speech.types.tabs-window :as tabs-window-type])
   (:import (javax.swing JFrame)
            (javax.swing.tree DefaultMutableTreeNode)))
 
@@ -84,8 +85,8 @@
                               ::relay-manager-frame
                               ::event-handler
                               ::article-panel
+                              ::tabs-window-type/tabs-window
 
-                              ::tabs-window
                               ::user-window
 
                               ::backing-up]))
