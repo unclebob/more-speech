@@ -5,27 +5,13 @@
             [more-speech.types.relay :as relay-type]
             [more-speech.types.tab :as tab-type]
             [more-speech.types.event-counter :as event-counter-type]
-            [more-speech.types.user-configuration :as user-configuration-type])
+            [more-speech.types.user-configuration :as user-configuration-type]
+            [more-speech.types.event :as event-type])
   (:import (javax.swing JFrame)
            (javax.swing.tree DefaultMutableTreeNode)))
 
-;(s/def ::id number?)
-;(s/def ::created-at number?)
-;(s/def ::content string?)
-;(s/def ::sig number?)
-;(s/def ::tag (s/tuple keyword? number?))
-;(s/def ::tags (s/coll-of ::tag))
-;(s/def ::references (s/coll-of number?))
-;(s/def ::relay-url string?)
-;(s/def ::relays (s/coll-of ::relay-url))
-;(s/def ::event (s/keys :req-un [::id
-;                                ::pubkey
-;                                ::created-at
-;                                ::content
-;                                ::sig
-;                                ::tags
-;                                ::references]
-;                       :opt-un [::relays]))
+
+
 ;
 ;(s/def ::text-event-map (s/map-of :id :event))
 ;
@@ -41,6 +27,7 @@
 ;
 
 ;(s/def ::orphaned-references (s/map-of ::id (s/coll-of ::id :kind set?)))
+
 
 (s/def ::id number?)
 (s/def ::tab-index (s/and int? #(not (neg? %))))            ; non negative integer.
@@ -72,6 +59,8 @@
 ;but that creates a cycle.
 (s/def ::event-handler some?)
 
+(s/def ::article-panel (s/keys :req-un [::event-type/event]))
+
 (s/def ::mem (s/keys :req-un [::relay-type/relays
                               ::pubkey
                               ::keys]
@@ -94,8 +83,8 @@
                               ::refresh-main-window
                               ::relay-manager-frame
                               ::event-handler
-
                               ::article-panel
+
                               ::tabs-window
                               ::user-window
 
