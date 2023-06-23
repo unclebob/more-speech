@@ -4,7 +4,8 @@
             [more-speech.types.profile :as profile-type]
             [more-speech.types.relay :as relay-type]
             [more-speech.types.tab :as tab-type]
-            [more-speech.types.event-counter :as event-counter-type])
+            [more-speech.types.event-counter :as event-counter-type]
+            [more-speech.types.user-configuration :as user-configuration-type])
   (:import (javax.swing JFrame)
            (javax.swing.tree DefaultMutableTreeNode)))
 
@@ -78,6 +79,7 @@
                               ::orphaned-replies
                               ::event-history
                               ::event-counter-type/event-counter
+                              ::user-configuration-type/user-configuration
                               ::back-count
                               ::send-chan
 
@@ -89,7 +91,6 @@
                               ::user-window
                               ::event-handler
 
-                              ::user-configuration
                               ::backing-up]))
 
 (def memory (atom nil))
