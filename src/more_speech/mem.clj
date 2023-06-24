@@ -40,7 +40,6 @@
 (s/def ::frame #(instance? JFrame %))                       ;The main frame
 (s/def ::selected-event ::id)                               ;The id of the currently selected event
 (s/def ::selected-tab ::tab-index)                          ;index of the selected tab within :tabs-list
-(s/def ::back-count int?)
 (s/def ::send-chan #(= clojure.core.async.impl.channels.ManyToManyChannel (type %)))
 
 ;map, by id, of all displayed nodes in the tabs.
@@ -48,9 +47,6 @@
 
 ;map, by id -- so far unseen -- holding a collection of all known events that reference that id -- i.e. the orphans.
 (s/def ::orphaned-replies (s/map-of ::id (s/coll-of ::id)))
-
-;list, in order, of the last selected events.  Holds the tab index and the id
-(s/def ::event-history (s/coll-of (s/tuple ::tab-index ::id) :kind vector?))
 
 (s/def ::article-window-event-id ::id) ;id of article in the article window.
 (s/def ::refresh-main-window boolean?) ;when true, main window refreshes once.
@@ -62,6 +58,15 @@
 (s/def ::event-handler some?)
 
 (s/def ::article-panel (s/keys :req-un [::event-type/event]))
+
+;list, in order, of the last selected events.  Holds the tab index and the id
+(s/def ::event-history (s/coll-of (s/tuple ::tab-index ::id) :kind vector?))
+
+;used for managing the back and forward buttons.
+;back-count is the number of steps backwards we are in the event-history.
+;backing-up is true if the last event selection was because of going back or forward.
+(s/def ::back-count int?)
+(s/def ::backing-up boolean?)
 
 (s/def ::mem (s/keys :req-un [::relay-type/relays
                               ::pubkey
@@ -79,7 +84,6 @@
                               ::event-history
                               ::event-counter-type/event-counter
                               ::user-configuration-type/user-configuration
-                              ::back-count
                               ::send-chan
                               ::article-window-event-id
                               ::refresh-main-window
@@ -88,7 +92,7 @@
                               ::article-panel
                               ::tabs-window-type/tabs-window
                               ::user-window-type/user-window
-
+                              ::back-count
                               ::backing-up]))
 
 (def memory (atom nil))
