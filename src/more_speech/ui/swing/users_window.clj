@@ -32,8 +32,7 @@
 (defn make-sorted-listbox-items [ids]
   (sort-by first
            (map #(vector (formatters/format-user-id % 70 40) %)
-                ids))
-  )
+                ids)))
 
 (defn render-listbox-item [widget item]
   (let [value (:value item)]

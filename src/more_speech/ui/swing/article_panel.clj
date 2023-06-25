@@ -333,11 +333,13 @@
       (text! replies-label "Replies▶"))
 
 
-    (let [avatar-label (select main-frame [:#avatar-id])]
-      (future (config! avatar-label
-                       :text (if (some? (:picture profile))
-                               (format "<html><img src=\"%s\" width=\"100\" height=\"100\"></html>" (:picture profile))
-                               "<html><img src=\"http://cleancoder.com/images/cleancodelogo.png\" width=\"100\" height=\"100\"></html>"))))
+    (let [avatar-label (select main-frame [:#avatar-id])
+          picture (:picture profile)]
+      (when new-id?
+        (config! avatar-label :text "<html><img src=\"https://www.drodd.com/images14/white15.jpg\" width=\"100\" height=\"100\"></html>"))
+      (when (some? picture)
+        (future (config! avatar-label
+                         :text (format "<html><img src=\"%s\" width=\"100\" height=\"100\"></html>" picture)))))
     (text! subject-label (formatters/get-subject (:tags event)))
     (text! relays-label (format "%d %s"
                                 (count (:relays event))
