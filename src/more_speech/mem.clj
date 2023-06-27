@@ -68,6 +68,10 @@
 (s/def ::back-count int?)
 (s/def ::backing-up boolean?)
 
+;keeps track of which relays a particular event was received from.
+;used for detecting duplicate events without a DB hit.
+(s/def ::processed-event-ids (s/map-of ::id (s/coll-of ::event-type/relay-url :kind set?)))
+
 (s/def ::mem (s/keys :req-un [::relay-type/relays
                               ::pubkey
                               ::keys]
@@ -93,7 +97,9 @@
                               ::tabs-window-type/tabs-window
                               ::user-window-type/user-window
                               ::back-count
-                              ::backing-up]))
+                              ::backing-up
+                              ::processed-event-ids
+                              ]))
 
 (def memory (atom nil))
 
