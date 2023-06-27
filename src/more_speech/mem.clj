@@ -8,7 +8,8 @@
             [more-speech.types.user-configuration :as user-configuration-type]
             [more-speech.types.event :as event-type]
             [more-speech.types.tabs-window :as tabs-window-type]
-            [more-speech.types.user-window :as user-window-type])
+            [more-speech.types.user-window :as user-window-type]
+            [more-speech.types.zaps :as zaps-type])
   (:import (javax.swing JFrame)
            (javax.swing.tree DefaultMutableTreeNode)))
 
@@ -41,6 +42,11 @@
 (s/def ::selected-event ::id)                               ;The id of the currently selected event
 (s/def ::selected-tab ::tab-index)                          ;index of the selected tab within :tabs-list
 (s/def ::send-chan #(= clojure.core.async.impl.channels.ManyToManyChannel (type %)))
+(s/def ::incoming-events int?) ;number of events processed since startup.
+
+;count of events received from a given relay.
+(s/def ::events-by-relay (s/map-of ::event-type/relay-url pos-int?))
+
 
 ;map, by id, of all displayed nodes in the tabs.
 (s/def ::node-map (s/map-of ::id (s/coll-of #(instance? DefaultMutableTreeNode %))))
@@ -99,6 +105,10 @@
                               ::back-count
                               ::backing-up
                               ::processed-event-ids
+                              ::incoming-events
+                              ::events-by-relay
+                              ::tab-type/tab-search
+                              ::zaps-type/pending-zaps
                               ]))
 
 (def memory (atom nil))

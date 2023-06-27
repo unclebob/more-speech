@@ -17,3 +17,10 @@
 (s/def ::tabs-list (s/coll-of ::tab))
 
 (s/def ::tab-tree-map (s/map-of string? #(instance? JTree %)))
+
+;The control structure for a search.  Contains the target regex,
+;the index of the result being displayed, and the list of event ids matched.
+(s/def ::search-results (s/tuple string? int? (s/coll-of ::id)))
+
+;The search target for a given tab.
+(s/def ::tab-search (s/map-of ::name ::search-results))

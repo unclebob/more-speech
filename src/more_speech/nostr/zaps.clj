@@ -346,7 +346,6 @@
       (when (= zappee-id (get-mem :pubkey))
         (when-not (= :off config/auto-thanks)
           (auto-thanks zapper-id)))
-
       (log-zap zapper-id zappee-id amount-str time content))
 
     (when (some? transaction)
