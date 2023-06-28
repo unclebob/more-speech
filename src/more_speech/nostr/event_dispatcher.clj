@@ -6,6 +6,7 @@
             [more-speech.mem :refer :all]
             [more-speech.nostr.contact-list :as contact-list]
             [more-speech.nostr.elliptic-signature :as ecc]
+            [more-speech.nostr.event-composers :as event-composers]
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :as relays]
             [more-speech.nostr.util :refer :all :as util]
@@ -93,9 +94,31 @@
       (add-cross-reference db event))
     (gateway/add-relays-to-event db id urls)))
 
+(defn is-auto-dm? [event]
+  (let [ptags (events/get-tag event :p)
+        ptag (first ptags)
+        hex-id (first ptag)
+        recipient (unhexify hex-id)]
+    (and (= 4 (:kind event))
+         (= recipient (:pubkey event) (get-mem :pubkey)))))
+
+(defn process-auto-dm [event]
+  (when (is-auto-dm? event)
+    (when-let [match (re-find #"zap (\d+)->([a-zA-Z0-9-]+)(.*)" (:content event))]
+      (when (and (some? (get-mem [:keys :wallet-connect]))
+                 (> 60 (- (util/get-now) (:created-at event))))
+        (try
+          (let [[_ amount-str name comment] match
+                amount (Integer/parseInt amount-str)
+                recipient-id (event-composers/find-user-id name)]
+            (zaps/auto-zap amount recipient-id (:id event) (apply str (take 20 comment))))
+          (catch Exception e
+            (log-pr 2 'process-auto-dm (:content event) 'failed (.getMessage e))))))))
+
 (defn process-text-event [db event url]
   (add-event db event [url])
-  (relays/add-recommended-relays-in-tags event))
+  (relays/add-recommended-relays-in-tags event)
+  (process-auto-dm event))
 
 (defn get-last-x-tag [x tags]
   (let [x-tags (filter #(= x (first %)) tags)]

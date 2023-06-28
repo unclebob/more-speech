@@ -44,8 +44,8 @@
     (catch Exception e
       (log-pr 1 'decode-lnurl (.getMessage e) lnurl))))
 
-(defn get-lnurl-from-tag [event]
-  (let [zap-tags (events/get-tag event :zap)
+(defn get-lnurl-from-tag [zap-descriptor]
+  (let [zap-tags (events/get-tag zap-descriptor :zap)
         [zap-addr lud-type] (first zap-tags)]
     (cond
       (empty? zap-tags)
@@ -60,9 +60,8 @@
       :else
       zap-addr)))
 
-(defn get-lnurl-from-profile [event]
-  (let [author-id (:pubkey event)
-        profile (gateway/get-profile (get-db) author-id)
+(defn get-lnurl-from-profile [author-id]
+  (let [profile (gateway/get-profile (get-db) author-id)
         lud16 (:lud16 profile)
         lud06 (:lud06 profile)]
     (cond
@@ -76,13 +75,13 @@
       (throw (Exception. "no zap tag or profile"))
       )))
 
-(defn get-lnurl [event]
-  (let [zap-address (get-lnurl-from-tag event)]
+(defn get-lnurl [zap-descriptor]
+  (let [zap-address (get-lnurl-from-tag zap-descriptor)]
     (if (some? zap-address)
       zap-address
-      (get-lnurl-from-profile event))))
+      (get-lnurl-from-profile (:pubkey zap-descriptor)))))
 
-(defn make-zap-request [wallet-response event amount comment lnurl]
+(defn make-zap-request [wallet-response recipient event-id amount comment lnurl]
   (let [{:strs [maxSendable minSendable
                 commentAllowed allowsNostr]} wallet-response
         _ (when-not allowsNostr
@@ -101,14 +100,14 @@
                      (some? commentAllowed)
                      (> (count comment) commentAllowed))
             (throw (Exception. (str "This wallet restricts comments to " commentAllowed " characters"))))
-        recipient (:pubkey event)
         body {:kind 9734
               :content comment
               :tags [(concat ["relays"] (relays/relays-for-reading))
                      ["amount" (str amount)]
                      ["lnurl" (bech32/encode-str "lnurl" lnurl)]
                      ["p" (util/hexify recipient)]
-                     ["e" (util/hexify (:id event))]]}
+                     ["e" (util/hexify event-id)]
+                     ]}
         [_ request] (composers/body->event body)]
     request))
 
@@ -131,21 +130,21 @@
                 :cancel-fn (fn [_p] nil))]
     (show! (pack! zap-dialog))))
 
-(defn get-zap-invoice [event]
+(defn get-zap-invoice [zap-descriptor]
   (try
-    (let [lnurl (get-lnurl event)
+    (let [lnurl (get-lnurl zap-descriptor)
+          _ ('get-zap-invoice 'lnurl lnurl)
           ln-response (client/get lnurl)
           wallet-response (json/read-str (:body ln-response))
           {:strs [callback status reason]} wallet-response]
       (when (and (some? status) (not= status "OK"))
         (throw (Exception. (str "Wallet error: " status reason))))
-      (let [[amount comment :as answer] (ask-for-zap)
-            _ (when (nil? answer) (throw (Exception. "cancel")))
-            zap-request (make-zap-request wallet-response event amount comment lnurl)
+      (let [{:keys [zap-amount zap-comment id pubkey]} zap-descriptor
+            zap-request (make-zap-request wallet-response pubkey id zap-amount zap-comment lnurl)
             json-request (events/to-json zap-request)
             encoded-request (URLEncoder/encode ^String json-request "UTF-8")
             invoice-request (str callback
-                                 "?amount=" amount
+                                 "?amount=" zap-amount
                                  "&nostr=" encoded-request
                                  "&lnurl=" lnurl)
             invoice-response (client/get invoice-request)
@@ -157,17 +156,18 @@
             _ (when (and (some? json-status) (= "ERROR" json-status))
                 (throw (Exception. (str "Invoice request error: " (get invoice-json "reason")))))
             invoice (get invoice-json "pr")]
-        (update-mem :pending-zaps assoc invoice {:id (:id event)
-                                                 :amount amount
-                                                 :comment comment})
+        (update-mem :pending-zaps assoc invoice {:id (:id zap-descriptor)
+                                                 :amount zap-amount
+                                                 :comment zap-comment})
         invoice))
     (catch Exception e
-      (log-pr 1 'zap-author (.getMessage e))
       (when (not= "cancel" (.getMessage e))
-        (alert (str "Cannot zap. " (.getMessage e)))))))
+        (log-pr 2 'zap-author (.getMessage e))
+        (when-not (:auto-zap? zap-descriptor)
+          (alert (str "Cannot zap. " (.getMessage e))))))))
 
-(defn zap-by-invoice [event]
-  (when-let [invoice (get-zap-invoice event)]
+(defn zap-by-invoice [zap-descriptor]
+  (when-let [invoice (get-zap-invoice zap-descriptor)]
     (util/copy-to-clipboard invoice)
     (alert (str "Invoice is copied to clipboard.\n"
                 "Paste it into your wallet and Zap!\n\n"
@@ -226,10 +226,10 @@
     (compose-wc-request-event wc-pubkey-hex secret-hex request)))
 
 (defn zap-by-wallet-connect
-  ([event]
-   (zap-by-wallet-connect event (async/timeout 60000)))
+  ([zap-descriptor]
+   (zap-by-wallet-connect zap-descriptor (async/timeout 60000)))
 
-  ([event event-chan]
+  ([zap-descriptor event-chan]
    (let [wc (get-mem [:keys :wallet-connect])
          wc-map (uri/query-map wc)
          wc-uri (uri/uri wc)
@@ -257,14 +257,16 @@
                          (let [code (get error "code")
                                message (get error "message")]
                            (log-pr 2 'zap-wallet-connect 'response-error response)
-                           (alert (str "Zap failed: " code " " message))))
+                           (when-not (:auto-zap? zap-descriptor)
+                             (alert (str "Zap failed: " code " " message)))))
                        (do
                          (log-pr 2 'zap-wallet-connect 'invalid-result-type response)
-                         (alert (str "Questionable response from wallet:" relay-url))))))))
+                         (when-not (:auto-zap? zap-descriptor)
+                           (alert (str "Questionable response from wallet:" relay-url)))))))))
 
              (send-request-and-handle-response [open-relay]
                (relay/send open-relay ["REQ" "ms-resp" {"kinds" [23195] "authors" [wc-pubkey-hex]}])
-               (relay/send open-relay (get-wc-request-event event wc))
+               (relay/send open-relay (get-wc-request-event zap-descriptor wc))
                (loop [response-event (async/<!! event-chan)]
                  (cond
                    (= 23195 (:kind response-event))
@@ -293,13 +295,21 @@
 
            :else
            (do (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url info-event)
-               (alert (str "Zap failed.  No info-event from: " relay-url))
+               (when-not (:auto-zap? zap-descriptor)
+                 (alert (str "Zap failed.  No info-event from: " relay-url)))
                (relay/close open-relay))))))))
 
 (defn zap-author [event _e]
-  (if (some? (get-mem [:keys :wallet-connect]))
-    (zap-by-wallet-connect event)
-    (zap-by-invoice event)))
+  (try
+    (let [[amount comment :as answer] (ask-for-zap)
+          _ (when (nil? answer) (throw (Exception. "cancel")))
+          zap-descriptor (assoc event :zap-amount amount :zap-comment comment)]
+      (if (some? (get-mem [:keys :wallet-connect]))
+        (zap-by-wallet-connect zap-descriptor)
+        (zap-by-invoice zap-descriptor)))
+    (catch Exception e
+      (when (not= "cancel" (.getMessage e))
+        (log-pr 2 'zap-author (.getMessage e))))))
 
 (defn- get-fortune []
   (condp = config/auto-thanks-fortune
@@ -360,5 +370,13 @@
                                       :comment comment})
         (update-mem :pending-zaps dissoc receipt-invoice)))))
 
-(defn process-zap-response [event]
-  (prn 'zap-response event))
+(defn auto-zap [amount recipient-id event-id message]
+  (log-pr 2 'auto-zap amount recipient-id message)
+  (let [zap-descriptor {:zap-amount (* 1000 amount)
+                        :pubkey recipient-id
+                        :zap-comment message
+                        :auto-zap? true
+                        :id event-id}]
+    (zap-by-wallet-connect zap-descriptor))
+  )
+
