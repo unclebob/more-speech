@@ -61,6 +61,11 @@
     (set-mem [:tab-tree-map tab-name] header-tree)
     header-tree))
 
+(defn clear-search-field [tab-name search-field _e]
+  (text! search-field "")
+  (tab-searcher/set-search-status tab-name "")
+  (set-mem [:tab-search tab-name] ["" 0 []]))
+
 (defn make-search-bar [tab-name]
   (let [status-id (keyword (str tab-name "-status"))
         search-id (keyword (str tab-name "-search"))
@@ -69,7 +74,9 @@
         prev-search (label "⬆")
         next-search (label "⬇")
         search-items [(label "Find:")
-                      search-field status-field
+                      search-field
+                      (label :text "❌" :listen [:mouse-pressed (partial clear-search-field tab-name search-field)])
+                      status-field
                       next-search prev-search]
         bar (flow-panel :align :left :items search-items)]
     (listen search-field :key-pressed (partial tab-searcher/search-event tab-name))
