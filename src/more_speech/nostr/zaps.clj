@@ -240,6 +240,10 @@
         request (make-wc-json-request invoice)]
     (compose-wc-request-event wc-pubkey-hex secret-hex request)))
 
+(defn decrypt-content [secret wc-pubkey content]
+  (let [shared-secret (SECP256K1/calculateKeyAgreement secret wc-pubkey)]
+    (SECP256K1/decrypt shared-secret content)))
+
 (defn zap-by-wallet-connect
   ([zap-descriptor]
    (zap-by-wallet-connect zap-descriptor (async/timeout 60000)))
@@ -262,8 +266,7 @@
                      ptag (ffirst (events/get-tag response-event :p))]
                  (if-not (= ptag secret-pubkey-hex)
                    :continue
-                   (let [shared-secret (SECP256K1/calculateKeyAgreement secret wc-pubkey)
-                         decrypted-content (SECP256K1/decrypt shared-secret content)
+                   (let [decrypted-content (decrypt-content secret wc-pubkey content)
                          response (json/read-str decrypted-content)
                          result-type (get response "result_type")
                          error (get response "error")]

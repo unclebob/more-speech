@@ -103,7 +103,8 @@
       (with zap-descriptor {:zap-amount 1000
                             :zap-comment "12345678901234567890"
                             :id 1
-                            :pubkey 99})
+                            :pubkey 99
+                            :auto-zap? true})
 
       (it "makes a zap request if all is valid"
         (with-redefs [util/get-now (stub :get-now {:return 11111})]
@@ -206,12 +207,15 @@
   (context "wallet-connect"
     (it "executes wallet-connect payment"
       (let [event-index (atom -1)
-            events [{:content "pay_invoice"} {:kind 23195 :content "{\"result_type\": \"pay_invoice\"}"}]]
+            events [{:content "pay_invoice"} {:kind 23195
+                                              :tags [[:p "e6c47ae6962c5ea1559f48b437c193a1bcb1d72d08d75d743ba3cbfb8e7afbeb"]]
+                                              :content "{\"result_type\": \"pay_invoice\"}"}]]
         (set-mem [:keys :wallet-connect] "nostrwalletconnect://beef?relay=wc-relay-url&secret=dead")
         (with-redefs [ws-relay/make (stub :relay-make {:return "some-relay"})
                       relay/open (stub :relay-open {:return "open-relay"})
                       relay/send (stub :relay-send)
                       relay/close (stub :relay-close)
+                      zaps/decrypt-content (stub :calc-key {:invoke (fn [_ _ c] c)})
                       zaps/get-wc-request-event (stub :request-event {:return "request-event"})
                       async/<!! (stub :read-chan {:invoke (fn [_x] (get events (swap! event-index inc)))})]
           (let [event-chan :some-channel]
