@@ -1,6 +1,9 @@
 (ns more-speech.nostr.zaps-spec
   (:require
+    [clj-http.client :as client]
     [clojure.core.async :as async]
+    [clojure.data.json :as json]
+    [clojure.string :as string]
     [more-speech.bech32 :as bech32]
     [more-speech.config :as config]
     [more-speech.db.gateway :as gateway]
@@ -16,7 +19,7 @@
     [speclj.core :refer :all])
   (:import (ecdhJava SECP256K1)))
 
-(declare db)
+(declare db wallet-response zap-descriptor)
 (describe "zaps"
   (with-stubs)
   (setup-db-mem)
@@ -87,22 +90,24 @@
       )
 
     (context "zap request"
+      (with wallet-response {"status" "OK"
+                             "reason" "reason"
+                             "callback" "invoice-url"
+                             "maxSendable" 1000000
+                             "minSendable" 1000
+                             "metadata" "metadata"
+                             "tag" "payRequest"
+                             "commentAllowed" 20
+                             "allowsNostr" true
+                             "nostrPubkey" "deadbeef"})
+      (with zap-descriptor {:zap-amount 1000
+                            :zap-comment "12345678901234567890"
+                            :id 1
+                            :pubkey 99})
+
       (it "makes a zap request if all is valid"
         (with-redefs [util/get-now (stub :get-now {:return 11111})]
-          (let [wallet-response {"callback" "callback"
-                                 "maxSendable" 100
-                                 "minSendable" 1
-                                 "metadata" "metadata"
-                                 "tag" "payRequest"
-                                 "commentAllowed" 20
-                                 "allowsNostr" true
-                                 "nostrPubkey" "deadbeef"}
-                recipient-id 99
-                event-id 1
-                amount 100
-                comment "comment"
-                lnurl "lnurl"
-                b32-lnurl (bech32/encode-str "lnurl" lnurl)
+          (let [b32-lnurl (bech32/encode-str "lnurl" "lnurl")
                 my-privkey 0xb0b
                 my-pubkey (util/bytes->num (es/get-pub-key (util/num->bytes 32 my-privkey)))
                 _ (set-mem :pubkey my-pubkey)
@@ -111,84 +116,60 @@
                 _ (set-mem :relays {"relay-r1" {:read :read-all}
                                     "relay-nr" {:read :read-none}
                                     "relay-r2" {:read :read-all}})
-                body (zaps/make-zap-request
-                       wallet-response recipient-id event-id amount comment lnurl)
+                body (zaps/make-zap-request-event
+                       @wallet-response "lnurl" @zap-descriptor)
                 {:keys [kind content tags pubkey created_at]} body
                 tags (set tags)]
 
             (should= 9734 kind)
-            (should= "comment" content)
+            (should= (:zap-comment @zap-descriptor) content)
             (should= my-pubkey (util/unhexify pubkey))
             (should= (util/get-now) created_at)
             (should (contains? tags ["relays" "relay-r1" "relay-r2"]))
-            (should (contains? tags ["amount" "100"]))
+            (should (contains? tags ["amount" "1000"]))
             (should (contains? tags ["lnurl" b32-lnurl]))
-            (should (contains? tags ["p" (util/hexify recipient-id)]))
-            (should (contains? tags ["e" (util/hexify event-id)])))))
+            (should (contains? tags ["p" (util/hexify (:pubkey @zap-descriptor))]))
+            (should (contains? tags ["e" (util/hexify (:id @zap-descriptor))])))))
 
       (it "rejects if nostr is not allowed"
-        (let [wallet-response {"callback" "callback"
-                               "maxSendable" 100
-                               "minSendable" 1
-                               "metadata" "metadata"
-                               "tag" "payRequest"
-                               "commentAllowed" 20
-                               "allowsNostr" false
-                               "nostrPubkey" "deadbeef"}
-              amount 100
-              comment "12345678901234567890"
-              lnurl "lnurl"]
+        (let [wallet-response (assoc @wallet-response "allowsNostr" false)]
           (should-throw Exception "Recipient does not accept Nostr zaps."
-                        (zaps/make-zap-request wallet-response
-                                               0 0 amount comment lnurl))))
+                        (zaps/make-zap-request-event wallet-response "lnurl" @zap-descriptor))))
 
       (it "rejects if amount too small"
-        (let [wallet-response {"callback" "callback"
-                               "maxSendable" 1000000
-                               "minSendable" 1000
-                               "metadata" "metadata"
-                               "tag" "payRequest"
-                               "commentAllowed" 20
-                               "allowsNostr" true
-                               "nostrPubkey" "deadbeef"}
-              amount 100
-              comment "12345678901234567890"
-              lnurl "lnurl"]
+        (let [zap-descriptor (assoc @zap-descriptor :zap-amount 100)]
           (should-throw Exception "Amount 0 is below minimum of 1"
-                        (zaps/make-zap-request wallet-response
-                                               0 0 amount comment lnurl))))
+                        (zaps/make-zap-request-event @wallet-response "lnurl" zap-descriptor))))
 
       (it "rejects if amount too large"
-        (let [wallet-response {"callback" "callback"
-                               "maxSendable" 1000000
-                               "minSendable" 1000
-                               "metadata" "metadata"
-                               "tag" "payRequest"
-                               "commentAllowed" 20
-                               "allowsNostr" true
-                               "nostrPubkey" "deadbeef"}
-              comment "12345678901234567890"
-              lnurl "lnurl"
-              amount 2000000]
+        (let [zap-descriptor (assoc @zap-descriptor :zap-amount 2000000)]
           (should-throw Exception "Amount 2000 is larger than maximum of 1000"
-                        (zaps/make-zap-request wallet-response
-                                               0 0 amount comment lnurl))))
+                        (zaps/make-zap-request-event @wallet-response "lnurl" zap-descriptor))))
 
       (it "rejects if comment too long"
-        (let [wallet-response {"callback" "callback"
-                               "maxSendable" 1000000
-                               "minSendable" 1000
-                               "metadata" "metadata"
-                               "tag" "payRequest"
-                               "commentAllowed" 20
-                               "allowsNostr" true
-                               "nostrPubkey" "deadbeef"}
-              comment "123456789012345678901"
-              amount 1000
-              lnurl "lnurl"]
+        (let [zap-descriptor (assoc @zap-descriptor :zap-comment "123456789012345678901")]
           (should-throw Exception "This wallet restricts comments to 20 characters"
-                        (zaps/make-zap-request wallet-response
-                                               0 0 amount comment lnurl))))
+                        (zaps/make-zap-request-event @wallet-response "lnurl" zap-descriptor))))
+
+      (it "gets the zap invoice"
+        (let [ln-response {:body (json/write-str @wallet-response)}
+              invoice-response {:status 200
+                                :body (json/write-str {:status "OK"
+                                                       :pr "invoice"})}
+              zap-descriptor {:zap-amount 1000
+                              :zap-comment "comment"
+                              :id 1
+                              :pubkey 2
+                              :auto-zap? true}
+              messages {"lnurl" ln-response
+                        "invoice-url" invoice-response}
+              client-get (fn [url] (get messages (first (string/split url #"\?"))))]
+          (with-redefs [zaps/get-lnurl (stub :get-lnurl {:return "lnurl"})
+                        client/get (stub :client-get {:invoke client-get})
+                        es/do-sign (stub :do-sign {:return (util/num->bytes 64 99)})]
+            (should= "invoice" (zaps/get-zap-invoice zap-descriptor))
+            (should= {"invoice" {:id 1, :amount 1000, :comment "comment"}}
+                     (get-mem :pending-zaps)))))
       )
     )
 

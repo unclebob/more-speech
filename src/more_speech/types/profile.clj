@@ -12,7 +12,7 @@
 (s/def ::display-name string?)
 (s/def ::website string?)
 (s/def ::created-at number?)
-(s/def ::wallet-connect string?)
+(s/def ::wallet-connect (s/or :nil nil? :string string?))
 (s/def ::password string?)
 (s/def ::profile (s/keys :req-un [::name
                                   ::about

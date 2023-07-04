@@ -81,35 +81,40 @@
       zap-address
       (get-lnurl-from-profile (:pubkey zap-descriptor)))))
 
-(defn make-zap-request [wallet-response recipient event-id amount comment lnurl]
-  (let [{:strs [maxSendable minSendable
-                commentAllowed allowsNostr]} wallet-response
-        _ (when-not allowsNostr
-            (throw (Exception. (str "Recipient does not accept Nostr zaps."))))
-        _ (when (< amount minSendable)
-            (throw (Exception. (str "Amount "
-                                    (quot amount 1000)
-                                    " is below minimum of "
-                                    (quot minSendable 1000)))))
-        _ (when (> amount maxSendable)
-            (throw (Exception. (str "Amount "
-                                    (quot amount 1000)
-                                    " is larger than maximum of "
-                                    (quot maxSendable 1000)))))
-        _ (when (and (some? comment)
-                     (some? commentAllowed)
-                     (> (count comment) commentAllowed))
-            (throw (Exception. (str "This wallet restricts comments to " commentAllowed " characters"))))
-        body {:kind 9734
-              :content comment
-              :tags [(concat ["relays"] (relays/relays-for-reading))
-                     ["amount" (str amount)]
-                     ["lnurl" (bech32/encode-str "lnurl" lnurl)]
-                     ["p" (util/hexify recipient)]
-                     ["e" (util/hexify event-id)]
-                     ]}
-        [_ request] (composers/body->event body)]
-    request))
+(defn make-zap-request-event
+  ([wallet-response lnurl zap-descriptor]
+   (let [{:keys [zap-amount zap-comment id pubkey]} zap-descriptor]
+     (make-zap-request-event wallet-response pubkey id zap-amount zap-comment lnurl)))
+
+  ([wallet-response recipient event-id amount comment lnurl]
+   (let [{:strs [maxSendable minSendable
+                 commentAllowed allowsNostr]} wallet-response
+         _ (when-not allowsNostr
+             (throw (Exception. (str "Recipient does not accept Nostr zaps."))))
+         _ (when (< amount minSendable)
+             (throw (Exception. (str "Amount "
+                                     (quot amount 1000)
+                                     " is below minimum of "
+                                     (quot minSendable 1000)))))
+         _ (when (> amount maxSendable)
+             (throw (Exception. (str "Amount "
+                                     (quot amount 1000)
+                                     " is larger than maximum of "
+                                     (quot maxSendable 1000)))))
+         _ (when (and (some? comment)
+                      (some? commentAllowed)
+                      (> (count comment) commentAllowed))
+             (throw (Exception. (str "This wallet restricts comments to " commentAllowed " characters"))))
+         body {:kind 9734
+               :content comment
+               :tags [(concat ["relays"] (relays/relays-for-reading))
+                      ["amount" (str amount)]
+                      ["lnurl" (bech32/encode-str "lnurl" lnurl)]
+                      ["p" (util/hexify recipient)]
+                      ["e" (util/hexify event-id)]
+                      ]}
+         [_ request] (composers/body->event body)]
+     request)))
 
 (defn- ask-for-zap []
   (let [zap-dialog
@@ -130,36 +135,46 @@
                 :cancel-fn (fn [_p] nil))]
     (show! (pack! zap-dialog))))
 
+(defn open-wallet [lnurl]
+  (let [ln-response (client/get lnurl)
+        wallet-response (json/read-str (:body ln-response))
+        {:strs [status reason]} wallet-response]
+    (when (and (some? status) (not= status "OK"))
+      (throw (Exception. (str "Wallet error: " status reason))))
+    wallet-response))
+
+(defn request-invoice [wallet-response lnurl zap-descriptor]
+  (let [zap-request-event (make-zap-request-event wallet-response lnurl zap-descriptor)
+        json-request (events/to-json zap-request-event)
+        encoded-request (URLEncoder/encode ^String json-request "UTF-8")
+        callback (get wallet-response "callback")
+        invoice-request (str callback
+                             "?amount=" (:zap-amount zap-descriptor)
+                             "&nostr=" encoded-request
+                             "&lnurl=" lnurl)]
+    (client/get invoice-request)))
+
+(defn validate-invoice [invoice-response]
+  (let [invoice-response-status (:status invoice-response)
+        _ (when (not= 200 invoice-response-status)
+            (throw (Exception. (str "Invoice request failed:" invoice-response-status))))
+        invoice-json (json/read-str (:body invoice-response))
+        json-status (get invoice-json "status")
+        _ (when (and (some? json-status) (= "ERROR" json-status))
+            (throw (Exception. (str "Invoice request error: " (get invoice-json "reason")))))]
+    (get invoice-json "pr")))
+
 (defn get-zap-invoice [zap-descriptor]
   (try
     (let [lnurl (get-lnurl zap-descriptor)
-          _ ('get-zap-invoice 'lnurl lnurl)
-          ln-response (client/get lnurl)
-          wallet-response (json/read-str (:body ln-response))
-          {:strs [callback status reason]} wallet-response]
-      (when (and (some? status) (not= status "OK"))
-        (throw (Exception. (str "Wallet error: " status reason))))
-      (let [{:keys [zap-amount zap-comment id pubkey]} zap-descriptor
-            zap-request (make-zap-request wallet-response pubkey id zap-amount zap-comment lnurl)
-            json-request (events/to-json zap-request)
-            encoded-request (URLEncoder/encode ^String json-request "UTF-8")
-            invoice-request (str callback
-                                 "?amount=" zap-amount
-                                 "&nostr=" encoded-request
-                                 "&lnurl=" lnurl)
-            invoice-response (client/get invoice-request)
-            invoice-response-status (:status invoice-response)
-            _ (when (not= 200 invoice-response-status)
-                (throw (Exception. (str "Invoice request failed:" invoice-response-status))))
-            invoice-json (json/read-str (:body invoice-response))
-            json-status (get invoice-json "status")
-            _ (when (and (some? json-status) (= "ERROR" json-status))
-                (throw (Exception. (str "Invoice request error: " (get invoice-json "reason")))))
-            invoice (get invoice-json "pr")]
-        (update-mem :pending-zaps assoc invoice {:id (:id zap-descriptor)
-                                                 :amount zap-amount
-                                                 :comment zap-comment})
-        invoice))
+          wallet-response (open-wallet lnurl)
+          invoice-response (request-invoice wallet-response lnurl zap-descriptor)
+          invoice (validate-invoice invoice-response)]
+      (update-mem :pending-zaps
+                  assoc invoice {:id (:id zap-descriptor)
+                                 :amount (:zap-amount zap-descriptor)
+                                 :comment (:zap-comment zap-descriptor)})
+      invoice)
     (catch Exception e
       (when (not= "cancel" (.getMessage e))
         (log-pr 2 'zap-author (.getMessage e))
