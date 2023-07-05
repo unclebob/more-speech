@@ -244,78 +244,87 @@
   (let [shared-secret (SECP256K1/calculateKeyAgreement secret wc-pubkey)]
     (SECP256K1/decrypt shared-secret content)))
 
-(defn zap-by-wallet-connect
-  ([zap-descriptor]
-   (zap-by-wallet-connect zap-descriptor (async/timeout 60000)))
+(defn process-wallet-response [zap-descriptor wallet-connection wallet-response]
+  (let [{:keys [secret-pubkey-hex secret wc-pubkey relay-url]} wallet-connection
+        content (:content wallet-response)
+        ptag (ffirst (events/get-tag wallet-response :p))]
+    (if-not (= ptag secret-pubkey-hex)
+      :continue
+      (let [decrypted-content (decrypt-content secret wc-pubkey content)
+            response (json/read-str decrypted-content)
+            result-type (get response "result_type")
+            error (get response "error")]
+        (if (= "pay_invoice" result-type)
+          (when-not (nil? error)
+            (let [code (get error "code")
+                  message (get error "message")]
+              (log-pr 2 'zap-wallet-connect 'response-error response)
+              (when-not (:auto-zap? zap-descriptor)
+                (alert (str "Zap failed: " code " " message)))))
+          (do
+            (log-pr 2 'zap-wallet-connect 'invalid-result-type response)
+            (when-not (:auto-zap? zap-descriptor)
+              (alert (str "Questionable response from wallet:" relay-url)))))))))
 
-  ([zap-descriptor event-chan]
-   (let [wc (get-mem [:keys :wallet-connect])
-         wc-map (uri/query-map wc)
-         wc-uri (uri/uri wc)
-         wc-pubkey-hex (:host wc-uri)
-         wc-pubkey (util/hex-string->num wc-pubkey-hex)
-         relay-url (get wc-map "relay")
-         secret-hex (get wc-map "secret")
-         secret-bytes (util/hex-string->bytes secret-hex)
-         secret-pubkey-bytes (es/get-pub-key secret-bytes)
-         secret-pubkey-hex (util/bytes->hex-string secret-pubkey-bytes)
-         secret (util/hex-string->num secret-hex)]
+(defn send-request-and-handle-response [zap-descriptor wallet-connection relay]
+  (let [{:keys [wc relay-url event-chan wc-pubkey-hex]} wallet-connection]
+    (relay/send relay ["REQ" "ms-resp" {"kinds" [23195] "authors" [wc-pubkey-hex]}])
+    (relay/send relay (get-wc-request-event zap-descriptor wc))
+    (loop [response-event (async/<!! event-chan)]
+      (cond
+        (= 23195 (:kind response-event))
+        (when (= :continue (process-wallet-response zap-descriptor wallet-connection response-event))
+          (recur (async/<!! event-chan)))
 
-     (letfn [(process-wallet-response [response-event]
-               (let [content (:content response-event)
-                     ptag (ffirst (events/get-tag response-event :p))]
-                 (if-not (= ptag secret-pubkey-hex)
-                   :continue
-                   (let [decrypted-content (decrypt-content secret wc-pubkey content)
-                         response (json/read-str decrypted-content)
-                         result-type (get response "result_type")
-                         error (get response "error")]
-                     (if (= "pay_invoice" result-type)
-                       (when-not (nil? error)
-                         (let [code (get error "code")
-                               message (get error "message")]
-                           (log-pr 2 'zap-wallet-connect 'response-error response)
-                           (when-not (:auto-zap? zap-descriptor)
-                             (alert (str "Zap failed: " code " " message)))))
-                       (do
-                         (log-pr 2 'zap-wallet-connect 'invalid-result-type response)
-                         (when-not (:auto-zap? zap-descriptor)
-                           (alert (str "Questionable response from wallet:" relay-url)))))))))
+        :else
+        (log-pr 1 'zap-by-wallet-connect 'uknown-event relay-url response-event)))
+    (relay/close relay)))
 
-             (send-request-and-handle-response [open-relay]
-               (relay/send open-relay ["REQ" "ms-resp" {"kinds" [23195] "authors" [wc-pubkey-hex]}])
-               (relay/send open-relay (get-wc-request-event zap-descriptor wc))
-               (loop [response-event (async/<!! event-chan)]
-                 (cond
-                   (= 23195 (:kind response-event))
-                   (when (= :continue (process-wallet-response response-event))
-                     (recur (async/<!! event-chan)))
+(defn open-wallet-connection []
+  (let [wc (get-mem [:keys :wallet-connect])
+        wc-map (uri/query-map wc)
+        wc-uri (uri/uri wc)
+        wc-pubkey-hex (:host wc-uri)
+        wc-pubkey (util/hex-string->num wc-pubkey-hex)
+        relay-url (get wc-map "relay")
+        secret-hex (get wc-map "secret")
+        secret-bytes (util/hex-string->bytes secret-hex)
+        secret-pubkey-bytes (es/get-pub-key secret-bytes)
+        secret-pubkey-hex (util/bytes->hex-string secret-pubkey-bytes)
+        secret (util/hex-string->num secret-hex)
+        event-chan (async/timeout 60000)
+        relay (ws-relay/make relay-url {:recv (partial get-wc-info event-chan)
+                                        :close wc-close})]
+    {:wc wc
+     :event-chan event-chan
+     :secret-pubkey-hex secret-pubkey-hex
+     :secret secret
+     :wc-pubkey wc-pubkey
+     :wc-pubkey-hex wc-pubkey-hex
+     :relay-url relay-url
+     :relay relay}))
 
-                   :else
-                   (log-pr 1 'zap-by-wallet-connect 'uknown-event relay-url response-event)))
+(defn zap-by-wallet-connect [zap-descriptor]
+  (let [wallet-connection (open-wallet-connection)
+        {:keys [relay relay-url wc-pubkey-hex event-chan]} wallet-connection
+        request ["REQ" "ms-info" {"kinds" [13194] "authors" [wc-pubkey-hex]}]
+        open-relay (relay/open relay)
+        _ (relay/send open-relay request)
+        info-event (async/<!! event-chan)]
+    (cond
+      (nil? info-event)
+      (do
+        (log-pr 1 'zap-by-wallet-connect 'info-timeout relay-url)
+        (relay/close open-relay))
 
-               (relay/close open-relay))]
+      (not (neg? (string/index-of (:content info-event) "pay_invoice")))
+      (send-request-and-handle-response zap-descriptor wallet-connection open-relay)
 
-       (let [relay (ws-relay/make relay-url {:recv (partial get-wc-info event-chan)
-                                             :close wc-close})
-             request ["REQ" "ms-info" {"kinds" [13194] "authors" [wc-pubkey-hex]}]
-             open-relay (relay/open relay)
-             _ (relay/send open-relay request)
-             info-event (async/<!! event-chan)]
-         (cond
-           (nil? info-event)
-           (do
-             (log-pr 1 'zap-by-wallet-connect 'info-timeout relay-url)
-             (relay/close open-relay))
-
-           (not (neg? (string/index-of (:content info-event) "pay_invoice")))
-           (send-request-and-handle-response open-relay)
-
-           :else
-           (do (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url info-event)
-               (when-not (:auto-zap? zap-descriptor)
-                 (alert (str "Zap failed.  No info-event from: " relay-url)))
-               (relay/close open-relay))))))))
+      :else
+      (do (log-pr 1 'zap-by-wallet-connect 'unknown-result relay-url info-event)
+          (when-not (:auto-zap? zap-descriptor)
+            (alert (str "Zap failed.  No info-event from: " relay-url)))
+          (relay/close open-relay)))))
 
 (defn zap-author [event _e]
   (try

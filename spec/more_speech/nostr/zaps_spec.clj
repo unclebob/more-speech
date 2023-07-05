@@ -218,14 +218,13 @@
                       zaps/decrypt-content (stub :calc-key {:invoke (fn [_ _ c] c)})
                       zaps/get-wc-request-event (stub :request-event {:return "request-event"})
                       async/<!! (stub :read-chan {:invoke (fn [_x] (get events (swap! event-index inc)))})]
-          (let [event-chan :some-channel]
-            (zaps/zap-by-wallet-connect "event-to-zap" event-chan)
-            (should-have-invoked :relay-make {:with ["wc-relay-url" :*]})
-            (should-have-invoked :relay-open {:with ["some-relay"]})
-            (should-have-invoked :relay-send {:with ["open-relay" ["REQ" "ms-info" {"kinds" [13194], "authors" ["beef"]}]]})
-            (should-have-invoked :request-event {:with ["event-to-zap" :*]})
-            (should-have-invoked :relay-send {:with ["open-relay" "request-event"]})
-            (should-have-invoked :relay-close {:with ["open-relay"]})))))
+          (zaps/zap-by-wallet-connect "event-to-zap")
+          (should-have-invoked :relay-make {:with ["wc-relay-url" :*]})
+          (should-have-invoked :relay-open {:with ["some-relay"]})
+          (should-have-invoked :relay-send {:with ["open-relay" ["REQ" "ms-info" {"kinds" [13194], "authors" ["beef"]}]]})
+          (should-have-invoked :request-event {:with ["event-to-zap" :*]})
+          (should-have-invoked :relay-send {:with ["open-relay" "request-event"]})
+          (should-have-invoked :relay-close {:with ["open-relay"]}))))
 
     (it "generates wc request"
       (should= "{\"method\":\"pay_invoice\",\"params\":{\"invoice\":\"invoice\"}}"
