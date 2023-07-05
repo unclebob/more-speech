@@ -1,18 +1,23 @@
 (ns more-speech.ui.swing.show-user-info
   (:require
+    [clojure.string :as string]
     [more-speech.config :as config]
     [more-speech.config :refer [get-db]]
     [more-speech.db.gateway :as gateway]
     [more-speech.mem :as mem]
     [more-speech.nostr.contact-list :as contact-list]
+    [more-speech.nostr.protocol :as protocol]
     [more-speech.nostr.trust-updater :as trust-updater]
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatter-util :as formatter-util]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.html-util :as html-util]
     [more-speech.ui.swing.tabs :as tabs]
+    [more-speech.ui.swing.user-info-interface :as user-info-interface]
     [more-speech.ui.swing.user-info-interface :as html-interface])
-  (:use (seesaw [border] [core])))
+  (:use (seesaw [border] [core]))
+  (:import (java.awt Point)
+           (java.util Timer TimerTask)))
 
 (defn trust-author [id _e]
   (trust-updater/trust-this-author id))
@@ -55,15 +60,53 @@
                                    add-user-to-tab-item])]
     (menubar :items [actions-menu])))
 
+(defn render-user-name [widget item]
+  (let [id (:value item)]
+    (text! widget (formatters/get-best-name id))))
+
+(defn trusted-user-box-click [e]
+  (let [listbox (.getSource e)
+        index (.locationToIndex listbox (Point. (.getX e) (.getY e)))
+        model (.getModel listbox)
+        user-id (.getElementAt model index)
+        tab-names (vec (remove #(= "all" %) (map :name (mem/get-mem :tabs-list))))
+        tab-names (conj tab-names "<new-tab>")
+        add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab user-id %)) tab-names)]
+    (protocol/request-profiles-and-contacts-for user-id)
+    (when (.isPopupTrigger e)
+      (let [p (popup :items [(action :name "Get Info..." :handler (fn [_e] (user-info-interface/show-user-profile user-id)))
+                             (menu :text "Add author to tab" :items add-author-actions)])]
+        (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))))
+
+(defn make-trusted-user-pane [id]
+  (let [trusted-user-label (label "Trusted Users")
+        trusted-users (contact-list/get-trustees id)
+        trusted-user-box (listbox :model trusted-users
+                                  :renderer render-user-name
+                                  :listen [:mouse-pressed trusted-user-box-click])
+        trusted-user-pane (vertical-panel :items [trusted-user-label trusted-user-box])]
+    (protocol/request-profiles-and-contacts-for trusted-users)
+    trusted-user-pane))
+
+(defn- repaint-profile-window [frame]
+  (.repaint frame))
+
 (defn show-profile [id profile]
   (let [created-at (:created-at profile)
         petname (contact-list/get-petname id)
+        about (string/replace
+                (formatter-util/wrap-and-trim
+                  (string/replace (:about profile) "\n" " ")
+                  80 10)
+                "\n"
+                "<br>")
         html-doc (make-html-document
                    config/editor-pane-stylesheet
                    (str "<h2> Name:</h2>" (:name profile)
                         "<h2> Petname:</h2>" petname
                         "<h2> Pubkey:</h2>" (util/hexify id)
-                        "<h2> About: </h2>" (:about profile)
+                        "<h2> About: </h2>" about
+
                         "<h2> Display name: </h2>" (:display-name profile)
                         "<h2> Banner: </h2>" (:banner profile)
                         "<h2> Website: </h2>" (:website profile)
@@ -79,9 +122,16 @@
                        :editable? false
                        :id :article-area
                        :text html-doc)
-        profile-panel (vertical-panel :items [(scrollable profile-pane)])
+        trusted-user-pane (make-trusted-user-pane id)
+        profile-panel (horizontal-panel :items [(scrollable profile-pane)
+                                                (scrollable trusted-user-pane)])
         profile-frame (frame :title (str "User Profile for " (:name profile))
-                             :content profile-panel)]
+                             :content profile-panel)
+        profile-window-timer (Timer. "Profile window timer")
+        profile-window-repaint-task (proxy [TimerTask] []
+                                      (run [] (repaint-profile-window profile-frame)))
+        ]
+    (.schedule profile-window-timer profile-window-repaint-task 1000 1000)
     (config! profile-frame :menubar (make-profile-menubar profile-frame id))
     (listen profile-pane :hyperlink html-util/open-link)
     (pack! profile-frame)
