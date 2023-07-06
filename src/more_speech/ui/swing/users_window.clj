@@ -7,6 +7,7 @@
     [more-speech.mem :refer :all]
     [more-speech.mem :refer :all]
     [more-speech.nostr.contact-list :as contact-list]
+    [more-speech.nostr.event-composers :as composers]
     [more-speech.nostr.event-composers :as event-composers]
     [more-speech.nostr.protocol :as protocol]
     [more-speech.nostr.trust-updater :as trust-updater]
@@ -133,27 +134,30 @@
 
 (defn untrust-selection [frame _e]
   (let [trusted-listbox (select frame [:#trusted-users-listbox])
-        selected-item (selection trusted-listbox)]
-    (when (some? selected-item)
-      (let [untrusted-user (second selected-item)
-            recent-button (select frame [:#recent-button])
-            selected-listbox (select frame [:#selected-users])
-            answer (trust-updater/verify-untrust untrusted-user)]
-        (when (= answer :success)
-          (trust-updater/untrust-and-send untrusted-user)
-          (load-trusted-users)
-          (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))
-          (config! recent-button :selected? true)
-          (load-recent-users)
+        recent-button (select frame [:#recent-button])
+        selected-listbox (select frame [:#selected-users])
+        selected-items (selection trusted-listbox {:multi? true})]
+    (loop [selected-items selected-items]
+      (when-let [selected-item (first selected-items)]
+        (let [untrusted-user (second selected-item)]
+          (trust-updater/untrust untrusted-user)
+          (recur (rest selected-items)))))
+    (load-trusted-users)
+    (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))
+    (config! recent-button :selected? true)
+    (load-recent-users)
+    (loop [selected-items selected-items]
+      (when-let [selected-item (first selected-items)]
+        (let [untrusted-user (second selected-item)]
           (update-mem [:user-window :recent-users] conj untrusted-user)
-          (set-mem [:user-window :recent-user-items]
-                   (make-sorted-listbox-items
-                     (get-mem [:user-window :recent-users])))
-          (config! selected-listbox :model (get-mem [:user-window :recent-user-items]))
-          (.setSelectedValue selected-listbox
-                             (find-item untrusted-user (get-mem [:user-window :recent-user-items]))
-                             true)
-          (set-mem [:user-window :contact-list-changed] true))))))
+          (recur (rest selected-items)))))
+    (set-mem [:user-window :recent-user-items]
+             (make-sorted-listbox-items
+               (get-mem [:user-window :recent-users])))
+    (config! selected-listbox :model (get-mem [:user-window :recent-user-items]))
+    (set-mem [:user-window :contact-list-changed] true)
+    (composers/compose-and-send-contact-list
+      (gateway/get-contacts (get-db) (get-mem :pubkey)))))
 
 (defn listbox-click [e]
   (let [item (swing-util/get-clicked-value e)
