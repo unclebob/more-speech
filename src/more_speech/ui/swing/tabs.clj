@@ -299,7 +299,7 @@
                            (action :name "DM author..." :handler (partial dm-author event))
                            (action :name "Zap author..." :handler (partial zaps/zap-author event))
                            ])]
-      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e))))))
+      (swing-util/show-popup p e))))
 
 (defn tab-menu [e]
   (let [tab-label (.getComponent e)
@@ -319,7 +319,7 @@
                                  :handler (partial add-pattern-to-tab tab-name)
                                  :enabled? true)])]
     (if (.isPopupTrigger e)
-      (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))
+      (swing-util/show-popup p e)
       (swing-util/select-tab tab-index))))
 
 

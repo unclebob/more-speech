@@ -6,7 +6,8 @@
     [more-speech.nostr.protocol :as protocol]
     [more-speech.nostr.relays :as relays]
     [more-speech.nostr.util :as util]
-    [more-speech.ui.swing.html-util :as html-util])
+    [more-speech.ui.swing.html-util :as html-util]
+    [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [core]))
   (:import (java.awt Point)
            (java.util Timer TimerTask)))
@@ -314,21 +315,17 @@
     (config! relays-menu :enabled? true)))
 
 (defn read-click [url e]
-  (let [x (.x (.getPoint e))
-        y (.y (.getPoint e))
-        label (.getComponent e)
+  (let [label (.getComponent e)
         p (popup :items [(action :name "none" :handler (partial set-relay-read label url :read-none))
                          (action :name "all" :handler (partial set-relay-read label url :read-all))
                          (action :name "trusted" :handler (partial set-relay-read label url :read-trusted))
                          (action :name "web of trust" :handler (partial set-relay-read label url :read-web-of-trust))])]
-    (.show p (to-widget e) x y)))
+    (swing-util/show-popup p e)))
 
 (defn write-click [url e]
-  (let [x (.x (.getPoint e))
-        y (.y (.getPoint e))
-        label (.getComponent e)
+  (let [label (.getComponent e)
         p (popup :items [(action :name "true" :handler (partial set-relay-write label url true))
                          (action :name "false" :handler (partial set-relay-write label url false))
                          ])]
-    (.show p (to-widget e) x y)))
+    (swing-util/show-popup p e)))
 

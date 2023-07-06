@@ -14,7 +14,8 @@
     [more-speech.ui.swing.html-util :as html-util]
     [more-speech.ui.swing.tabs :as tabs]
     [more-speech.ui.swing.user-info-interface :as user-info-interface]
-    [more-speech.ui.swing.user-info-interface :as html-interface])
+    [more-speech.ui.swing.user-info-interface :as html-interface]
+    [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [border] [core]))
   (:import (java.awt Point)
            (java.util Timer TimerTask)))
@@ -76,7 +77,7 @@
     (when (.isPopupTrigger e)
       (let [p (popup :items [(action :name "Get Info..." :handler (fn [_e] (user-info-interface/show-user-profile user-id)))
                              (menu :text "Add author to tab" :items add-author-actions)])]
-        (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))))
+        (swing-util/show-popup p e)))))
 
 (defn make-trusted-user-pane [id]
   (let [trusted-user-label (label "Trusted Users")
@@ -106,7 +107,6 @@
                         "<h2> Petname:</h2>" petname
                         "<h2> Pubkey:</h2>" (util/hexify id)
                         "<h2> About: </h2>" about
-
                         "<h2> Display name: </h2>" (:display-name profile)
                         "<h2> Banner: </h2>" (:banner profile)
                         "<h2> Website: </h2>" (:website profile)

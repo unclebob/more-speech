@@ -37,9 +37,7 @@
 
 (defn copy-click [e]
   (when (.isPopupTrigger e)
-    (let [x (.x (.getPoint e))
-          y (.y (.getPoint e))
-          node (.getComponent e)
+    (let [node (.getComponent e)
           id (config node :user-data)
           hex-id (util/hexify id)
           note-id (str "nostr:" (bech32/encode "note" id))
@@ -47,7 +45,7 @@
                                    :handler (partial copy-to-clipboard hex-id))
                            (action :name (str "Copy " (subs note-id 0 16) "...")
                                    :handler (partial copy-to-clipboard note-id))])]
-      (.show p (to-widget e) x y))))
+      (swing-util/show-popup p e))))
 
 (defn id-click [e]
   (if (.isPopupTrigger e)
@@ -56,9 +54,7 @@
       (swing-util/select-event id))))
 
 (defn user-name-click [type frame e]
-  (let [x (.x (.getPoint e))
-        y (.y (.getPoint e))
-        node (.getComponent e)
+  (let [node (.getComponent e)
         pubkey (config node :user-data)
         hex-id (util/hexify pubkey)
         npub (bech32/encode "npub" pubkey)
@@ -80,7 +76,7 @@
                                                 :handler (partial zaps/zap-author event)))
                       popup-items)
         p (popup :items popup-items)]
-    (.show p (to-widget e) x y)))
+    (swing-util/show-popup p e)))
 
 (defn reaction-click [polarity]
   (let [frame (get-mem :frame)

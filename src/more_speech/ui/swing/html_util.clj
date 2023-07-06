@@ -47,7 +47,7 @@
         ev (.getInputEvent e)
         [x y] (mouse/location ev)]
     (if (some? profile)
-      (.show p (to-widget e) x y)
+      (swing-util/show-popup p e x y)
       (protocol/request-profiles-and-contacts-for id))))
 
 (defn open-link [e]

@@ -154,3 +154,13 @@
                 (select-tab tab-name)
                 (tabs-util/select-tree-node tree node))
               (recur (rest tabs)))))))))
+
+(defn show-popup
+  ([popup event x y]
+   (.show popup (to-widget event) x y))
+
+  ([popup event]
+   (let [point (.getPoint event)
+         x (.x point)
+         y (.y point)]
+     (show-popup popup event x y))))

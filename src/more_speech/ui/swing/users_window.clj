@@ -13,7 +13,8 @@
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.tabs :as tabs]
-    [more-speech.ui.swing.user-info-interface :as user-info-interface])
+    [more-speech.ui.swing.user-info-interface :as user-info-interface]
+    [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [core]))
   (:import (java.awt Point)
            (java.util Timer TimerTask)))
@@ -167,7 +168,7 @@
     (when (.isPopupTrigger e)
       (let [p (popup :items [(action :name "Get Info..." :handler (fn [_e] (user-info-interface/show-user-profile user-id)))
                              (menu :text "Add author to tab" :items add-author-actions)])]
-        (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))))
+        (swing-util/show-popup p e)))))
 
 (defn- repaint-user-window [frame]
   (.repaint frame))

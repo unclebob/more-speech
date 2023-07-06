@@ -66,7 +66,7 @@
                                      :handler (fn [_e]
                                                 (swing-util/remove-id-from-tab tab-name key id)
                                                 (remove-id-from listbox tab-name key id)))])]
-        (.show p (to-widget e) (.x (.getPoint e)) (.y (.getPoint e)))))))
+        (swing-util/show-popup p e)))))
 
 (defn- make-selected-area [tab-desc]
   (let [tab-name (:name tab-desc)
