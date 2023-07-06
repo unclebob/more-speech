@@ -16,8 +16,7 @@
     [more-speech.ui.swing.user-info-interface :as user-info-interface]
     [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [core]))
-  (:import (java.awt Point)
-           (java.util Timer TimerTask)))
+  (:import (java.util Timer TimerTask)))
 
 (defn close-users-frame [users-menu timer _e]
   (.cancel timer)
@@ -156,10 +155,8 @@
                              true)
           (set-mem [:user-window :contact-list-changed] true))))))
 
-(defn listbox-click [listbox e]
-  (let [index (.locationToIndex listbox (Point. (.getX e) (.getY e)))
-        model (.getModel listbox)
-        item (.getElementAt model index)
+(defn listbox-click [e]
+  (let [item (swing-util/get-clicked-value e)
         user-id (second item)
         tab-names (vec (remove #(= "all" %) (map :name (get-mem :tabs-list))))
         tab-names (conj tab-names "<new-tab>")
@@ -179,7 +176,7 @@
                  :font config/default-font
                  :renderer render-listbox-item
                  :model (get-mem [:user-window :trusted-user-items]))]
-    (listen trusted-users-listbox :mouse-pressed (partial listbox-click trusted-users-listbox))
+    (listen trusted-users-listbox :mouse-pressed listbox-click)
     trusted-users-listbox))
 
 (defn- make-trusted-users-panel []
@@ -219,7 +216,7 @@
                                                 recent-button
                                                 scrollable-selected-listbox])]
     (config! selected-listbox :model (get-mem [:user-window :recent-user-items]))
-    (listen selected-listbox :mouse-pressed (partial listbox-click selected-listbox))
+    (listen selected-listbox :mouse-pressed listbox-click)
     selection-panel))
 
 (defn make-users-frame [_e]

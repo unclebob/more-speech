@@ -6,7 +6,8 @@
             [more-speech.nostr.event-dispatcher :as event-handlers]
             [more-speech.nostr.util :as util]
             [more-speech.ui.swing.tabs-util :as tabs-util])
-  (:use (seesaw [core])))
+  (:use (seesaw [core]))
+  (:import (java.awt Point)))
 
 (defn clear-popup [popup]
   (while (not (empty? (.getSubElements popup)))
@@ -164,3 +165,9 @@
          x (.x point)
          y (.y point)]
      (show-popup popup event x y))))
+
+(defn get-clicked-value [e]
+  (let [listbox (.getSource e)
+        index (.locationToIndex listbox (Point. (.getX e) (.getY e)))
+        model (.getModel listbox)]
+    (.getElementAt model index)))

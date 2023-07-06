@@ -17,8 +17,7 @@
     [more-speech.ui.swing.user-info-interface :as html-interface]
     [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [border] [core]))
-  (:import (java.awt Point)
-           (java.util Timer TimerTask)))
+  (:import (java.util Timer TimerTask)))
 
 (defn trust-author [id _e]
   (trust-updater/trust-this-author id))
@@ -66,10 +65,7 @@
     (text! widget (formatters/get-best-name id))))
 
 (defn trusted-user-box-click [e]
-  (let [listbox (.getSource e)
-        index (.locationToIndex listbox (Point. (.getX e) (.getY e)))
-        model (.getModel listbox)
-        user-id (.getElementAt model index)
+  (let [user-id (swing-util/get-clicked-value e)
         tab-names (vec (remove #(= "all" %) (map :name (mem/get-mem :tabs-list))))
         tab-names (conj tab-names "<new-tab>")
         add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab user-id %)) tab-names)]

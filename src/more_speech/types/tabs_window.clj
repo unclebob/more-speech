@@ -15,8 +15,11 @@
 
 (s/def ::all-ids (s/coll-of ::id))
 
-(s/def ::tabs-window ; a map of tab names to tab data or :all-ids to a list of ids.
-  (s/map-of (s/or :tab-data ::tab-name
-                  :all-ids #(= :all-ids %))
-            (s/or :tab-data ::tab-data
-                  :all-ids ::all-ids)))
+; a map of tab names to tab data or :all-ids to a list of ids.
+(s/def ::tabs-window
+  (s/or :nil nil?
+        :map (s/map-of
+               (s/or :tab-data ::tab-name
+                     :all-ids #(= :all-ids %))
+               (s/or :tab-data ::tab-data
+                     :all-ids ::all-ids))))

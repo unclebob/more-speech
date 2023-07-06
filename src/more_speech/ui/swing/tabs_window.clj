@@ -9,8 +9,7 @@
     [more-speech.ui.swing.user-info-interface :as html-interface]
     [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [core]))
-  (:import (java.awt Point)
-           (java.util Timer TimerTask)))
+  (:import (java.util Timer TimerTask)))
 
 (defn close-tabs-frame [menu timer _e]
   (data-storage/write-tabs)
@@ -48,9 +47,7 @@
     (config! listbox :model ids)))
 
 (defn listbox-click [listbox tab-name key e]
-  (let [index (.locationToIndex listbox (Point. (.getX e) (.getY e)))
-        model (.getModel listbox)
-        id (.getElementAt model index)
+  (let [id (swing-util/get-clicked-value e)
         event? (gateway/event-exists? (config/get-db) id)
         user? (some? (gateway/get-profile (config/get-db) id))
         select-string (if event? "Select" "Get Info...")
