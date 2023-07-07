@@ -132,25 +132,31 @@
             (.setSelectedValue trusted-listbox
                                new-trusted-item true)))))))
 
+(defn untrust-items [listbox-items]
+  (loop [items listbox-items]
+    (when-let [item (first items)]
+      (let [untrusted-user (second item)]
+        (trust-updater/untrust untrusted-user)
+        (recur (rest items))))))
+
+(defn add-items-to-recent-users [listbox-items]
+  (loop [items listbox-items]
+    (when-let [item (first items)]
+      (let [user-id (second item)]
+        (update-mem [:user-window :recent-users] conj user-id)
+        (recur (rest items))))))
+
 (defn untrust-selection [frame _e]
   (let [trusted-listbox (select frame [:#trusted-users-listbox])
         recent-button (select frame [:#recent-button])
         selected-listbox (select frame [:#selected-users])
         selected-items (selection trusted-listbox {:multi? true})]
-    (loop [selected-items selected-items]
-      (when-let [selected-item (first selected-items)]
-        (let [untrusted-user (second selected-item)]
-          (trust-updater/untrust untrusted-user)
-          (recur (rest selected-items)))))
+    (untrust-items selected-items)
     (load-trusted-users)
     (config! trusted-listbox :model (get-mem [:user-window :trusted-user-items]))
     (config! recent-button :selected? true)
     (load-recent-users)
-    (loop [selected-items selected-items]
-      (when-let [selected-item (first selected-items)]
-        (let [untrusted-user (second selected-item)]
-          (update-mem [:user-window :recent-users] conj untrusted-user)
-          (recur (rest selected-items)))))
+    (add-items-to-recent-users selected-items)
     (set-mem [:user-window :recent-user-items]
              (make-sorted-listbox-items
                (get-mem [:user-window :recent-users])))

@@ -57,7 +57,7 @@
         renderer (.getCellRenderer header-tree)
         _ (.setBackgroundSelectionColor renderer (color :azure))]
     (listen header-tree :selection (partial node-selected tab-index))
-    (listen header-tree :mouse-pressed article-click)
+    (listen header-tree :mouse-pressed (partial article-click tab-index))
     (set-mem [:tab-tree-map tab-name] header-tree)
     header-tree))
 
@@ -274,8 +274,9 @@
 
 ;------DECLARED
 
-(defn article-click [e]
-  (when (.isPopupTrigger e)
+(defn article-click [tab-index e]
+  (if-not (.isPopupTrigger e)
+    (node-selected tab-index e)
     (let [tree (.getComponent e)
           path (.getPathForLocation tree (.getX e) (.getY e))
           node (.getLastPathComponent path)
