@@ -1,11 +1,12 @@
 (ns more-speech.ui.swing.edit-window
-  (:require [more-speech.nostr.event-composers :as composers]
-            [more-speech.ui.formatters :as formatters]
+  (:require [more-speech.config :refer [get-db]]
+            [more-speech.db.gateway :as gateway]
             [more-speech.mem :refer :all]
+            [more-speech.nostr.event-composers :as composers]
+            [more-speech.ui.formatters :as formatters]
             [more-speech.user-configuration :as uconfig]
-            [more-speech.config :refer [get-db]]
-            [more-speech.db.gateway :as gateway])
-  (:use [seesaw core]))
+            [more-speech.ui.swing.undo :as undo])
+  (:use (seesaw [core])))
 
 (defn make-edit-window
   ([kind]
@@ -43,6 +44,7 @@
               (if reply?
                 (formatters/format-reply event)
                 content))
+       (undo/setup-undo edit-area)
        (config! edit-frame :content
                 (border-panel
                   :north subject-panel
