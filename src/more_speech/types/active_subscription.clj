@@ -25,5 +25,5 @@
                                        ]))
 (s/def ::subscriptions (s/or :nil nil?
                              :subscriptions (s/map-of ::subscription-id ::subscription)))
-(s/def ::active-subscriptions (s/or :nil nil?
-                                    :subscriptions (s/map-of ::subscription-url ::subscriptions)))
+(s/def ::active-subscriptions (s/or :subscriptions (s/map-of ::subscription-url ::subscriptions)
+                                    :empty nil?))

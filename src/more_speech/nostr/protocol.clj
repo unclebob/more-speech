@@ -83,15 +83,15 @@
         (Thread/sleep (+ 1000 (rand-int 200))))
       (relay/send relay ["REQ" id query]))))
 
-(defn request-contact-lists [relay]
+(defn request-contact-lists [relay-url]
   (let [now (quot (System/currentTimeMillis) 1000)
         days-ago config/read-contact-lists-days-ago
         seconds-ago (int (* days-ago 86400))
         since (int (- now seconds-ago))]
-    (request-batch relay "ms-contacts" since {"kinds" [3] "since" since})))
+    (request-batch relay-url "ms-contacts" since {"kinds" [3] "since" since})))
 
-(defn request-metadata [relay since]
-  (request-batch relay "ms-profiles" since {"kinds" [0] "since" since})
+(defn request-metadata [relay-url since]
+  (request-batch relay-url "ms-profiles" since {"kinds" [0] "since" since})
   )
 
 (defn add-trustees [type filters who]
@@ -130,7 +130,7 @@
                   (format-time new-until)
                   (format-time back-to)
                   url)
-          (update-mem [:active-subscriptions "url"] dissoc id)
+          (update-mem [:active-subscriptions url] dissoc id)
           (relay/send relay ["CLOSE" id]))
 
         :else
@@ -382,10 +382,9 @@
   (log-pr 2 'requesting-contact-lists)
   (let [relays (get-mem :relays)]
     (doseq [url (keys relays)]
-      (let [relay (get-in relays [url :connection])
-            read-type (get-in relays [url :read])]
+      (let [read-type (get-in relays [url :read])]
         (when (= :read-all read-type)
-          (request-contact-lists relay))))))
+          (request-contact-lists url))))))
 
 (defn request-metadata-from-relays [since]
   (log-pr 2 'requesting-metadata)
@@ -394,7 +393,7 @@
       (let [relay (get-in relays [url :connection])
             read? (get-in relays [url :read])]
         (when (and read? (some? relay))
-          (request-metadata relay since))))))
+          (request-metadata url since))))))
 
 (defn close-all-relays []
   (let [relays (get-mem :relays)]
