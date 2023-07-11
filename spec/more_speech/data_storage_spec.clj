@@ -1,6 +1,6 @@
 (ns more-speech.data-storage-spec
   (:require [speclj.core :refer :all]
-            [more-speech.data-storage :refer :all]))
+            [more-speech.data-storage-imp :refer :all]))
 
 (defn- created-at [day n]
   (+ n (* day 86400)))

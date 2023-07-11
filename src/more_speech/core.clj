@@ -5,7 +5,7 @@
   (:gen-class)
   (:require [clojure.core.async :as async]
             [more-speech.config :as config]
-            [more-speech.data-storage :as data-storage]
+            [more-speech.data-storage-imp :as ds-imp]
             [more-speech.logger.default :refer [log-level log-pr]]
             [more-speech.mem :refer :all]
             [more-speech.migrator :as migrator]
@@ -20,7 +20,7 @@
 (defn ^:export -main [& args]
   (let [arg (first args)]
     (when (= "compress" arg)
-      (data-storage/compress)
+      (ds-imp/compress)
       (Thread/sleep 1000)
       (System/exit 1))
     (log-pr 1 'main arg 'start)
@@ -42,7 +42,7 @@
       (config/set-db! config/production-db))
     (migrator/migrate-to config/migration-level)
     (log-pr 2 'main 'loading-configuration)
-    (data-storage/load-configuration)
+    (ds-imp/load-configuration)
     (log-pr 2 'main 'setting-up-gui)
     (let [handler (swing/setup-main-window)]
       (log-pr 2 'main 'main-window-setup-complete)
@@ -51,7 +51,7 @@
       (log-pr 2 'main 'reading-in-last-n-days)
       (let [latest-old-message-time
             (if (not (config/is-test-run?))
-              (data-storage/load-event-history handler)
+              (ds-imp/load-event-history handler)
               (-> (util/get-now) (- 7200)))
             latest-old-message-time
             (if (some? (get-mem :request-hours-ago))
@@ -60,7 +60,7 @@
             _ (log-pr 2 'main 'getting-events (formatter-util/format-time latest-old-message-time))
             exit-condition (main/start-nostr latest-old-message-time)]
         (log-pr 2 'starting-exit-process)
-        (data-storage/write-configuration)
+        (ds-imp/write-configuration)
         (if (= exit-condition :relaunch)
           (do
             (invoke-now (.dispose (get-mem :frame)))

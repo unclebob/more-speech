@@ -10,7 +10,7 @@
      [util :as util]
      [elliptic-signature :as ecc]
      [event-dispatcher :as handlers]]
-    [more-speech.data-storage :as data-storage]
+    [more-speech.data-storage-imp :as ds-imp]
     [more-speech.user-configuration :as user-configuration]
     [more-speech.db.gateway :as gateway]
     [more-speech.util.files :refer :all]
@@ -91,8 +91,8 @@
 
 (defn migration-7-break-messages-into-daily-files []
   (let [messages (read-string (slurp @config/messages-filename))
-        partitions (data-storage/partition-messages-by-day messages)]
-    (data-storage/write-messages-by-day partitions)
+        partitions (ds-imp/partition-messages-by-day messages)]
+    (ds-imp/write-messages-by-day partitions)
     (delete-file @config/messages-filename)
     )
   )

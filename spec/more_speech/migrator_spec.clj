@@ -3,6 +3,7 @@
             [more-speech.bech32 :as bech32]
             [more-speech.config :as config]
             [more-speech.data-storage :as data-storage]
+            [more-speech.data-storage-imp :as ds-imp]
             [more-speech.db.gateway :as gateway]
             [more-speech.mem :as mem]
             [more-speech.migrator :refer :all]
@@ -324,7 +325,7 @@
           (spit @config/keys-filename {:private-key hex-private-key
                                        :public-key hex-public-key
                                        :wallet-connect wallet-connect})
-          (data-storage/read-keys)
+          (ds-imp/read-keys)
           (should= hex-public-key (mem/get-mem [:keys :public-key]))
           (should= hex-private-key (mem/get-mem [:keys :private-key]))
           (should= wallet-connect (mem/get-mem [:keys :wallet-connect]))
@@ -350,7 +351,7 @@
                                        :public-key hex-public-key
                                        :password password
                                        :wallet-connect encoded-wallet-connect})
-          (data-storage/read-keys)
+          (ds-imp/read-keys)
           (should= hex-public-key (mem/get-mem [:keys :public-key]))
           (should= hex-private-key (mem/get-mem [:keys :private-key]))
           (should= wallet-connect (mem/get-mem [:keys :wallet-connect]))
