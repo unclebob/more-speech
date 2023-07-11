@@ -1,6 +1,7 @@
 (ns more-speech.ui.swing.util
   (:require [clojure.core.async :as async]
             [more-speech.config :as config]
+            [more-speech.data-storage :as data-storage]
             [more-speech.db.gateway :as gateway]
             [more-speech.mem :refer :all]
             [more-speech.nostr.event-dispatcher :as event-handlers]
@@ -39,7 +40,8 @@
          new-tabs-list []]
     (cond
       (empty? tabs-list)
-      (set-mem :tabs-list new-tabs-list)
+      (do (set-mem :tabs-list new-tabs-list)
+          (data-storage/write-tabs))
 
       (= old-name (:name (first tabs-list)))
       (recur (rest tabs-list)
@@ -49,7 +51,12 @@
       (recur (rest tabs-list)
              (conj new-tabs-list (first tabs-list))))))
 
-(defn delete-tab-from-tabs-list [tabs-list tab-name]
+(defn delete-tab-from-tabs-list
+  ([tab-name]
+   (update-mem :tabs-list delete-tab-from-tabs-list tab-name)
+   (data-storage/write-tabs))
+
+  ([tabs-list tab-name]
   (loop [tabs-list tabs-list
          new-tabs-list []]
     (cond
@@ -61,13 +68,14 @@
 
       :else
       (recur (rest tabs-list)
-             (conj new-tabs-list (first tabs-list))))))
+             (conj new-tabs-list (first tabs-list)))))))
 
 (defn add-tab-to-tabs-list [tab-name]
   (let [tabs-list (get-mem :tabs-list)
         tab-desc {:name tab-name :selected [:empty] :blocked []}
         new-tabs-list (conj tabs-list tab-desc)]
     (set-mem :tabs-list new-tabs-list)
+    (data-storage/write-tabs)
     tab-desc))
 
 (defn remove-id-from-tab [tab-name key id]
@@ -87,13 +95,13 @@
       (recur (rest tabs-list)
              (conj new-tabs-list (first tabs-list))))))
 
-
 (defn add-filter-to-tab [tab-name key id]
   (loop [tabs-list (get-mem :tabs-list)
          new-tabs-list []]
     (cond
       (empty? tabs-list)
-      (set-mem :tabs-list new-tabs-list)
+      (do (set-mem :tabs-list new-tabs-list)
+          (data-storage/write-tabs))
 
       (= tab-name (:name (first tabs-list)))
       (let [tab-descriptor (first tabs-list)

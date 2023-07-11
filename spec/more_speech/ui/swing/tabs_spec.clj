@@ -1,5 +1,6 @@
 (ns more-speech.ui.swing.tabs-spec
   (:require [more-speech.config :as config]
+            [more-speech.data-storage :as data-storage]
             [more-speech.db.gateway :as gateway]
             [more-speech.mem :refer :all]
             [more-speech.nostr.util :as util]
@@ -15,6 +16,7 @@
 (declare db)
 
 (describe "tabs"
+  (with-stubs)
   (context "ensure-tab-list-has-all"
     (it "adds 'all' to tabs that don't have 'all'"
       (let [tab-list [{:name "tab1" :selected [1] :blocked [2]}]]
@@ -37,11 +39,14 @@
       (should-be-nil (get-tab-index "tab2"))))
 
   (context "change-tabs-list-name"
+    (redefs-around [data-storage/write-tabs (stub :write-tabs)])
+
     (it "changes tabs-list name if it exists"
       (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
       (change-tabs-list-name "old-name" "new-name")
       (should= [{:name "new-name"} {:name "some-name"}]
-               (get-mem :tabs-list)))
+               (get-mem :tabs-list))
+      (should-have-invoked :write-tabs))
 
     (it "changes does not change tabs-list name if it does not exist"
       (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
@@ -50,22 +55,30 @@
                (get-mem :tabs-list))))
 
   (context "delete-tab-from-tabs-list"
+    (redefs-around [data-storage/write-tabs (stub :write-tabs)])
+
     (it "deletes an existing tab"
       (set-mem :tabs-list [{:name "old-name"} {:name "some-name"}])
-      (update-mem :tabs-list delete-tab-from-tabs-list "old-name")
+      (delete-tab-from-tabs-list "old-name")
+      (should-have-invoked :write-tabs)
       (should= [{:name "some-name"}]
                (get-mem :tabs-list))))
 
   (context "add-tab-to-tabs-list"
+    (redefs-around [data-storage/write-tabs (stub :write-tabs)])
+
     (it "adds-a-tab"
       (set-mem :tabs-list [{:name "some-name"}])
       (add-tab-to-tabs-list "new-name")
+      (should-have-invoked :write-tabs)
       (should= [{:name "some-name"}
                 {:name "new-name" :selected [:empty] :blocked []}]
                (get-mem :tabs-list)))
     )
 
   (context "select-id-in-tab"
+    (redefs-around [data-storage/write-tabs (stub :write-tabs)])
+
     (it "adds-a-tab"
       (set-mem :tabs-list [{:name "tab"} {:name "another"}])
       (add-filter-to-tab "tab" :selected 1)
@@ -169,30 +182,35 @@
 
 (describe "adding ids to tabs"
   (with-stubs)
+  (redefs-around [data-storage/write-tabs (stub :write-tabs)])
   (setup-db-mem)
 
   (it "adds an an unrooted article id to a tab"
     (gateway/add-event @db {:id 1 :tags []})
-    (with-redefs [swing-util/add-filter-to-tab (stub :add-id-to-tab)
-                  swing-util/relaunch (stub :relaunch)
+    (with-redefs [swing-util/relaunch (stub :relaunch)
                   swing-util/select-tab (stub :select-tab)
                   add-event-to-tab (stub :add-event-to-tab)]
+      (add-tab-to-tabs-list "tab")
       (add-article-to-tab 1 "tab" nil)
-      (should-have-invoked :add-id-to-tab {:with ["tab" :selected 1]})
       (should-have-invoked :select-tab {:with ["tab"]})
-      (should-have-invoked :add-event-to-tab)))
+      (should-have-invoked :add-event-to-tab)
+      (should= [{:name "tab", :selected [:empty 1], :blocked []}]
+               (get-mem :tabs-list))
+      (should-have-invoked :write-tabs)))
 
   (it "adds the root id of a thread to a tab"
     (let [root-id 100
           event {:id 1 :tags [[:e (util/hexify root-id) "" "root"]]}]
       (gateway/add-event @db event)
-      (with-redefs [swing-util/add-filter-to-tab (stub :add-id-to-tab)
-                    add-event-to-tab (stub :add-event-to-tab)
+      (with-redefs [add-event-to-tab (stub :add-event-to-tab)
                     swing-util/select-tab (stub :select-tab)]
+        (add-tab-to-tabs-list "tab")
         (add-article-to-tab 1 "tab" nil)
-        (should-have-invoked :add-id-to-tab {:with ["tab" :selected root-id]})
         (should-have-invoked :select-tab {:with ["tab"]})
-        (should-have-invoked :add-event-to-tab))))
+        (should-have-invoked :add-event-to-tab)
+        (should= [{:name "tab", :selected [:empty 100], :blocked []}]
+                 (get-mem :tabs-list))
+        (should-have-invoked :write-tabs))))
   )
 
 (defn depict-node [node]
