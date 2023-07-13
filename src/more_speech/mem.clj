@@ -1,18 +1,20 @@
 (ns more-speech.mem
   (:require [clojure.spec.alpha :as s]
             [more-speech.types.active-subscription :as subscription-type]
+            [more-speech.types.event :as event-type]
+            [more-speech.types.event-counter :as event-counter-type]
             [more-speech.types.profile :as profile-type]
             [more-speech.types.relay :as relay-type]
             [more-speech.types.tab :as tab-type]
-            [more-speech.types.event-counter :as event-counter-type]
-            [more-speech.types.user-configuration :as user-configuration-type]
-            [more-speech.types.event :as event-type]
             [more-speech.types.tabs-window :as tabs-window-type]
+            [more-speech.types.user-configuration :as user-configuration-type]
             [more-speech.types.user-window :as user-window-type]
-            [more-speech.types.zaps :as zaps-type])
-  (:import (clojure.core.async.impl.channels ManyToManyChannel)
-           (javax.swing JFrame)
-           (javax.swing.tree DefaultMutableTreeNode)))
+            [more-speech.types.zaps :as zaps-type]
+            )
+  (:import
+    ;(clojure.core.async.impl.channels ManyToManyChannel)
+    (javax.swing JFrame)
+    (javax.swing.tree DefaultMutableTreeNode)))
 
 
 
@@ -42,8 +44,8 @@
 (s/def ::frame #(instance? JFrame %))                       ;The main frame
 (s/def ::selected-event ::id)                               ;The id of the currently selected event
 (s/def ::selected-tab ::tab-index)                          ;index of the selected tab within :tabs-list
-(s/def ::send-chan #(= ManyToManyChannel (type %)))
-(s/def ::incoming-events int?) ;number of events processed since startup.
+(s/def ::send-chan some?) ;#(= ManyToManyChannel (type %)))
+(s/def ::incoming-events int?)                              ;number of events processed since startup.
 
 ;count of events received from a given relay.
 (s/def ::events-by-relay (s/map-of ::event-type/relay-url pos-int?))
@@ -55,9 +57,9 @@
 ;map, by id -- so far unseen -- holding a collection of all known events that reference that id -- i.e. the orphans.
 (s/def ::orphaned-replies (s/map-of ::id (s/coll-of ::id)))
 
-(s/def ::article-window-event-id ::id) ;id of article in the article window.
-(s/def ::refresh-main-window boolean?) ;when true, main window refreshes once.
-(s/def ::relay-manager-frame #(instance? JFrame %)) ;the frame if the relay manager is up.
+(s/def ::article-window-event-id ::id)                      ;id of article in the article window.
+(s/def ::refresh-main-window boolean?)                      ;when true, main window refreshes once.
+(s/def ::relay-manager-frame #(instance? JFrame %))         ;the frame if the relay manager is up.
 
 ;The event handler decoupled through an interface.
 ;should be #(instance? more-speech.nostr.event-dispatcher/event-handler %)
