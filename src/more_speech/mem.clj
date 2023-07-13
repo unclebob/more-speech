@@ -10,7 +10,8 @@
             [more-speech.types.tabs-window :as tabs-window-type]
             [more-speech.types.user-window :as user-window-type]
             [more-speech.types.zaps :as zaps-type])
-  (:import (javax.swing JFrame)
+  (:import (clojure.core.async.impl.channels ManyToManyChannel)
+           (javax.swing JFrame)
            (javax.swing.tree DefaultMutableTreeNode)))
 
 
@@ -41,7 +42,7 @@
 (s/def ::frame #(instance? JFrame %))                       ;The main frame
 (s/def ::selected-event ::id)                               ;The id of the currently selected event
 (s/def ::selected-tab ::tab-index)                          ;index of the selected tab within :tabs-list
-(s/def ::send-chan #(= clojure.core.async.impl.channels.ManyToManyChannel (type %)))
+(s/def ::send-chan #(= ManyToManyChannel (type %)))
 (s/def ::incoming-events int?) ;number of events processed since startup.
 
 ;count of events received from a given relay.
