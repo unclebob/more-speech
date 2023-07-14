@@ -116,7 +116,7 @@
   )
 
 (defn load-configuration []
-  (let [tabs-list (tabs/ensure-tab-list-has-all
+  (let [tabs-list (tabs/ensure-tab-list-has-defaults
                     (read-string (slurp @config/tabs-list-filename)))
         user-configuration (user-configuration/validate
                              (read-string (slurp @config/user-configuration-filename)))

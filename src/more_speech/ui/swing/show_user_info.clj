@@ -4,7 +4,6 @@
     [more-speech.config :as config]
     [more-speech.config :refer [get-db]]
     [more-speech.db.gateway :as gateway]
-    [more-speech.mem :as mem]
     [more-speech.nostr.contact-list :as contact-list]
     [more-speech.nostr.protocol :as protocol]
     [more-speech.nostr.trust-updater :as trust-updater]
@@ -13,6 +12,7 @@
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.html-util :as html-util]
     [more-speech.ui.swing.tabs :as tabs]
+    [more-speech.ui.swing.tabs-util :as tabs-util]
     [more-speech.ui.swing.user-info-interface :as user-info-interface]
     [more-speech.ui.swing.user-info-interface :as html-interface]
     [more-speech.ui.swing.util :as swing-util])
@@ -37,7 +37,7 @@
 
 (defn- make-profile-menubar [frame id]
   (let [trusted? (some? (contact-list/get-petname id))
-        tab-names (vec (remove #(= "all" %) (map :name (mem/get-mem :tabs-list))))
+        tab-names (tabs-util/get-changeable-tab-names)
         tab-names (conj tab-names "<new-tab>")
         add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab id %)) tab-names)
         trust-item (menu-item
@@ -66,7 +66,7 @@
 
 (defn trusted-user-box-click [e]
   (let [user-id (swing-util/get-clicked-value e)
-        tab-names (vec (remove #(= "all" %) (map :name (mem/get-mem :tabs-list))))
+        tab-names (tabs-util/get-changeable-tab-names)
         tab-names (conj tab-names "<new-tab>")
         add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab user-id %)) tab-names)]
     (protocol/request-profiles-and-contacts-for user-id)

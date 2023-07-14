@@ -6,6 +6,7 @@
     [more-speech.db.gateway :as gateway]
     [more-speech.logger.default :refer [log-pr]]
     [more-speech.mem :refer :all]
+    [more-speech.nostr.contact-list :as contact-list]
     [more-speech.nostr.events :as events]
     [more-speech.nostr.tab-searcher :as tab-searcher]
     [more-speech.nostr.trust-updater :as trust-updater]
@@ -135,6 +136,7 @@
   (try
     (let [selected-ids (filter number? (:selected filters))
           selected-regexs (map re-pattern (filter string? (:selected filters)))
+          selected-keywords-set (set (filter keyword? (:selected filters)))
           blocked (:blocked filters)
           [root _mentions _referent] (events/get-references event)
           tags (:tags event)
@@ -142,20 +144,24 @@
           ptags (filter valid-ptag? ptags)
           pubkey-citings (map #(util/hex-string->num (second %)) ptags)
           content (or (:content event) "")
-          subject (or (ffirst (events/get-tag event :subject)) "")]
+          subject (or (ffirst (events/get-tag event :subject)) "")
+          author (:pubkey event)]
       (and
         (or
           (empty? (:selected filters))
-          (some #(= % (:pubkey event)) selected-ids)
+          (some #(= % author) selected-ids)
           (some #(= % (:id event)) selected-ids)
           (some #(= % root) selected-ids)
           (not-empty (set/intersection (set pubkey-citings) (set selected-ids)))
           (some #(re-find % content) selected-regexs)
           (some #(re-find % subject) selected-regexs)
+          (and
+            (selected-keywords-set :trusted)
+            (contact-list/is-trusted? author))
           )
         (not
           (or
-            (some #(= % (:pubkey event)) blocked)
+            (some #(= % author) blocked)
             (some #(= % (:id event)) blocked)))))
     (catch Exception _e
       (log-pr 1 'should-add-event? 'bad-tag event)
@@ -250,10 +256,20 @@
         (set-mem [:tab-search new-name] (get-mem [:tab-search tab-name]))
         (set-mem [:tab-search tab-name] nil)))))
 
-(defn ensure-tab-list-has-all [tab-list]
+(defn ensure-tab-list-has-all-tab [tab-list]
   (if (some #(= "all" (:name %)) tab-list)
     tab-list
     (conj tab-list {:name "all" :selected [] :blocked []})))
+
+(defn ensure-tab-list-has-trusted-tab [tab-list]
+  (if (some #(= "trusted" (:name %)) tab-list)
+    tab-list
+    (conj tab-list {:name "trusted" :selected [:trusted] :blocked []})))
+
+(defn ensure-tab-list-has-defaults [tab-list]
+  (-> tab-list
+      ensure-tab-list-has-all-tab
+      ensure-tab-list-has-trusted-tab))
 
 (defn get-info [event _e]
   (let [event-info (with-out-str
@@ -283,7 +299,7 @@
           event-id (.getUserObject ^DefaultMutableTreeNode node)
           event (gateway/get-event (get-db) event-id)
           public-key (:pubkey event)
-          tab-names (vec (remove #(= "all" %) (map :name (get-mem :tabs-list))))
+          tab-names (tabs-util/get-changeable-tab-names)
           tab-names (conj tab-names "<new-tab>")
           add-author-actions (map #(action :name % :handler (partial add-author-to-tab public-key %)) tab-names)
           block-author-actions (map #(action :name % :handler (partial block-author-from-tab public-key %)) tab-names)
@@ -306,13 +322,13 @@
   (let [tab-label (.getComponent e)
         tab-name (config tab-label :text)
         tab-index (swing-util/get-tab-index tab-name)
-        isAll? (= "all" tab-name)
+        is-changeable? (not (tabs-util/is-unchangeable-tab-name tab-name))
         p (popup :items [(action :name "Change name..."
                                  :handler (partial change-tab-name tab-label)
-                                 :enabled? (not isAll?))
+                                 :enabled? is-changeable?)
                          (action :name (str "Delete " tab-name "...")
                                  :handler (partial delete-tab tab-label)
-                                 :enabled? (not isAll?))
+                                 :enabled? is-changeable?)
                          (action :name "New tab..."
                                  :handler new-tab
                                  :enabled? true)

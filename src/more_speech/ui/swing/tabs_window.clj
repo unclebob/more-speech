@@ -6,6 +6,7 @@
     [more-speech.mem :refer :all]
     [more-speech.nostr.protocol :as protocol]
     [more-speech.ui.formatters :as formatters]
+    [more-speech.ui.swing.tabs-util :as tabs-util]
     [more-speech.ui.swing.user-info-interface :as html-interface]
     [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [core]))
@@ -119,7 +120,7 @@
      :content tab-window}))
 
 (defn make-tabs []
-  (loop [tabs-list (remove #(= "all" (:name %)) (get-mem :tabs-list))
+  (loop [tabs-list (tabs-util/get-changeable-tab-names)
          header-tree-tabs []]
     (if (empty? tabs-list)
       (let [all-ids (get-mem [:tabs-window :all-ids])]

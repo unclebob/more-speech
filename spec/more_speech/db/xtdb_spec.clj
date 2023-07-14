@@ -128,10 +128,10 @@
   (context "contacts"
     (it "adds and fetches contacts"
       (with-redefs [util/get-now (stub :get-now {:return 0})]
-        (gateway/add-contacts @db 1 {:name "contact"}))
+        (gateway/add-contacts @db 1 [{:name "contact"}]))
       (xtdb/sync-db @db)
-      (should= {:name "contact"} (gateway/get-contacts @db 1))
-      (should= {:contacts {:name "contact"}
+      (should= [{:name "contact"}] (gateway/get-contacts @db 1))
+      (should= {:contacts [{:name "contact"}]
                 :created-at 0}
                (xtdb/get-entity @db :contacts 1))
       (db/delete-contacts @db 1)

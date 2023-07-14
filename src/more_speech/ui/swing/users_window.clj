@@ -14,6 +14,7 @@
     [more-speech.nostr.util :as util]
     [more-speech.ui.formatters :as formatters]
     [more-speech.ui.swing.tabs :as tabs]
+    [more-speech.ui.swing.tabs-util :as tabs-util]
     [more-speech.ui.swing.user-info-interface :as user-info-interface]
     [more-speech.ui.swing.util :as swing-util])
   (:use (seesaw [core]))
@@ -168,7 +169,7 @@
 (defn listbox-click [e]
   (let [item (swing-util/get-clicked-value e)
         user-id (second item)
-        tab-names (vec (remove #(= "all" %) (map :name (get-mem :tabs-list))))
+        tab-names (tabs-util/get-changeable-tab-names)
         tab-names (conj tab-names "<new-tab>")
         add-author-actions (map #(action :name % :handler (partial tabs/add-author-to-tab user-id %)) tab-names)]
     (protocol/request-profiles-and-contacts-for user-id)

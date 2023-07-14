@@ -1,8 +1,8 @@
 (ns more-speech.ui.swing.tabs-util
-  (:use [seesaw core])
-  (:require [more-speech.mem :refer :all]
+  (:require [more-speech.config :refer [get-db]]
             [more-speech.db.gateway :as gateway]
-            [more-speech.config :refer [get-db]])
+            [more-speech.mem :refer :all])
+  (:use (seesaw [core]))
   (:import (java.util Collections)
            (javax.swing.tree DefaultMutableTreeNode TreePath)))
 
@@ -47,6 +47,13 @@
     (.clearSelection tree)
     (.setSelectionPath tree tree-path)
     (.scrollPathToVisible tree tree-path)))
+
+(defn is-unchangeable-tab-name [tab-name]
+  (#{"all" "trusted"} tab-name))
+
+(defn get-changeable-tab-names []
+  (vec (remove is-unchangeable-tab-name
+               (map :name (get-mem :tabs-list)))))
 
 
 

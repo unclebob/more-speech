@@ -17,18 +17,20 @@
 
 (describe "tabs"
   (with-stubs)
-  (context "ensure-tab-list-has-all"
-    (it "adds 'all' to tabs that don't have 'all'"
+  (setup-db-mem)
+  (context "ensure-tab-list-has-defaults"
+    (it "adds 'all' and 'trusted' to tabs that don't have them."
       (let [tab-list [{:name "tab1" :selected [1] :blocked [2]}]]
         (should= [{:name "tab1" :selected [1] :blocked [2]}
-                  {:name "all" :selected [] :blocked []}]
-                 (ensure-tab-list-has-all tab-list))))
+                  {:name "all" :selected [] :blocked []}
+                  {:name "trusted" :selected [:trusted] :blocked []}]
+                 (ensure-tab-list-has-defaults tab-list))))
 
-    (it "does not add 'all' if it exists"
+    (it "does not add 'all' or 'trusted' if they exists"
       (let [tab-list [{:name "all" :selected [1] :blocked [2]}
-                      {:name "tab" :selected [3] :blocked 4}]]
-        (should= tab-list (ensure-tab-list-has-all tab-list))
-        ))
+                      {:name "tab" :selected [3] :blocked 4}
+                      {:name "trusted" :selected [:trusted] :blocked []}]]
+        (should= tab-list (ensure-tab-list-has-defaults tab-list))))
     )
 
   (context "get-tab-index"
@@ -100,6 +102,15 @@
             filter-results (map #(boolean (should-add-event? filter %)) events)]
         (should= [true false true] filter-results)))
 
+    (it "allows trusted authors if :trusted filter"
+      (set-mem :pubkey 99)
+      (gateway/add-contacts @db 99 [{:pubkey 10}])
+      (let [events [{:id 1 :pubkey 10} {:id 2 :pubkey 20} {:id 3 :pubkey 30}]
+            filter {:selected [:trusted]
+                    :blocked []}
+            filter-results (map #(boolean (should-add-event? filter %)) events)]
+        (should= [true false false] filter-results)))
+
     (it "allows selected pubkeys"
       (let [events [{:id 1 :pubkey 10} {:id 2 :pubkey 20} {:id 3 :pubkey 30}]
             filter {:selected [10 30]
@@ -143,7 +154,7 @@
             event {:content "match"}]
         (should (should-add-event? filter event))))
 
-    (it "does not select notes whose contents do ont match a string"
+    (it "does not select notes whose contents do not match a string"
       (let [filter {:selected ["alpha" "nope" "beta"] :blocked []}
             event {:content "match"}]
         (should-not (should-add-event? filter event))))

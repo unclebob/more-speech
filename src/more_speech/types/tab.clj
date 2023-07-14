@@ -10,7 +10,8 @@
 (s/def ::selected (s/coll-of
                     (s/or :id ::id
                           :pattern string?
-                          :keyword (s/and keyword? #(= :empty %)))))
+                          :keyword (s/and keyword? #(#{:empty
+                                                       :trusted} %)))))
 
 (s/def ::blocked (s/coll-of ::id))
 (s/def ::tab (s/keys :req-un [::name ::selected ::blocked]))
