@@ -213,20 +213,33 @@
     (log-pr 2 'reading (count event-ids) 'read-messages)
     event-ids))
 
+(defn choose-best-request-time
+  "chooses either the latest time in times, or the default time.
+  The default time will be chosen if the times list is empty,
+  or if the latest time is larger than the current time (which implies
+  that an event got corrupted with a bogus time)."
+  [times]
+  (let [now (util/get-now)
+        default-request-time (- now 86400)
+        times (conj times default-request-time)
+        latest-event-time (apply max times)
+        request-time (if (>= latest-event-time now)
+                       default-request-time
+                       latest-event-time)]
+    request-time))
+
 (defn load-event-history [handler]
   (log-pr 2 'load-event-history 'starting)
   (let [db (get-db)
         read-event-ids (get-read-events)
-        now (quot (System/currentTimeMillis) 1000)
+        now (util/get-now)
         start-time (int (- now (* config/days-to-read 86400)))
         all-event-ids (gateway/get-event-ids-since db start-time)
         event-ids (concat read-event-ids all-event-ids)
         events (map #(gateway/get-event db %) event-ids)
         times (map :created-at events)
-        last-time (if (empty? times)
-                    (- now 86400)
-                    (apply max times))
-        _ (log-pr 2 'load-event-history 'last-time (fu/format-time last-time))]
+        last-time (choose-best-request-time times)
+        _ (log-pr 1 'load-event-history 'last-time (fu/format-time last-time))]
     (future (load-events events handler))
     (log-pr 2 'reading-files-complete)
     last-time))

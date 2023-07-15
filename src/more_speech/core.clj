@@ -57,7 +57,7 @@
             (if (some? (get-mem :request-hours-ago))
               (- (util/get-now) (* 3600 (get-mem :request-hours-ago)))
               latest-old-message-time)
-            _ (log-pr 2 'main 'getting-events (formatter-util/format-time latest-old-message-time))
+            _ (log-pr 1 'main 'getting-events-since (formatter-util/format-time latest-old-message-time))
             exit-condition (main/start-nostr latest-old-message-time)]
         (log-pr 2 'starting-exit-process)
         (ds-imp/write-configuration)
