@@ -7,6 +7,7 @@
             [more-speech.nostr.event-composers :refer :all]
             [more-speech.nostr.event-composers :refer :all]
             [more-speech.nostr.event-dispatcher :refer :all]
+            [more-speech.nostr.events :as events]
             [more-speech.nostr.events :refer :all]
             [more-speech.nostr.util :as util]
             [more-speech.nostr.util :refer :all]
@@ -230,7 +231,7 @@
   )
 
 (declare event-tags)
-(describe "Emplacing references"
+(describe "Replacements, emplacements, and other edits."
   (with-stubs)
   (setup-db-mem)
   (redefs-around [util/get-now (stub :get-now {:return 1000})])
@@ -300,7 +301,16 @@
             content "hello @01234567abc."]
         (should= ["hello @01234567abc." [[:e "blah"]]]
                  (emplace-references content tags))
-        (should-be-nil (gateway/get-profile @db 0x01234567abc))))))
+        (should-be-nil (gateway/get-profile @db 0x01234567abc))))
+    )
+
+  (context "creating hashtags tags"
+    (it "adds hashtag tags"
+      (let [composed-body (compose-text-event-body "subject" "text #tag1 text #tag2 text #TAG1" nil)
+            t-tags (set (events/get-tag composed-body :t))]
+        (should= #{["tag1"] ["tag2"]} t-tags)))
+    )
+  )
 
 (describe "find-user-id"
   (setup-db-mem)

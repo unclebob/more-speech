@@ -178,69 +178,81 @@
           [encrypted-content 4])))
     [content 1]))
 
-(defn compose-text-event
-  ([subject text]
-   (compose-text-event subject text nil))
+(defn make-hashtag-tags [text]
+  (let [words (string/split text #"\s")
+        hashtags (filter #(.startsWith % "#") words)
+        hashtags (map #(subs % 1) hashtags)
+        hashtags (map #(.toLowerCase %) hashtags)
+        tags (map #(vector :t %) (set hashtags))]
+  tags))
 
-  ([subject text reply-to-or-nil]
-   (let [root (get-reply-root reply-to-or-nil)
-         tags (concat (make-event-reference-tags reply-to-or-nil root)
-                      (make-people-reference-tags reply-to-or-nil)
-                      (make-subject-tag subject)
-                      [[:client (str "more-speech - " config/version)]])
-         [content tags] (emplace-references text tags)
-         [content kind] (encrypt-if-direct-message content tags)
-         body {:kind kind
-               :tags tags
-               :content content}]
-     (body->event body))))
+(defn compose-text-event-body [subject text reply-to-or-nil]
+  (let [root (get-reply-root reply-to-or-nil)
+        tags (concat (make-event-reference-tags reply-to-or-nil root)
+                     (make-people-reference-tags reply-to-or-nil)
+                     (make-subject-tag subject)
+                     (make-hashtag-tags text)
+                     [[:client (str "more-speech - " config/version)]])
+        [content tags] (emplace-references text tags)
+        [content kind] (encrypt-if-direct-message content tags)]
+    {:kind kind
+     :tags tags
+     :content content}))
 
-(defn send-event [event]
-  (let [send-chan (get-mem :send-chan)]
-    (async/>!! send-chan [:event event])))
+  (defn compose-text-event
+    ([subject text]
+     (compose-text-event subject text nil))
 
-(defn compose-and-send-text-event [source-event-or-nil subject message]
-  (let [reply-to-or-nil (:id source-event-or-nil)
-        event (compose-text-event subject message reply-to-or-nil)]
-    (send-event event)))
+    ([subject text reply-to-or-nil]
+       (body->event
+         (compose-text-event-body subject text reply-to-or-nil))))
 
-(defn compose-recommended-server-event [url]
-  (let [body {:kind 2
-              :tags []
-              :content url}]
-    (body->event body)))
+  (defn send-event [event]
+    (let [send-chan (get-mem :send-chan)]
+      (async/>!! send-chan [:event event])))
 
-(defn remove-arguments [url]
-  (re-find config/relay-pattern url))
+  (defn compose-and-send-text-event [source-event-or-nil subject message]
+    (let [reply-to-or-nil (:id source-event-or-nil)
+          event (compose-text-event subject message reply-to-or-nil)]
+      (send-event event)))
 
-(defn compose-and-send-metadata-event []
-  (send-event (compose-metadata-event)))
+  (defn compose-recommended-server-event [url]
+    (let [body {:kind 2
+                :tags []
+                :content url}]
+      (body->event body)))
 
-(defn compose-and-send-metadata-and-relay-recommendations []
-  (send-event (compose-metadata-event))
-  (let [relays (get-mem :relays)
-        server-urls (filter #(:write (get relays %)) (keys relays))
-        server-urls (map remove-arguments server-urls)]
-    (log-pr 2 'server-urls server-urls)
-    (future
-      (doseq [url server-urls]
-        (Thread/sleep 5000)
-        (send-event (compose-recommended-server-event url))))))
+  (defn remove-arguments [url]
+    (re-find config/relay-pattern url))
 
-(defn compose-and-send-contact-list [contact-list]
-  (send-event (compose-contact-list contact-list)))
+  (defn compose-and-send-metadata-event []
+    (send-event (compose-metadata-event)))
 
-(defn compose-reaction-event [subject-event polarity]
-  (let [id (:id subject-event)
-        pubkey (:pubkey subject-event)
-        ep-tags (filter #(or (= :p (first %)) (= :e (first %))) (:tags subject-event))
-        tags (concat ep-tags [[:e (hexify id)] [:p (hexify pubkey)]])
-        body {:kind 7
-              :tags tags
-              :content polarity}]
-    body))
+  (defn compose-and-send-metadata-and-relay-recommendations []
+    (send-event (compose-metadata-event))
+    (let [relays (get-mem :relays)
+          server-urls (filter #(:write (get relays %)) (keys relays))
+          server-urls (map remove-arguments server-urls)]
+      (log-pr 2 'server-urls server-urls)
+      (future
+        (doseq [url server-urls]
+          (Thread/sleep 5000)
+          (send-event (compose-recommended-server-event url))))))
 
-(defn compose-and-send-reaction-event [subject-event polarity]
-  (send-event
-    (body->event
-      (compose-reaction-event subject-event polarity))))
+  (defn compose-and-send-contact-list [contact-list]
+    (send-event (compose-contact-list contact-list)))
+
+  (defn compose-reaction-event [subject-event polarity]
+    (let [id (:id subject-event)
+          pubkey (:pubkey subject-event)
+          ep-tags (filter #(or (= :p (first %)) (= :e (first %))) (:tags subject-event))
+          tags (concat ep-tags [[:e (hexify id)] [:p (hexify pubkey)]])
+          body {:kind 7
+                :tags tags
+                :content polarity}]
+      body))
+
+  (defn compose-and-send-reaction-event [subject-event polarity]
+    (send-event
+      (body->event
+        (compose-reaction-event subject-event polarity))))
