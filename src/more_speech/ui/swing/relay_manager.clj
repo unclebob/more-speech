@@ -106,7 +106,8 @@
   (let [connection-label (make-connection-label line-item-descriptor)
         read-label (text :text read-status :editable? false :size [100 :by field-height])
         write-label (text :text write-status :size [50 :by field-height])
-        info-button (label :text "ℹ"
+        relay-info (get-mem [:relays url :relay-info])
+        info-button (label :text (if (some? relay-info) "ℹ" "")
                            :foreground :red
                            :size [10 :by field-height]
                            :user-data url)
