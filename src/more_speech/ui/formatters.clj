@@ -77,8 +77,8 @@
           profile (gateway/get-profile (get-db) id)
           petname (contact-list/get-petname id)]
       (cond
-        (some? petname) petname
-        (some? profile) (:name profile)
+        (not (empty? petname)) petname
+        (not (empty? (:name profile))) (:name profile)
         :else npub))
     (catch Exception e
       (log-pr 2 'get-author-name (.getMessage e))

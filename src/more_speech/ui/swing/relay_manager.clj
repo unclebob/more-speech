@@ -107,7 +107,9 @@
         read-label (text :text read-status :editable? false :size [100 :by field-height])
         write-label (text :text write-status :size [50 :by field-height])
         relay-info (get-mem [:relays url :relay-info])
+        info-button-id (make-relay-element-id "info-button-" relay-name)
         info-button (label :text (if (some? relay-info) "ℹ" "")
+                           :id info-button-id
                            :foreground :red
                            :size [10 :by field-height]
                            :user-data url)
@@ -241,7 +243,9 @@
   (let [urls (keys (get-mem :relays))
         active-urls (sort (filter protocol/is-active-url? urls))]
     (doseq [url active-urls]
-      (let [event-counter-selector (keyword (str "#events-" (relay-id url)))
+      (let [info-button-selector (keyword (str "#info-button-" (relay-id url)))
+            info-button (select relay-panel [info-button-selector])
+            event-counter-selector (keyword (str "#events-" (relay-id url)))
             event-label (select relay-panel [event-counter-selector])
             notice-label-selector (keyword (str "#notice-" (relay-id url)))
             notice-label (select relay-panel [notice-label-selector])
@@ -256,7 +260,8 @@
         (config! notice-label
                  :text (get-mem [:relay-notice url]))
         (config! connection-label
-                 :text (str paid-mark (if (is-connected? url) "✓" "X")))))))
+                 :text (str paid-mark (if (is-connected? url) "✓" "X")))
+        (config! info-button :text (if (some? relay-info) "ℹ" ""))))))
 
 (defn scroll-to-top [scrollable-panel]
   (invoke-later (.setViewPosition (.getViewport scrollable-panel) (Point. 0 0))))
