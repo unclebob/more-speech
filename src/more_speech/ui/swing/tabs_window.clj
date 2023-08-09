@@ -120,7 +120,7 @@
      :content tab-window}))
 
 (defn make-tabs []
-  (loop [tabs-list (tabs-util/get-changeable-tab-names)
+  (loop [tabs-list (tabs-util/get-changeable-tab-descriptors)
          header-tree-tabs []]
     (if (empty? tabs-list)
       (let [all-ids (get-mem [:tabs-window :all-ids])]

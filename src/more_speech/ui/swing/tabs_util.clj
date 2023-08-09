@@ -55,5 +55,9 @@
   (vec (remove is-unchangeable-tab-name
                (map :name (get-mem :tabs-list)))))
 
+(defn get-changeable-tab-descriptors []
+  (vec (remove #(is-unchangeable-tab-name (:name %))
+               (get-mem :tabs-list))))
+
 
 

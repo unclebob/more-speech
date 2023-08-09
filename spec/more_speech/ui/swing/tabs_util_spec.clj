@@ -166,9 +166,15 @@
 
   (context "tab names"
     (it "gets list of changeable tab names"
-          (set-mem :tabs-list [{:name "all" :selected [1] :blocked [2]}
-                               {:name "tab" :selected [3] :blocked 4}
-                               {:name "trusted" :selected [:trusted] :blocked []}])
-          (should= ["tab"] (get-changeable-tab-names))))
+              (set-mem :tabs-list [{:name "all" :selected [1] :blocked [2]}
+                                   {:name "tab" :selected [3] :blocked [4]}
+                                   {:name "trusted" :selected [:trusted] :blocked []}])
+              (should= ["tab"] (get-changeable-tab-names)))
+
+    (it "gets list of changeable tab descriptors"
+              (set-mem :tabs-list [{:name "all" :selected [1] :blocked [2]}
+                                   {:name "tab" :selected [3] :blocked [4]}
+                                   {:name "trusted" :selected [:trusted] :blocked []}])
+              (should= [{:name "tab" :selected [3] :blocked [4]}] (get-changeable-tab-descriptors))))
   )
 

@@ -292,7 +292,7 @@
 
 (defn article-click [tab-index e]
   (if-not (.isPopupTrigger e)
-    (node-selected tab-index e)
+    (future (node-selected tab-index e))
     (let [tree (.getComponent e)
           path (.getPathForLocation tree (.getX e) (.getY e))
           node (.getLastPathComponent path)
