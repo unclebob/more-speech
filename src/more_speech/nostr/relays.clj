@@ -52,6 +52,9 @@
           (recur (rest urls)
                  (assoc relays-to-write url {:read read :write write})))))))
 
+(defn get-relay-for [url]
+  (:connection (get (get-mem :relays) url)))
+
 (defn validate-relay-url [url]
   (if (empty? url)
     nil

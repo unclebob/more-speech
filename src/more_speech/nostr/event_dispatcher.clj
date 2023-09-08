@@ -10,7 +10,8 @@
             [more-speech.nostr.events :as events]
             [more-speech.nostr.relays :as relays]
             [more-speech.nostr.util :refer :all :as util]
-            [more-speech.nostr.zaps :as zaps])
+            [more-speech.nostr.zaps :as zaps]
+            [more-speech.relay :as relay])
   (:import (ecdhJava SECP256K1)))
 
 (defprotocol event-handler
@@ -219,9 +220,26 @@
     (update-mem [:event-counter :total] inc)
     (update-mem [:event-counter relay] #(inc (if (nil? %) 0 %)))))
 
+;nip-42 authorization challenge.
+(defn handle-authorization-challenge [envelope url]
+  (let [response-event (event-composers/body->event
+                            {:kind 22242
+                             :tags [["relay" url]
+                                    ["challenge" (second envelope)]]
+                             :content ""})
+        relay (relays/get-relay-for url)]
+    (relay/send relay response-event)))
+
+(defn handle-unknown-notice-type [_envelope _url]
+  )
+
 (defn handle-notification [envelope url]
   (set-mem [:relay-notice url] (with-out-str (clojure.pprint/pprint envelope)))
-  (log-pr 2 'NOTICE url envelope))
+  (log-pr 2 'NOTICE url envelope)
+  (let [notice-type (first envelope)]
+    (condp = notice-type
+      "AUTH" (handle-authorization-challenge envelope url)
+      (handle-unknown-notice-type envelope url))))
 
 (defn inc-if-nil [n]
   (if (nil? n) 1 (inc n)))
