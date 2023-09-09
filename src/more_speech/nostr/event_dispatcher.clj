@@ -227,8 +227,9 @@
                              :tags [["relay" url]
                                     ["challenge" (second envelope)]]
                              :content ""})
+        auth-event ["AUTH" (second response-event)]
         relay (relays/get-relay-for url)]
-    (relay/send relay response-event)))
+    (relay/send relay auth-event)))
 
 (defn handle-unknown-notice-type [_envelope _url]
   )
