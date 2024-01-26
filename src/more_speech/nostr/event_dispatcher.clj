@@ -43,14 +43,9 @@
   (set-mem :refresh-main-window true)
   (try
     (let [profile (json/read-str content)
-          name (get profile "name")
+          {:strs [name lud16 nip05 lud06 website banner]} profile
           about (get profile "about" "")
           picture (get profile "picture" "")
-          lud16 (get profile "lud16")
-          nip05 (get profile "nip05")
-          lud06 (get profile "lud06")
-          website (get profile "website")
-          banner (get profile "banner")
           display-name (get profile "display_name")
           possible-alias (if (empty? display-name)
                            ""
@@ -223,13 +218,15 @@
 ;nip-42 authorization challenge.
 (defn handle-authorization-challenge [envelope url]
   (let [response-event (event-composers/body->event
-                            {:kind 22242
-                             :tags [["relay" url]
-                                    ["challenge" (second envelope)]]
-                             :content ""})
+                         {:kind 22242
+                          :tags [["relay" url]
+                                 ["challenge" (second envelope)]]
+                          :content ""})
         auth-event ["AUTH" (second response-event)]
         relay (relays/get-relay-for url)]
-    (relay/send relay auth-event)))
+    (if (nil? relay)
+      (log-pr 2 'handle-authorization-challenge 'nil-relay-for url)
+      (relay/send relay auth-event))))
 
 (defn handle-unknown-notice-type [_envelope _url]
   )
@@ -281,11 +278,15 @@
   (try
     (validate-and-process-event url envelope)
     (catch Exception e
-      (do (log-pr 1 'handle-event url (.getMessage e))
+      (do (log-pr 1 'validate-and-process-event url (.getMessage e))
           (log-pr 1 "--on event: " envelope)))))
 
 (defn handle-event [_agent envelope url]
-  (count-event url)
-  (if (not= "EVENT" (first envelope))
-    (handle-notification envelope url)
-    (try-validate-and-process-event url envelope)))
+  (try
+    (count-event url)
+    (if (not= "EVENT" (first envelope))
+      (handle-notification envelope url)
+      (try-validate-and-process-event url envelope))
+    (catch Exception e
+      (do (log-pr 1 'handle-event url (.getMessage e))
+          (log-pr 1 "--on event: " envelope)))))

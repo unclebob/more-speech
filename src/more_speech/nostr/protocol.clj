@@ -233,7 +233,7 @@
         [type id event] message]
 
     (cond
-      (= type "EVENT")                                      ;nobody uses this right now...
+      (= type "EVENT")
       (update-mem [:active-subscriptions url id] count-event event)
 
       (= type "EOSE")

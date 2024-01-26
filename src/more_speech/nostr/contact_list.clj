@@ -1,11 +1,11 @@
 (ns more-speech.nostr.contact-list
-  (:require [more-speech.nostr.util :as util]
+  (:require [more-speech.bech32 :as bech32]
+            [more-speech.config :refer [get-db]]
+            [more-speech.config :as config]
+            [more-speech.db.gateway :as gateway]
             [more-speech.logger.default :refer [log-pr]]
             [more-speech.mem :refer :all]
-            [more-speech.db.gateway :as gateway]
-            [more-speech.bech32 :as bech32]
-            [more-speech.config :refer [get-db]]
-            [more-speech.config :as config]))
+            [more-speech.nostr.util :as util]))
 
 
 (defn make-contact-from-tag [[_p pubkey relay petname]]
@@ -39,18 +39,22 @@
     (or (= candidate-pubkey my-pubkey)
         (contains? my-contact-pubkeys candidate-pubkey))))
 
-(defn which-contact-trusts [candidate-pubkey]
+(defn- my-contact-trusts-candidate? [my-contact candidate-id]
+  (let [his-contacts (gateway/get-contacts (get-db) my-contact)
+        his-contact-ids (set (map :pubkey his-contacts))]
+    (contains? his-contact-ids candidate-id)))
+
+(defn which-contact-trusts [candidate-id]
   (let [my-pubkey (get-mem :pubkey)
         my-contacts (gateway/get-contacts (get-db) my-pubkey)]
     (loop [my-contact-ids (map :pubkey my-contacts)]
-      (if (empty? my-contact-ids)
+      (cond
+        (empty? my-contact-ids)
         nil
-        (let [my-contact (first my-contact-ids)
-              his-contacts (gateway/get-contacts (get-db) my-contact)
-              his-contact-ids (set (map :pubkey his-contacts))]
-          (if (contains? his-contact-ids candidate-pubkey)
-            my-contact
-            (recur (rest my-contact-ids))))))))
+        (my-contact-trusts-candidate? (first my-contact-ids) candidate-id)
+        (first my-contact-ids)
+        :else
+        (recur (rest my-contact-ids))))))
 
 (defn get-petname [his-pubkey]
   (let [my-pubkey (get-mem :pubkey)
@@ -72,7 +76,7 @@
   ([id]
    (let [contacts (gateway/get-contacts (get-db) id)]
      (set (concat [(get-mem :pubkey)]
-             (map :pubkey contacts))))))
+                  (map :pubkey contacts))))))
 
 (defn get-web-of-trust
   ([]
